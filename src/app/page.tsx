@@ -1,103 +1,255 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+// file: src/app/page.js v1 - Updated Patriot Thanks homepage with integrated legal footer
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+import Link from 'next/link';
+import Image from 'next/image';
+import Navigation from '@/components/layout/Navigation';
+import Footer from '@/components/legal/Footer';
+
+export default function HomePage() {
+    return (
+            <div className="min-h-screen">
+                <Navigation />
+
+                {/* Hero Section with Background */}
+                <div
+                        className="relative pt-12 pb-16 bg-cover bg-center bg-no-repeat"
+                        style={{
+                            backgroundImage: "linear-gradient(rgba(30, 64, 175, 0.8), rgba(30, 58, 138, 0.8)), url('/images/backgroundNew.webp')"
+                        }}
+                >
+                    <br/>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            {/* Logo */}
+                            <div className="mb-6">
+                                <Image
+                                        src="/images/patriot-thanks-logo.png"
+                                        alt="Patriot Thanks Logo"
+                                        width={200}
+                                        height={100}
+                                        className="mx-auto"
+                                        priority
+                                />
+                            </div>
+
+                            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+                                Patriot Thanks
+                            </h1>
+                            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
+                                Supporting Those Who Serve Our Communities
+                            </p>
+                            <p className="text-lg text-blue-200 mb-12 max-w-2xl mx-auto">
+                                Connect with local businesses that offer discounts and incentives for military personnel, veterans, first responders, and their families.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link
+                                        href="/search"
+                                        className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-red-700 transition-colors shadow-lg"
+                                >
+                                    Find Businesses
+                                </Link>
+                                <Link
+                                        href="/auth/signup"
+                                        className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-800 transition-colors"
+                                >
+                                    Join Today
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Military Branches Section */}
+                <div className="bg-white py-16">
+                    <br/>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                                Honoring All Who Serve
+                            </h2>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                                We support military personnel, veterans, first responders, and their families from all branches of service
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <Image
+                                        src="/images/military_branches_middle.jpg"
+                                        alt="Military Branches"
+                                        width={500}
+                                        height={300}
+                                        className="rounded-lg shadow-lg"
+                                />
+                            </div>
+                            <div>
+                                <Image
+                                        src="/images/military_flags_middle.png"
+                                        alt="Military Flags"
+                                        width={500}
+                                        height={300}
+                                        className="rounded-lg shadow-lg"
+                                />
+                            </div>
+                        </div>
+                        <br/>
+                    </div>
+                </div>
+
+                {/* How It Works Section */}
+                <div className="bg-gray-50 py-16">
+                    <br/>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                                How Patriot Thanks Works
+                            </h2>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                                Connecting service members with businesses that appreciate their sacrifice
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="text-center bg-white p-6 rounded-lg shadow-md">
+                                <div className="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-2">Search</h3>
+                                <p className="text-gray-600">
+                                    Find local businesses in your area that offer military and first responder discounts
+                                </p>
+                            </div>
+
+                            <div className="text-center bg-white p-6 rounded-lg shadow-md">
+                                <div className="bg-red-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-2">Verify</h3>
+                                <p className="text-gray-600">
+                                    View verified discounts and incentives available for your service type
+                                </p>
+                            </div>
+
+                            <div className="text-center bg-white p-6 rounded-lg shadow-md">
+                                <div className="bg-yellow-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-2">Save</h3>
+                                <p className="text-gray-600">
+                                    Enjoy exclusive discounts and support businesses that support our heroes
+                                </p>
+                            </div>
+                            <br/>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Freedom Section with backgroundNew.webp */}
+                <div
+                        className="relative py-16 bg-cover bg-center bg-no-repeat"
+                        style={{
+                            backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/backgroundNew.webp')"
+                        }}
+                >
+                    <br/>
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                            Freedom Isn't Free
+                        </h2>
+                        <p className="text-xl text-gray-200 mb-8">
+                            We honor the sacrifices made by our service members and their families.
+                            Local businesses across America stand ready to show their appreciation.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link
+                                    href="/auth/signup"
+                                    className="bg-red-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-red-700 transition-colors shadow-lg"
+                            >
+                                Create Free Account
+                            </Link>
+                            <Link
+                                    href="/search"
+                                    className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                            >
+                                Browse Businesses
+                            </Link>
+                        </div>
+                        <br/>
+                    </div>
+                </div>
+
+                {/* Stats Section */}
+                <div className="bg-white py-16">
+                    <br/>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                                Growing Community
+                            </h2>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                                Join thousands of service members and hundreds of businesses in our appreciation network
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                                <div className="text-4xl font-bold text-blue-600 mb-2">37+</div>
+                                <div className="text-gray-700 font-medium">Local Businesses</div>
+                                <div className="text-sm text-gray-500 mt-1">Partners in appreciation</div>
+                            </div>
+                            <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+                                <div className="text-4xl font-bold text-red-600 mb-2">13+</div>
+                                <div className="text-gray-700 font-medium">Active Incentives</div>
+                                <div className="text-sm text-gray-500 mt-1">Exclusive discounts available</div>
+                            </div>
+                            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                                <div className="text-4xl font-bold text-yellow-600 mb-2">209+</div>
+                                <div className="text-gray-700 font-medium">Chain Partners</div>
+                                <div className="text-sm text-gray-500 mt-1">National brand supporters</div>
+                            </div>
+                        </div>
+                        <br/>
+                    </div>
+                </div>
+
+                {/* Call to Action Section */}
+                <div className="bg-gradient-to-r from-blue-600 to-red-600 py-16">
+                    <br/>
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                            Ready to Get Started?
+                        </h2>
+                        <p className="text-xl text-blue-100 mb-8">
+                            Join Patriot Thanks today and start connecting with businesses that appreciate your service
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link
+                                    href="/auth/signup"
+                                    className="bg-white text-blue-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+                            >
+                                Sign Up Free
+                            </Link>
+                            <Link
+                                    href="/auth/signup"
+                                    className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+                            >
+                                List Your Business
+                            </Link>
+                        </div>
+                    </div>
+                    <br/>
+                </div>
+
+                {/* Replace the old footer with the new integrated Footer component */}
+                <Footer />
+            </div>
+    );
 }
