@@ -163,7 +163,7 @@ export default function HomePage() {
                     <br/>
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                            Freedom Isn't Free
+                            Freedom Isn&#39;t Free
                         </h2>
                         <p className="text-xl text-gray-200 mb-8">
                             We honor the sacrifices made by our service members and their families.
