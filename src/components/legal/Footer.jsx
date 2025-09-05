@@ -130,15 +130,15 @@ export default function Footer() {
                         </ModalWrapper>
                 )}
 
-                <ContactSupportModal
-                        isOpen={showModal === 'contact'}
-                        onClose={closeModal}
-                        userSubscription={{
-                            tier: session?.user?.tier || 'free',
-                            userId: session?.user?.id,
-                            status: 'active'
-                        }}
-                />
+                {/*<ContactSupportModal*/}
+                {/*        isOpen={showModal === 'contact'}*/}
+                {/*        onClose={closeModal}*/}
+                {/*        userSubscription={{*/}
+                {/*            tier: session?.user?.tier || 'free',*/}
+                {/*            userId: session?.user?.id,*/}
+                {/*            status: 'active'*/}
+                {/*        }}*/}
+                {/*/>*/}
             </>
     );
 }
