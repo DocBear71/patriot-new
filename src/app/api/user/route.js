@@ -48,7 +48,7 @@ async function getUserFromToken(request) {
  */
 async function connectDB() {
     try {
-        connectDB();
+        await connectDB();
         console.log("✅ Database connection established");
         return { success: true };
     } catch (dbError) {
