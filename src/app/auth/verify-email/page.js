@@ -219,7 +219,7 @@ function VerifyEmailContent() {
                                     Sign In Now
                                 </Link>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    You'll be redirected automatically in a few seconds...
+                                    You&#39;ll be redirected automatically in a few seconds...
                                 </p>
                             </div>
                         )}
@@ -229,7 +229,7 @@ function VerifyEmailContent() {
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <h4 className="font-semibold text-blue-900 mb-2">Need a new verification email?</h4>
                                     <p className="text-sm text-blue-800 mb-3">
-                                        Enter your email address below and we'll send you a fresh verification link.
+                                        Enter your email address below and we&#39;ll send you a fresh verification link.
                                     </p>
                                 </div>
 

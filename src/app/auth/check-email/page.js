@@ -67,7 +67,7 @@ function CheckEmailContent() {
                             Account Created Successfully!
                         </h3>
                         <p className="text-gray-600 mb-4">
-                            We've sent a verification email to help secure your account.
+                            We&#39;ve sent a verification email to help secure your account.
                         </p>
                         {message && (
                             <div className={`mb-4 p-3 rounded ${
@@ -85,7 +85,7 @@ function CheckEmailContent() {
                             <h4 className="font-semibold text-blue-900 mb-2">Next Steps:</h4>
                             <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
                                 <li>Check your email inbox for a message from Patriot Thanks</li>
-                                <li>Look in your spam/junk folder if you don't see it</li>
+                                <li>Look in your spam/junk folder if you don&#39;t see it</li>
                                 <li>Click the verification link in the email</li>
                                 <li>Return here to sign in with full access</li>
                             </ol>
@@ -100,7 +100,7 @@ function CheckEmailContent() {
                         )}
 
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                            <h4 className="font-semibold text-yellow-900 mb-2">Didn't receive the email?</h4>
+                            <h4 className="font-semibold text-yellow-900 mb-2">Didn&#39;t receive the email?</h4>
                             <ul className="list-disc list-inside text-sm text-yellow-800 space-y-1 mb-3">
                                 <li>Check your spam/junk folder</li>
                                 <li>Make sure you entered the correct email address</li>

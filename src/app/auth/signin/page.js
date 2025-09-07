@@ -290,7 +290,7 @@ function SignInContent() {
                     </button>
 
                     <div className="text-center">
-                        <span className="text-sm text-gray-600">Don't have an account? </span>
+                        <span className="text-sm text-gray-600">Don&#39;t have an account? </span>
                         <Link href="/auth/signup" className="text-sm font-medium text-blue-500 hover:text-blue-700">
                             Sign up here
                         </Link>
