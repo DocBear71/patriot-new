@@ -44,24 +44,6 @@ async function getUserFromToken(request) {
 }
 
 /**
- * Helper to establish database connection
- */
-async function connectDB() {
-    try {
-        await connectDB();
-        console.log("✅ Database connection established");
-        return { success: true };
-    } catch (dbError) {
-        console.error("❌ Database connection error:", dbError);
-        return {
-            success: false,
-            error: dbError,
-            message: 'Database connection error'
-        };
-    }
-}
-
-/**
  * Handle GET requests - User profile operations
  */
 export async function GET(request) {
@@ -72,13 +54,11 @@ export async function GET(request) {
     console.log("👤 USER API: Processing GET request, operation:", operation);
 
     // Connect to database
-    const dbConnection = await connectDB();
-    if (!dbConnection.success) {
+    try {
+        await connectDB();
+    } catch (error) {
         return NextResponse.json(
-            {
-                message: dbConnection.message,
-                error: dbConnection.error?.message
-            },
+            { message: 'Database connection error: ' + error.message },
             { status: 500 }
         );
     }
