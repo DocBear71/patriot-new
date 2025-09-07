@@ -26,7 +26,7 @@ async function getUserFromToken(request) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
 
         // Connect to database
-        connectDB();
+        await connectDB();
 
         // Get user from database
         const user = await User.findById(decoded.userId);
