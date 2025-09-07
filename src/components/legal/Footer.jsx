@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import PrivacyPolicy from './PrivacyPolicy';
-import TermsOfUse from './TermsofUse';
+import TermsOfUse from './TermsOfUse';
 import AboutUs from './AboutUs';
 //import ContactSupportModal from '@/components/support/ContactSupportModal';
 import { useSession } from 'next-auth/react';
