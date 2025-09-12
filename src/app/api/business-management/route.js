@@ -1,8 +1,7 @@
-// file: /src/app/api/business-management/route.js v1 - Internal business management operations
+// file: /src/app/api/business-management/route.js v2 - Fixed Next.js route exports
 // Handles create, update, and enhanced business operations with chain inheritance
 
 import connectDB from '../../../lib/mongodb.js';
-import mongoose from 'mongoose';
 import Business from '../../../models/Business.js';
 import Chain from '../../../models/Chain.js';
 import { geocodeAddress } from '../../../utils/geocoding.js';
@@ -342,81 +341,5 @@ async function handleAddBusiness(request) {
             { success: false, message: 'Error adding business: ' + error.message },
             { status: 500 }
         );
-    }
-}
-
-// ========== UTILITY FUNCTIONS ==========
-
-/**
- * UPDATED: Enhanced incentive retrieval with proper chain inheritance handling
- * This should replace your existing incentive retrieval logic
- */
-export async function getBusinessIncentivesWithChainInheritance(businessId) {
-    console.log(`🎁 ENHANCED INCENTIVES: Getting incentives for business ${businessId}`);
-
-    try {
-        await connectDB();
-
-        const business = await Business.findById(businessId);
-
-        if (!business) {
-            console.error(`❌ Business not found: ${businessId}`);
-            return [];
-        }
-
-        console.log(`📊 Business details for incentives:`);
-        console.log(`   - Name: ${business.bname}`);
-        console.log(`   - Chain ID: ${business.chain_id || 'None'}`);
-        console.log(`   - Universal Incentives: ${business.universal_incentives}`);
-        console.log(`   - Is Chain Location: ${business.is_chain_location || false}`);
-
-        // If this is a chain location with universal incentives enabled
-        if (business.chain_id && business.universal_incentives) {
-            console.log(`🔗 CHAIN INCENTIVES: Loading chain incentives for ${business.bname}`);
-
-            try {
-                const chainDetails = await Chain.findById(business.chain_id);
-
-                if (chainDetails && chainDetails.incentives && chainDetails.incentives.length > 0) {
-                    // Convert chain incentives to standard format
-                    const chainIncentives = chainDetails.incentives
-                        .filter(incentive => incentive.is_active)
-                        .map(incentive => ({
-                            _id: incentive._id,
-                            business_id: businessId, // Associate with this location
-                            is_available: incentive.is_active,
-                            type: incentive.type,
-                            amount: incentive.amount,
-                            information: incentive.information,
-                            other_description: incentive.other_description,
-                            created_at: incentive.created_date,
-                            is_chain_wide: true // Mark as chain-wide
-                        }));
-
-                    console.log(`✅ Found ${chainIncentives.length} chain incentives for ${business.bname}`);
-                    return chainIncentives;
-                } else {
-                    console.log(`❌ No active chain incentives found for chain ${business.chain_id}`);
-                    return [];
-                }
-            } catch (chainError) {
-                console.error("❌ Error loading chain incentives:", chainError);
-                return [];
-            }
-        } else {
-            // Check for location-specific incentives
-            const Incentive = mongoose.model('Incentive');
-            const locationIncentives = await Incentive.find({
-                business_id: businessId,
-                is_available: true
-            });
-
-            console.log(`📍 Found ${locationIncentives.length} location-specific incentives`);
-            return locationIncentives;
-        }
-
-    } catch (error) {
-        console.error("❌ Error in getBusinessIncentivesWithChainInheritance:", error);
-        return [];
     }
 }
