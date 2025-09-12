@@ -1,9 +1,10 @@
 'use client';
 
-// file: /src/app/business-add/page.jsx v1 - Business Add with Membership Gating
+// file: /src/app/business-add/page.jsx v2 - Fixed authentication check for admin
 
 import { useState, useEffect } from 'react';
 import Navigation from '../../components/layout/Navigation';
+import Footer from '../../components/legal/Footer';
 
 export default function BusinessAddPage() {
     const [formData, setFormData] = useState({
@@ -26,6 +27,7 @@ export default function BusinessAddPage() {
     const [message, setMessage] = useState({ type: '', content: '' });
     const [hasAccess, setHasAccess] = useState(false);
     const [userLevel, setUserLevel] = useState('Free');
+    const [isClient, setIsClient] = useState(false); // Client-side check
 
     // Business types from the original HTML
     const businessTypes = [
@@ -115,64 +117,80 @@ export default function BusinessAddPage() {
 
     // Check membership access on component mount
     useEffect(() => {
+        setIsClient(true);
         checkMembershipAccess();
     }, []);
 
-    // Membership access check function using Next-Auth session
-    const checkMembershipAccess = async () => {
-        try {
-            // Try Next-Auth session first
-            const { data: session } = await import('next-auth/react').then(mod => ({ data: mod.useSession().data }));
-
-            if (session?.user) {
-                // Use Next-Auth session data
-                const level = session.user.level || 'Free';
-                setUserLevel(level);
-
-                const requiredLevel = 'Basic';
-                const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
-                const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
-
-                if (hasRequiredLevel) {
-                    setHasAccess(true);
-                } else {
-                    setHasAccess(false);
-                    setMessage({
-                        type: 'warning',
-                        content: `Adding businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
-                    });
-                }
-                return;
-            }
-        } catch (error) {
-            console.log('Next-Auth session not available, checking localStorage...');
+    // FIXED: Membership access check function using correct localStorage key
+    const checkMembershipAccess = () => {
+        // Only access localStorage on client-side
+        if (typeof window === 'undefined') {
+            return;
         }
 
-        // Fallback to localStorage check (for backward compatibility)
-        const userToken = localStorage.getItem('userToken');
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const level = userData.level || 'Free';
+        try {
+            // Check for patriotThanksSession (your actual auth system)
+            const sessionData = localStorage.getItem('patriotThanksSession');
 
-        setUserLevel(level);
+            if (!sessionData) {
+                setHasAccess(false);
+                setMessage({
+                    type: 'error',
+                    content: 'You must be logged in to add businesses. Please sign in to continue.'
+                });
+                return;
+            }
 
-        const requiredLevel = 'Basic';
-        const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
-        const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
+            const session = JSON.parse(sessionData);
 
-        if (!userToken) {
+            if (!session || !session.user) {
+                setHasAccess(false);
+                setMessage({
+                    type: 'error',
+                    content: 'Invalid session. Please log in again.'
+                });
+                return;
+            }
+
+            const user = session.user;
+            const level = user.level || 'Free';
+            setUserLevel(level);
+
+            console.log('User auth check:', {
+                level: user.level,
+                isAdmin: user.isAdmin,
+                status: user.status
+            });
+
+            // FIXED: Admin should have universal access
+            if (user.isAdmin === true || user.level === 'Admin' || user.status === 'AD') {
+                console.log('Admin access granted');
+                setHasAccess(true);
+                return;
+            }
+
+            // Business add requires Basic level or higher
+            const requiredLevel = 'Basic';
+            const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
+            const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
+
+            if (hasRequiredLevel) {
+                setHasAccess(true);
+            } else {
+                setHasAccess(false);
+                setMessage({
+                    type: 'warning',
+                    content: `Adding businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
+                });
+            }
+
+        } catch (error) {
+            console.error('Error checking membership access:', error);
             setHasAccess(false);
             setMessage({
                 type: 'error',
-                content: 'You must be logged in to add businesses. Please sign in to continue.'
+                content: 'Error checking access. Please try logging in again.'
             });
-        } else if (!hasRequiredLevel) {
-            setHasAccess(false);
-            setMessage({
-                type: 'warning',
-                content: `Adding businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
-            });
-        } else {
-            setHasAccess(true);
         }
     };
 
@@ -222,7 +240,14 @@ export default function BusinessAddPage() {
                                     </a>
                                 </div>
 
-                                {typeof window !== 'undefined' && !localStorage.getItem('userToken') && (
+                                {isClient && (() => {
+                                    try {
+                                        const sessionData = localStorage.getItem('patriotThanksSession');
+                                        return !sessionData;
+                                    } catch {
+                                        return true;
+                                    }
+                                })() && (
                                         <div className="mt-6 pt-6 border-t">
                                             <p className="text-gray-600">
                                                 Don't have an account?
@@ -267,12 +292,11 @@ export default function BusinessAddPage() {
         return errors;
     };
 
-    // Handle form submission
+    // FIXED: Handle form submission with correct auth token
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess) {
-            showPremiumFeatureMessage();
+        if (!hasAccess || !isClient) {
             return;
         }
 
@@ -289,9 +313,18 @@ export default function BusinessAddPage() {
         setMessage({ type: '', content: '' });
 
         try {
-            // Prepare data for your existing business.js API
+            // Get auth token from patriotThanksSession
+            const sessionData = localStorage.getItem('patriotThanksSession');
+            let authToken = null;
+
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                authToken = session.token; // Use the token from your session
+            }
+
+            // Prepare data for your existing business API
             const businessData = {
-                bname: formData.bname,
+                name: formData.bname,  // Use 'name' field for the business-management API
                 address1: formData.address1,
                 address2: formData.address2,
                 city: formData.city,
@@ -300,21 +333,16 @@ export default function BusinessAddPage() {
                 phone: formData.phone,
                 type: formData.type,
                 chain_id: formData.chainId || null,
-                chain_name: formData.chainName || null,
-                is_chain_location: formData.isChainLocation,
                 lat: formData.latitude || null,
-                lng: formData.longitude || null,
-                status: 'active',
-                created_at: new Date(),
-                updated_at: new Date()
+                lng: formData.longitude || null
             };
 
-            // Use your existing business.js API with 'create' operation
-            const response = await fetch('/api/business?operation=create', {
+            // Use your business-management API with 'add' operation
+            const response = await fetch('/api/business-management?operation=add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('userToken')}`
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
                 },
                 body: JSON.stringify(businessData)
             });
@@ -357,6 +385,23 @@ export default function BusinessAddPage() {
             setLoading(false);
         }
     };
+
+    // Show loading while checking client-side access
+    if (!isClient) {
+        return (
+                <div className="min-h-screen bg-gray-50">
+                    <Navigation />
+                    <div className="pt-20 pb-12">
+                        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                                <p className="text-gray-600">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        );
+    }
 
     // If no access, show premium message
     if (!hasAccess) {
@@ -584,6 +629,7 @@ export default function BusinessAddPage() {
                         </div>
                     </div>
                 </div>
+                <Footer />
             </div>
     );
 }

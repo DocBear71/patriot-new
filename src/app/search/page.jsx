@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from '../../components/layout/Navigation';
+import Footer from '../../components/legal/Footer';
 
 export default function SearchPage() {
     const [searchData, setSearchData] = useState({
@@ -985,6 +986,7 @@ export default function SearchPage() {
                             )}
                         </div>
                     </div>
+                    <Footer />
                 </div>
             </>
     );

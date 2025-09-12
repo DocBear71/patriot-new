@@ -1,9 +1,10 @@
 'use client';
 
-// file: /src/app/business-update/page.jsx v2 - Fixed localStorage SSR issue
+// file: /src/app/business-update/page.jsx v3 - Fixed authentication check for admin
 
 import { useState, useEffect } from 'react';
 import Navigation from '../../components/layout/Navigation';
+import Footer from '../../components/legal/Footer';
 
 export default function BusinessUpdatePage() {
     const [searchData, setSearchData] = useState({
@@ -131,39 +132,76 @@ export default function BusinessUpdatePage() {
         checkMembershipAccess();
     }, []);
 
-    // FIXED: Membership access check function with client-side guard
+    // FIXED: Membership access check function using correct localStorage key
     const checkMembershipAccess = () => {
         // Only access localStorage on client-side
         if (typeof window === 'undefined') {
             return;
         }
 
-        // Check if user is logged in
-        const userToken = localStorage.getItem('userToken');
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const level = userData.level || 'Free';
+        try {
+            // Check for patriotThanksSession (your actual auth system)
+            const sessionData = localStorage.getItem('patriotThanksSession');
 
-        setUserLevel(level);
+            if (!sessionData) {
+                setHasAccess(false);
+                setMessage({
+                    type: 'error',
+                    content: 'You must be logged in to update businesses. Please sign in to continue.'
+                });
+                return;
+            }
 
-        // Business update requires Premium level or higher
-        const requiredLevel = 'Premium';
-        const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
-        const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
+            const session = JSON.parse(sessionData);
 
-        if (!userToken) {
+            if (!session || !session.user) {
+                setHasAccess(false);
+                setMessage({
+                    type: 'error',
+                    content: 'Invalid session. Please log in again.'
+                });
+                return;
+            }
+
+            const user = session.user;
+            const level = user.level || 'Free';
+            setUserLevel(level);
+
+            console.log('User auth check:', {
+                level: user.level,
+                isAdmin: user.isAdmin,
+                status: user.status
+            });
+
+            // FIXED: Admin should have universal access
+            if (user.isAdmin === true || user.level === 'Admin' || user.status === 'AD') {
+                console.log('Admin access granted');
+                setHasAccess(true);
+                return;
+            }
+
+            // Business update requires Premium level or higher
+            const requiredLevel = 'Premium';
+            const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
+            const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
+
+            if (hasRequiredLevel) {
+                setHasAccess(true);
+            } else {
+                setHasAccess(false);
+                setMessage({
+                    type: 'warning',
+                    content: `Updating businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
+                });
+            }
+
+        } catch (error) {
+            console.error('Error checking membership access:', error);
             setHasAccess(false);
             setMessage({
                 type: 'error',
-                content: 'You must be logged in to update businesses. Please sign in to continue.'
+                content: 'Error checking access. Please try logging in again.'
             });
-        } else if (!hasRequiredLevel) {
-            setHasAccess(false);
-            setMessage({
-                type: 'warning',
-                content: `Updating businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
-            });
-        } else {
-            setHasAccess(true);
         }
     };
 
@@ -214,7 +252,14 @@ export default function BusinessUpdatePage() {
                                 </div>
 
                                 {/* FIXED: Client-side check before accessing localStorage */}
-                                {isClient && !localStorage.getItem('userToken') && (
+                                {isClient && (() => {
+                                    try {
+                                        const sessionData = localStorage.getItem('patriotThanksSession');
+                                        return !sessionData;
+                                    } catch {
+                                        return true;
+                                    }
+                                })() && (
                                         <div className="mt-6 pt-6 border-t">
                                             <p className="text-gray-600">
                                                 Don't have an account?
@@ -249,7 +294,7 @@ export default function BusinessUpdatePage() {
         }));
     };
 
-    // FIXED: Handle business search with client-side check
+    // FIXED: Handle business search with client-side check and correct auth
     const handleSearch = async (e) => {
         e.preventDefault();
 
@@ -270,13 +315,22 @@ export default function BusinessUpdatePage() {
         setMessage({ type: '', content: '' });
 
         try {
+            // Get auth token from patriotThanksSession
+            const sessionData = localStorage.getItem('patriotThanksSession');
+            let authToken = null;
+
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                authToken = session.token;
+            }
+
             const params = new URLSearchParams();
             if (searchData.businessName) params.append('businessName', searchData.businessName);
             if (searchData.address) params.append('address', searchData.address);
 
             const response = await fetch(`/api/business?operation=search&${params}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('userToken')}`
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
                 }
             });
 
@@ -345,7 +399,7 @@ export default function BusinessUpdatePage() {
         return errors;
     };
 
-    // FIXED: Handle form submission with client-side check
+    // FIXED: Handle form submission with client-side check and correct auth
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -366,13 +420,26 @@ export default function BusinessUpdatePage() {
         setMessage({ type: '', content: '' });
 
         try {
-            const response = await fetch(`/api/business?operation=update-business`, {
-                method: 'PUT',
+            // Get auth token from patriotThanksSession
+            const sessionData = localStorage.getItem('patriotThanksSession');
+            let authToken = null;
+
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                authToken = session.token;
+            }
+
+            // Use business-management API for update
+            const response = await fetch(`/api/business-management?operation=update`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('userToken')}`
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
                 },
-                body: JSON.stringify({ businessId: selectedBusiness._id, ...formData })
+                body: JSON.stringify({
+                    _id: selectedBusiness._id,
+                    ...formData
+                })
             });
 
             const data = await response.json();
@@ -741,6 +808,7 @@ export default function BusinessUpdatePage() {
                         )}
                     </div>
                 </div>
+                <Footer />
             </div>
     );
 }
