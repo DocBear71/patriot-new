@@ -181,7 +181,7 @@ export default function BusinessUpdatePage() {
             }
 
             // Business update requires Premium level or higher
-            const requiredLevel = 'Premium';
+            const requiredLevel = 'Free';
             const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
             const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
 

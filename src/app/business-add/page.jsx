@@ -170,7 +170,7 @@ export default function BusinessAddPage() {
             }
 
             // Business add requires Basic level or higher
-            const requiredLevel = 'Basic';
+            const requiredLevel = 'Free';
             const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
             const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
 
