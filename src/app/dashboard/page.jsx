@@ -1,6 +1,6 @@
 'use client';
 
-// file: src/app/dashboard/page.jsx Main dashboard page after signin
+// file: src/app/dashboard/page.jsx v2 - Main dashboard page with fresh verification status check
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -9,10 +9,11 @@ import Navigation from '../../components/layout/Navigation';
 import EmailVerificationBanner from '../../components/auth/EmailVerificationBanner';
 
 export default function Dashboard() {
-    const { data: session, status } = useSession();
+    const { data: session, status, update } = useSession();
     const router = useRouter();
     const [recentBusinesses, setRecentBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userVerificationStatus, setUserVerificationStatus] = useState(null);
 
     useEffect(() => {
         if (status === 'loading') return;
@@ -21,21 +22,59 @@ export default function Dashboard() {
             return;
         }
 
-        // Fetch recent businesses
-        fetchRecentBusinesses();
+        // Fetch recent businesses and check verification status
+        fetchDashboardData();
     }, [session, status, router]);
 
-    const fetchRecentBusinesses = async () => {
+    const fetchDashboardData = async () => {
         try {
-            const response = await fetch('/api/businesses?limit=6');
-            const data = await response.json();
-            if (response.ok) {
-                setRecentBusinesses(data.businesses || []);
+            // Fetch recent businesses
+            const businessResponse = await fetch('/api/businesses?limit=6');
+            const businessData = await businessResponse.json();
+            if (businessResponse.ok) {
+                setRecentBusinesses(businessData.businesses || []);
+            }
+
+            // Check fresh verification status from database
+            if (session?.user?.email) {
+                await checkFreshVerificationStatus();
             }
         } catch (error) {
-            console.error('Failed to fetch businesses:', error);
+            console.error('Failed to fetch dashboard data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkFreshVerificationStatus = async () => {
+        try {
+            const response = await fetch('/api/user/verification-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: session.user.email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.isVerified !== undefined) {
+                setUserVerificationStatus(data.isVerified);
+
+                // If database shows verified but session shows unverified, update session
+                if (data.isVerified && !session.user.isVerified) {
+                    console.log('🔄 Updating session with fresh verification status');
+                    await update({
+                        ...session,
+                        user: {
+                            ...session.user,
+                            isVerified: true
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to check verification status:', error);
         }
     };
 
@@ -63,14 +102,29 @@ export default function Dashboard() {
         return types[status] || status;
     };
 
+    // Use fresh verification status if available, otherwise fall back to session
+    const isUserVerified = userVerificationStatus !== null ? userVerificationStatus : session.user.isVerified;
+
     return (
             <div className="min-h-screen bg-gray-50">
                 <Navigation />
 
                 <div className="pt-20 pb-12">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {/* Email Verification Banner */}
-                        <EmailVerificationBanner user={session.user} />
+                        {/* Email Verification Banner - only show if not verified */}
+                        {!isUserVerified && (
+                                <EmailVerificationBanner
+                                        user={{
+                                            ...session.user,
+                                            isVerified: isUserVerified
+                                        }}
+                                        onDismiss={() => {
+                                            // Optionally refresh verification status when dismissed
+                                            checkFreshVerificationStatus();
+                                        }}
+                                />
+                        )}
+
                         {/* Welcome Header */}
                         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
                             <div className="flex items-center justify-between">
@@ -82,8 +136,13 @@ export default function Dashboard() {
                                         Service Type: <span className="font-medium">{getServiceTypeLabel(session.user.status)}</span>
                                         {session.user.level && (
                                                 <span className="ml-3">
-                      Access Level: <span className="font-medium">{session.user.level}</span>
-                    </span>
+                                                    Access Level: <span className="font-medium">{session.user.level}</span>
+                                                </span>
+                                        )}
+                                        {isUserVerified && (
+                                                <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                ✓ Verified
+                                            </span>
                                         )}
                                     </p>
                                 </div>
@@ -110,7 +169,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="mt-4">
-                                    <a href="/search" className="text-blue-500 hover:text-bg-blue-900 font-medium">
+                                    <a href="/search" className="text-blue-500 hover:text-blue-900 font-medium">
                                         Start searching →
                                     </a>
                                 </div>
@@ -129,7 +188,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="mt-4">
-                                    <a href="/profile" className="text-blue-500 hover:text-bg-blue-900 font-medium">
+                                    <a href="/profile" className="text-blue-500 hover:text-blue-900 font-medium">
                                         View profile →
                                     </a>
                                 </div>
@@ -138,7 +197,7 @@ export default function Dashboard() {
                             {session.user.isAdmin && (
                                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                                         <div className="flex items-center">
-                                            <div className="bg-gold-400 text-white p-3 rounded-full">
+                                            <div className="bg-yellow-400 text-white p-3 rounded-full">
                                                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
@@ -149,7 +208,7 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                         <div className="mt-4">
-                                            <a href="/admin/dashboard" className="text-blue-500 hover:text-bg-blue-900 font-medium">
+                                            <a href="/admin/dashboard" className="text-blue-500 hover:text-blue-900 font-medium">
                                                 Open admin panel →
                                             </a>
                                         </div>
