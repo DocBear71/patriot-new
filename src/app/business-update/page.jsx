@@ -1,12 +1,15 @@
 'use client';
 
-// file: /src/app/business-update/page.jsx v3 - Fixed authentication check for admin
+// file: /src/app/business-update/page.jsx v4 - Fixed for NextAuth authentication
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
 
 export default function BusinessUpdatePage() {
+    const { data: session, status } = useSession();
+
     const [searchData, setSearchData] = useState({
         businessName: '',
         address: ''
@@ -32,7 +35,6 @@ export default function BusinessUpdatePage() {
     const [hasAccess, setHasAccess] = useState(false);
     const [userLevel, setUserLevel] = useState('Free');
     const [hasSearched, setHasSearched] = useState(false);
-    const [isClient, setIsClient] = useState(false); // Add client-side check
 
     // Business types from the original HTML
     const businessTypes = [
@@ -126,81 +128,60 @@ export default function BusinessUpdatePage() {
         { value: 'pending', label: 'Pending Review' }
     ];
 
-    // FIXED: Set client-side flag and check membership access after component mounts
+    // Check membership access when session changes
     useEffect(() => {
-        setIsClient(true);
+        if (status === 'loading') return; // Still loading session
         checkMembershipAccess();
-    }, []);
+    }, [session, status]);
 
-    // FIXED: Membership access check function using correct localStorage key
+    // FIXED: NextAuth-based membership access check
     const checkMembershipAccess = () => {
-        // Only access localStorage on client-side
-        if (typeof window === 'undefined') {
+        console.log('Checking access with NextAuth session:', session);
+        console.log('Session status:', status);
+
+        if (status === 'loading') {
+            return; // Still loading
+        }
+
+        if (status === 'unauthenticated' || !session?.user) {
+            setHasAccess(false);
+            setUserLevel('Free');
+            setMessage({
+                type: 'error',
+                content: 'You must be logged in to update businesses. Please sign in to continue.'
+            });
             return;
         }
 
-        try {
-            // Check for patriotThanksSession (your actual auth system)
-            const sessionData = localStorage.getItem('patriotThanksSession');
+        const user = session.user;
+        const level = user.level || 'Free';
+        setUserLevel(level);
 
-            if (!sessionData) {
-                setHasAccess(false);
-                setMessage({
-                    type: 'error',
-                    content: 'You must be logged in to update businesses. Please sign in to continue.'
-                });
-                return;
-            }
+        console.log('User access check:', {
+            level: user.level,
+            isAdmin: user.isAdmin,
+            email: user.email
+        });
 
-            const session = JSON.parse(sessionData);
+        // FIXED: Admin should have universal access
+        if (user.isAdmin === true || user.level === 'Admin') {
+            console.log('Admin access granted');
+            setHasAccess(true);
+            return;
+        }
 
-            if (!session || !session.user) {
-                setHasAccess(false);
-                setMessage({
-                    type: 'error',
-                    content: 'Invalid session. Please log in again.'
-                });
-                return;
-            }
+        // Business update requires Premium level or higher
+        const requiredLevel = 'Premium';
+        const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
+        const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
 
-            const user = session.user;
-            const level = user.level || 'Free';
-            setUserLevel(level);
-
-            console.log('User auth check:', {
-                level: user.level,
-                isAdmin: user.isAdmin,
-                status: user.status
-            });
-
-            // FIXED: Admin should have universal access
-            if (user.isAdmin === true || user.level === 'Admin' || user.status === 'AD') {
-                console.log('Admin access granted');
-                setHasAccess(true);
-                return;
-            }
-
-            // Business update requires Premium level or higher
-            const requiredLevel = 'Free';
-            const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
-            const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
-
-            if (hasRequiredLevel) {
-                setHasAccess(true);
-            } else {
-                setHasAccess(false);
-                setMessage({
-                    type: 'warning',
-                    content: `Updating businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
-                });
-            }
-
-        } catch (error) {
-            console.error('Error checking membership access:', error);
+        if (hasRequiredLevel) {
+            setHasAccess(true);
+        } else {
             setHasAccess(false);
             setMessage({
-                type: 'error',
-                content: 'Error checking access. Please try logging in again.'
+                type: 'warning',
+                content: `Updating businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
             });
         }
     };
@@ -251,19 +232,11 @@ export default function BusinessUpdatePage() {
                                     </a>
                                 </div>
 
-                                {/* FIXED: Client-side check before accessing localStorage */}
-                                {isClient && (() => {
-                                    try {
-                                        const sessionData = localStorage.getItem('patriotThanksSession');
-                                        return !sessionData;
-                                    } catch {
-                                        return true;
-                                    }
-                                })() && (
+                                {status === 'unauthenticated' && (
                                         <div className="mt-6 pt-6 border-t">
                                             <p className="text-gray-600">
                                                 Don't have an account?
-                                                <a href="/register" className="text-red-600 hover:text-red-800 font-medium ml-1">
+                                                <a href="/auth/signup" className="text-red-600 hover:text-red-800 font-medium ml-1">
                                                     Sign up here
                                                 </a>
                                             </p>
@@ -294,11 +267,11 @@ export default function BusinessUpdatePage() {
         }));
     };
 
-    // FIXED: Handle business search with client-side check and correct auth
+    // FIXED: Handle business search with NextAuth
     const handleSearch = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess || !isClient) {
+        if (!hasAccess || status !== 'authenticated') {
             return;
         }
 
@@ -315,25 +288,11 @@ export default function BusinessUpdatePage() {
         setMessage({ type: '', content: '' });
 
         try {
-            // Get auth token from patriotThanksSession
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            let authToken = null;
-
-            if (sessionData) {
-                const session = JSON.parse(sessionData);
-                authToken = session.token;
-            }
-
             const params = new URLSearchParams();
             if (searchData.businessName) params.append('businessName', searchData.businessName);
             if (searchData.address) params.append('address', searchData.address);
 
-            const response = await fetch(`/api/business?operation=search&${params}`, {
-                headers: {
-                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-                }
-            });
-
+            const response = await fetch(`/api/business?operation=search&${params}`);
             const data = await response.json();
 
             if (response.ok) {
@@ -399,11 +358,11 @@ export default function BusinessUpdatePage() {
         return errors;
     };
 
-    // FIXED: Handle form submission with client-side check and correct auth
+    // FIXED: Handle form submission with NextAuth
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess || !selectedBusiness || !isClient) {
+        if (!hasAccess || !selectedBusiness || status !== 'authenticated') {
             return;
         }
 
@@ -420,21 +379,11 @@ export default function BusinessUpdatePage() {
         setMessage({ type: '', content: '' });
 
         try {
-            // Get auth token from patriotThanksSession
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            let authToken = null;
-
-            if (sessionData) {
-                const session = JSON.parse(sessionData);
-                authToken = session.token;
-            }
-
             // Use business-management API for update
             const response = await fetch(`/api/business-management?operation=update`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     _id: selectedBusiness._id,
@@ -474,8 +423,8 @@ export default function BusinessUpdatePage() {
         }
     };
 
-    // FIXED: Show loading or premium message while checking client-side access
-    if (!isClient) {
+    // Show loading while checking session
+    if (status === 'loading') {
         return (
                 <div className="min-h-screen bg-gray-50">
                     <Navigation />
@@ -511,6 +460,12 @@ export default function BusinessUpdatePage() {
                                 This allows you to correct or update details for businesses that offer discounts and incentives
                                 for active-duty, veterans, first responders, and their spouses.
                             </p>
+                            {/* Debug info for admin */}
+                            {session?.user?.isAdmin && (
+                                    <div className="mt-4 p-2 bg-green-100 border border-green-200 rounded text-sm">
+                                        Admin Access: Logged in as {session.user.fname} {session.user.lname} ({session.user.level})
+                                    </div>
+                            )}
                         </div>
 
                         {/* Message Display */}

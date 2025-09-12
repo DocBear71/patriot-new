@@ -1,12 +1,15 @@
 'use client';
 
-// file: /src/app/business-add/page.jsx v2 - Fixed authentication check for admin
+// file: /src/app/business-add/page.jsx v3 - Fixed for NextAuth authentication
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
 
 export default function BusinessAddPage() {
+    const { data: session, status } = useSession();
+
     const [formData, setFormData] = useState({
         bname: '',
         address1: '',
@@ -27,7 +30,6 @@ export default function BusinessAddPage() {
     const [message, setMessage] = useState({ type: '', content: '' });
     const [hasAccess, setHasAccess] = useState(false);
     const [userLevel, setUserLevel] = useState('Free');
-    const [isClient, setIsClient] = useState(false); // Client-side check
 
     // Business types from the original HTML
     const businessTypes = [
@@ -115,81 +117,60 @@ export default function BusinessAddPage() {
         { value: 'WY', label: 'Wyoming' }
     ];
 
-    // Check membership access on component mount
+    // Check membership access when session changes
     useEffect(() => {
-        setIsClient(true);
+        if (status === 'loading') return; // Still loading session
         checkMembershipAccess();
-    }, []);
+    }, [session, status]);
 
-    // FIXED: Membership access check function using correct localStorage key
+    // FIXED: NextAuth-based membership access check
     const checkMembershipAccess = () => {
-        // Only access localStorage on client-side
-        if (typeof window === 'undefined') {
+        console.log('Checking access with NextAuth session:', session);
+        console.log('Session status:', status);
+
+        if (status === 'loading') {
+            return; // Still loading
+        }
+
+        if (status === 'unauthenticated' || !session?.user) {
+            setHasAccess(false);
+            setUserLevel('Free');
+            setMessage({
+                type: 'error',
+                content: 'You must be logged in to add businesses. Please sign in to continue.'
+            });
             return;
         }
 
-        try {
-            // Check for patriotThanksSession (your actual auth system)
-            const sessionData = localStorage.getItem('patriotThanksSession');
+        const user = session.user;
+        const level = user.level || 'Free';
+        setUserLevel(level);
 
-            if (!sessionData) {
-                setHasAccess(false);
-                setMessage({
-                    type: 'error',
-                    content: 'You must be logged in to add businesses. Please sign in to continue.'
-                });
-                return;
-            }
+        console.log('User access check:', {
+            level: user.level,
+            isAdmin: user.isAdmin,
+            email: user.email
+        });
 
-            const session = JSON.parse(sessionData);
+        // FIXED: Admin should have universal access
+        if (user.isAdmin === true || user.level === 'Admin') {
+            console.log('Admin access granted');
+            setHasAccess(true);
+            return;
+        }
 
-            if (!session || !session.user) {
-                setHasAccess(false);
-                setMessage({
-                    type: 'error',
-                    content: 'Invalid session. Please log in again.'
-                });
-                return;
-            }
+        // Business add requires Basic level or higher
+        const requiredLevel = 'Basic';
+        const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
+        const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
 
-            const user = session.user;
-            const level = user.level || 'Free';
-            setUserLevel(level);
-
-            console.log('User auth check:', {
-                level: user.level,
-                isAdmin: user.isAdmin,
-                status: user.status
-            });
-
-            // FIXED: Admin should have universal access
-            if (user.isAdmin === true || user.level === 'Admin' || user.status === 'AD') {
-                console.log('Admin access granted');
-                setHasAccess(true);
-                return;
-            }
-
-            // Business add requires Basic level or higher
-            const requiredLevel = 'Free';
-            const levels = ['Free', 'Basic', 'Premium', 'VIP', 'Admin'];
-            const hasRequiredLevel = levels.indexOf(level) >= levels.indexOf(requiredLevel);
-
-            if (hasRequiredLevel) {
-                setHasAccess(true);
-            } else {
-                setHasAccess(false);
-                setMessage({
-                    type: 'warning',
-                    content: `Adding businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
-                });
-            }
-
-        } catch (error) {
-            console.error('Error checking membership access:', error);
+        if (hasRequiredLevel) {
+            setHasAccess(true);
+        } else {
             setHasAccess(false);
             setMessage({
-                type: 'error',
-                content: 'Error checking access. Please try logging in again.'
+                type: 'warning',
+                content: `Adding businesses requires a ${requiredLevel} membership or higher. Your current level: ${level}`
             });
         }
     };
@@ -240,18 +221,11 @@ export default function BusinessAddPage() {
                                     </a>
                                 </div>
 
-                                {isClient && (() => {
-                                    try {
-                                        const sessionData = localStorage.getItem('patriotThanksSession');
-                                        return !sessionData;
-                                    } catch {
-                                        return true;
-                                    }
-                                })() && (
+                                {status === 'unauthenticated' && (
                                         <div className="mt-6 pt-6 border-t">
                                             <p className="text-gray-600">
                                                 Don't have an account?
-                                                <a href="/register" className="text-red-600 hover:text-red-800 font-medium ml-1">
+                                                <a href="/auth/signup" className="text-red-600 hover:text-red-800 font-medium ml-1">
                                                     Sign up here
                                                 </a>
                                             </p>
@@ -292,11 +266,11 @@ export default function BusinessAddPage() {
         return errors;
     };
 
-    // FIXED: Handle form submission with correct auth token
+    // FIXED: Handle form submission with NextAuth
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess || !isClient) {
+        if (!hasAccess || status !== 'authenticated') {
             return;
         }
 
@@ -313,16 +287,7 @@ export default function BusinessAddPage() {
         setMessage({ type: '', content: '' });
 
         try {
-            // Get auth token from patriotThanksSession
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            let authToken = null;
-
-            if (sessionData) {
-                const session = JSON.parse(sessionData);
-                authToken = session.token; // Use the token from your session
-            }
-
-            // Prepare data for your existing business API
+            // Prepare data for your business API
             const businessData = {
                 name: formData.bname,  // Use 'name' field for the business-management API
                 address1: formData.address1,
@@ -334,15 +299,15 @@ export default function BusinessAddPage() {
                 type: formData.type,
                 chain_id: formData.chainId || null,
                 lat: formData.latitude || null,
-                lng: formData.longitude || null
+                lng: formData.longitude || null,
+                created_by: session.user.id || session.user._id
             };
 
             // Use your business-management API with 'add' operation
             const response = await fetch('/api/business-management?operation=add', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(businessData)
             });
@@ -386,8 +351,8 @@ export default function BusinessAddPage() {
         }
     };
 
-    // Show loading while checking client-side access
-    if (!isClient) {
+    // Show loading while checking session
+    if (status === 'loading') {
         return (
                 <div className="min-h-screen bg-gray-50">
                     <Navigation />
@@ -422,6 +387,12 @@ export default function BusinessAddPage() {
                             <p className="text-lg text-gray-600">
                                 If you know of a business that offers discounts and/or incentives, please add them here.
                             </p>
+                            {/* Debug info for admin */}
+                            {session?.user?.isAdmin && (
+                                    <div className="mt-4 p-2 bg-green-100 border border-green-200 rounded text-sm">
+                                        Admin Access: Logged in as {session.user.fname} {session.user.lname} ({session.user.level})
+                                    </div>
+                            )}
                         </div>
 
                         {/* Message Display */}
