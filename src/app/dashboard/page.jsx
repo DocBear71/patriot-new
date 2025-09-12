@@ -48,6 +48,8 @@ export default function Dashboard() {
 
     const checkFreshVerificationStatus = async () => {
         try {
+            console.log('🔍 Making API call to check verification status for:', session.user.email);
+
             const response = await fetch('/api/user/verification-status', {
                 method: 'POST',
                 headers: {
@@ -56,25 +58,19 @@ export default function Dashboard() {
                 body: JSON.stringify({ email: session.user.email }),
             });
 
+            console.log('📡 API Response status:', response.status);
+
             const data = await response.json();
+            console.log('📋 API Response data:', data);
 
             if (response.ok && data.isVerified !== undefined) {
                 setUserVerificationStatus(data.isVerified);
-
-                // If database shows verified but session shows unverified, update session
-                if (data.isVerified && !session.user.isVerified) {
-                    console.log('🔄 Updating session with fresh verification status');
-                    await update({
-                        ...session,
-                        user: {
-                            ...session.user,
-                            isVerified: true
-                        }
-                    });
-                }
+                console.log('✅ Set user verification status to:', data.isVerified);
+            } else {
+                console.error('❌ API call failed or returned unexpected data:', data);
             }
         } catch (error) {
-            console.error('Failed to check verification status:', error);
+            console.error('❌ Failed to check verification status:', error);
         }
     };
 
