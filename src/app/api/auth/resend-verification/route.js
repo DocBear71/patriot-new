@@ -1,4 +1,4 @@
-// file: /src/app/api/auth/resend-verification/route.js v1 - Resend verification with rate limiting for Patriot Thanks
+// file: /src/app/api/auth/resend-verification/route.js v2 - Fixed from email domain and added debug logging
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import connectDB from '../../../../lib/mongodb.js';
@@ -23,10 +23,26 @@ export async function POST(request) {
     try {
         const { email } = await request.json();
 
+        console.log('📧 Resend verification request for:', email);
+        console.log('🔧 Environment check:', {
+            hasResendKey: !!process.env.RESEND_API_KEY,
+            fromEmail: process.env.FROM_EMAIL || 'send@patriotthanks.com',
+            nodeEnv: process.env.NODE_ENV
+        });
+
         if (!email) {
             return NextResponse.json(
                 { error: 'Email is required' },
                 { status: 400 }
+            );
+        }
+
+        // Check if Resend API key is configured
+        if (!process.env.RESEND_API_KEY) {
+            console.error('❌ RESEND_API_KEY is not configured');
+            return NextResponse.json(
+                { error: 'Email service not configured' },
+                { status: 500 }
             );
         }
 
@@ -90,20 +106,31 @@ export async function POST(request) {
         user.verificationTokenExpires = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)); // 7 days
         await user.save();
 
-        // Send verification email
+        // Send verification email with CORRECT from domain
         const baseURL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
         const verificationLink = `${baseURL}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
+        // Use the correct from email based on your DNS setup
+        const fromEmail = process.env.FROM_EMAIL || 'send@patriotthanks.com';
+
+        console.log('📨 Sending email with details:', {
+            from: fromEmail,
+            to: email,
+            verificationToken,
+            baseURL
+        });
+
         try {
-            await resend.emails.send({
-                from: process.env.FROM_EMAIL || 'noreply@patriotthanks.com',
+            const emailResult = await resend.emails.send({
+                from: fromEmail,
                 to: email,
                 subject: 'Verify Your Email - Patriot Thanks',
                 html: getVerificationEmailHTML(user.fname, verificationLink, verificationToken),
                 text: getVerificationEmailText(user.fname, verificationLink, verificationToken)
             });
 
-            console.log(`📧 Verification email resent to: ${email}`);
+            console.log('✅ Resend API response:', emailResult);
+            console.log(`📧 Verification email sent to: ${email}`);
 
             return NextResponse.json({
                 message: 'Verification email sent successfully.',
@@ -113,30 +140,45 @@ export async function POST(request) {
                         verificationToken,
                         verificationLink,
                         expiresIn: '7 days',
-                        attemptsRemaining: 3 - attempts.count
+                        attemptsRemaining: 3 - attempts.count,
+                        emailId: emailResult.id,
+                        fromEmail: fromEmail
                     }
                 })
             });
 
         } catch (emailError) {
-            console.error('Error sending verification email:', emailError);
+            console.error('❌ Error sending verification email:', emailError);
+            console.error('❌ Full error details:', JSON.stringify(emailError, null, 2));
 
-            // Still return success for security (don't reveal email sending failures)
-            return NextResponse.json({
-                message: 'Verification email sent successfully.',
-                ...(process.env.NODE_ENV === 'development' && {
+            // In development, show the actual error
+            if (process.env.NODE_ENV === 'development') {
+                return NextResponse.json({
+                    error: 'Email sending failed',
+                    details: emailError.message,
                     debug: {
                         verificationToken,
                         verificationLink,
-                        emailError: emailError.message,
-                        note: 'Email failed to send but user token was updated'
+                        fromEmail: fromEmail,
+                        apiKeyExists: !!process.env.RESEND_API_KEY
                     }
-                })
+                }, { status: 500 });
+            }
+
+            // In production, still return success for security
+            return NextResponse.json({
+                message: 'Verification email sent successfully.',
+                debug: {
+                    verificationToken,
+                    verificationLink,
+                    emailError: emailError.message,
+                    note: 'Email failed to send but user token was updated'
+                }
             });
         }
 
     } catch (error) {
-        console.error('Resend verification error:', error);
+        console.error('❌ Resend verification error:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
