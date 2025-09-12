@@ -1,6 +1,6 @@
 'use client';
 
-// file: /src/app/business-update/page.jsx v1 - Business Update with Membership Gating
+// file: /src/app/business-update/page.jsx v2 - Fixed localStorage SSR issue
 
 import { useState, useEffect } from 'react';
 import Navigation from '../../components/layout/Navigation';
@@ -31,6 +31,7 @@ export default function BusinessUpdatePage() {
     const [hasAccess, setHasAccess] = useState(false);
     const [userLevel, setUserLevel] = useState('Free');
     const [hasSearched, setHasSearched] = useState(false);
+    const [isClient, setIsClient] = useState(false); // Add client-side check
 
     // Business types from the original HTML
     const businessTypes = [
@@ -124,13 +125,19 @@ export default function BusinessUpdatePage() {
         { value: 'pending', label: 'Pending Review' }
     ];
 
-    // Check membership access on component mount
+    // FIXED: Set client-side flag and check membership access after component mounts
     useEffect(() => {
+        setIsClient(true);
         checkMembershipAccess();
     }, []);
 
-    // Membership access check function
+    // FIXED: Membership access check function with client-side guard
     const checkMembershipAccess = () => {
+        // Only access localStorage on client-side
+        if (typeof window === 'undefined') {
+            return;
+        }
+
         // Check if user is logged in
         const userToken = localStorage.getItem('userToken');
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -206,7 +213,8 @@ export default function BusinessUpdatePage() {
                                     </a>
                                 </div>
 
-                                {!localStorage.getItem('userToken') && (
+                                {/* FIXED: Client-side check before accessing localStorage */}
+                                {isClient && !localStorage.getItem('userToken') && (
                                         <div className="mt-6 pt-6 border-t">
                                             <p className="text-gray-600">
                                                 Don't have an account?
@@ -241,11 +249,11 @@ export default function BusinessUpdatePage() {
         }));
     };
 
-    // Handle business search
+    // FIXED: Handle business search with client-side check
     const handleSearch = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess) {
+        if (!hasAccess || !isClient) {
             return;
         }
 
@@ -337,11 +345,11 @@ export default function BusinessUpdatePage() {
         return errors;
     };
 
-    // Handle form submission
+    // FIXED: Handle form submission with client-side check
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!hasAccess || !selectedBusiness) {
+        if (!hasAccess || !selectedBusiness || !isClient) {
             return;
         }
 
@@ -398,6 +406,23 @@ export default function BusinessUpdatePage() {
             setLoading(false);
         }
     };
+
+    // FIXED: Show loading or premium message while checking client-side access
+    if (!isClient) {
+        return (
+                <div className="min-h-screen bg-gray-50">
+                    <Navigation />
+                    <div className="pt-20 pb-12">
+                        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                                <p className="text-gray-600">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        );
+    }
 
     // If no access, show premium message
     if (!hasAccess) {
