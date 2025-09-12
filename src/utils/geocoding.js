@@ -1,6 +1,6 @@
 // utils/geocoding.js - FIXED to use axios instead of fetch
 
-const axios = require('axios');
+import axios from "axios";
 
 /**
  * Geocode an address to get coordinates
