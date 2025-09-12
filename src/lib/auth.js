@@ -90,7 +90,8 @@ export const authOptions = {
                         termsAccepted: user.termsAccepted || false,
                         termsVersion: user.termsVersion,
                         termsAcceptedDate: user.termsAcceptedDate,
-                        preferences: user.preferences || {}
+                        preferences: user.preferences || {},
+                        isVerified: user.isVerified || false
                     };
 
                 } catch (error) {
@@ -136,6 +137,7 @@ export const authOptions = {
                 token.termsVersion = user.termsVersion;
                 token.termsAcceptedDate = user.termsAcceptedDate;
                 token.preferences = user.preferences;
+                token.isVerified = user.isVerified;
 
                 console.log('🎫 JWT token created for Patriot Thanks:', {
                     id: token.id,
@@ -173,6 +175,7 @@ export const authOptions = {
                 session.user.termsVersion = token.termsVersion;
                 session.user.termsAcceptedDate = token.termsAcceptedDate;
                 session.user.preferences = token.preferences;
+                session.user.isVerified = token.isVerified;
 
                 console.log('👤 Session created for Patriot Thanks:', {
                     id: session.user.id,
