@@ -103,7 +103,14 @@ export default function Dashboard() {
     };
 
     // Use fresh verification status if available, otherwise fall back to session
+    // Always prefer the fresh database status over the session
     const isUserVerified = userVerificationStatus !== null ? userVerificationStatus : session.user.isVerified;
+
+    console.log('🔍 Verification Status Check:', {
+        sessionVerified: session.user.isVerified,
+        freshVerified: userVerificationStatus,
+        finalStatus: isUserVerified
+    });
 
     return (
             <div className="min-h-screen bg-gray-50">
