@@ -1,11 +1,11 @@
-// file: /src/app/api/chains/helpers/admin-auth/route.js v1 - Admin authentication helper for chains API
+// file: /src/lib/admin-auth.js v1 - Admin authentication helper utilities
 
 import jwt from 'jsonwebtoken';
-import connectDB from '../../../../../lib/mongodb';
-import User from '../../../../../models/User';
+import connectDB from './mongodb';
+import User from '../models/User';
 
 /**
- * Helper to verify admin access for chains operations
+ * Helper to verify admin access for API operations
  * @param {Request} request - Next.js request object
  * @returns {Promise<Object>} - Auth result with success status and user info
  */
@@ -111,4 +111,46 @@ export function requireAdmin(handler) {
 
         return await handler(request, ...args);
     };
+}
+
+/**
+ * NextAuth-compatible admin verification
+ * For use with NextAuth sessions instead of JWT tokens
+ * @param {Object} session - NextAuth session object
+ * @returns {Promise<Object>} - Auth result with success status and user info
+ */
+export async function verifyAdminAccessWithSession(session) {
+    try {
+        if (!session?.user) {
+            return {
+                success: false,
+                status: 401,
+                message: 'Authentication required'
+            };
+        }
+
+        const user = session.user;
+
+        if (user.level !== 'Admin' && user.isAdmin !== true) {
+            return {
+                success: false,
+                status: 403,
+                message: 'Admin access required'
+            };
+        }
+
+        return {
+            success: true,
+            userId: user.id || user._id,
+            user
+        };
+
+    } catch (error) {
+        console.error("Admin verification error:", error);
+        return {
+            success: false,
+            status: 500,
+            message: 'Authentication error: ' + error.message
+        };
+    }
 }

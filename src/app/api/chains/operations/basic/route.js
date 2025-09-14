@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../../../lib/mongodb';
-import { verifyAdminAccess } from '../../helpers/admin-auth/route';
+import { verifyAdminAccess } from '../../../../../lib/admin-auth';
 import mongoose from 'mongoose';
 import Chain from '../../../../../models/Chain';
 import Business from '../../../../../models/Business';
