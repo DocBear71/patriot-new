@@ -3,35 +3,35 @@
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
 
-// Import operation handlers
+// Import operation handlers from utilities
 import {
     handleListChains,
     handleGetChain,
     handleCreateChain,
     handleUpdateChain,
     handleDeleteChain
-} from './operations/basic/route';
+} from '../../../lib/chains/basic-operations';
 
 import {
     handleAddChainIncentive,
     handleRemoveChainIncentive,
     handleUpdateChainIncentive,
     handleGetChainIncentives
-} from './operations/incentives/route';
+} from '../../../lib/chains/incentives-operations';
 
 import {
     handleAddLocationToChain,
     handleRemoveLocationFromChain,
     handleGetChainLocations,
     handleSyncChainLocations
-} from './operations/locations/route';
+} from '../../../lib/chains/locations-operations';
 
 import {
     handleSearchChains,
     handleFindChainMatch,
     handleBulkUpdateUniversalIncentives,
     handleChainSummary
-} from './operations/utils/route';
+} from '../../../lib/chains/utils-operations';
 
 /**
  * Handle all HTTP methods for chains API
@@ -134,8 +134,8 @@ async function handleChainRequest(request, method) {
                         operations: [
                             'list', 'get', 'create', 'update', 'delete',
                             'add_incentive', 'remove_incentive', 'update_incentive', 'get_incentives',
-                            'search', 'add_location', 'remove_location', 'get_locations',
-                            'sync_locations', 'bulk_update_universal_incentives', 'summary'
+                             'search', 'add_location', 'remove_location', 'get_locations',
+                             'sync_locations', 'bulk_update_universal_incentives', 'summary'
                         ]
                     });
                 }

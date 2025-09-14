@@ -1,11 +1,11 @@
-// file: /src/app/api/chains/operations/basic/route.js v1 - Basic CRUD operations for chains
+// file: /src/lib/chains/basic-operations.js v1 - Basic CRUD operations for chains
 
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../../lib/mongodb';
-import { verifyAdminAccess } from '../../../../../lib/admin-auth';
+import connectDB from '../mongodb';
+import { verifyAdminAccess } from '../admin-auth';
 import mongoose from 'mongoose';
-import Chain from '../../../../../models/Chain';
-import Business from '../../../../../models/Business';
+import Chain from '../../models/Chain';
+import Business from '../../models/Business';
 
 const { ObjectId } = mongoose.Types;
 
@@ -169,13 +169,6 @@ export async function handleCreateChain(request) {
         );
     }
 
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
-        );
-    }
-
     try {
         const body = await request.json();
         const { chain_name, business_type, universal_incentives, corporate_info } = body;
@@ -245,13 +238,6 @@ export async function handleUpdateChain(request) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -328,13 +314,6 @@ export async function handleDeleteChain(request) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 

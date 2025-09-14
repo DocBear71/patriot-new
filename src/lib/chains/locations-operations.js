@@ -1,32 +1,25 @@
-// file: /src/app/api/chains/operations/locations/route.js v1 - Location management operations for chains
+// file: /src/lib/chains/locations-operations.js v1 - Location management operations for chains
 
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../../lib/mongodb';
-import { verifyAdminAccess } from '../../../../../lib/admin-auth';
+import connectDB from '../mongodb';
+import { verifyAdminAccess } from '../admin-auth';
 import mongoose from 'mongoose';
-import Chain from '../../../../../models/Chain';
-import Business from '../../../../../models/Business';
+import Chain from '../../models/Chain';
+import Business from '../../models/Business';
 
 const { ObjectId } = mongoose.Types;
 
 /**
- * Add business location to chain
+ * Add location to chain
  */
 export async function handleAddLocationToChain(request) {
-    console.log("📍 CHAINS: Adding location to chain");
+    console.log("🏢 CHAINS: Adding location to chain");
 
     const adminCheck = await verifyAdminAccess(request);
     if (!adminCheck.success) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -52,8 +45,21 @@ export async function handleAddLocationToChain(request) {
             );
         }
 
-        // Get business details
-        const business = await Business.findById(business_id);
+        // Update business with chain information
+        const business = await Business.findByIdAndUpdate(
+            business_id,
+            {
+                $set: {
+                    chain_id: chain_id,
+                    chain_name: chain.chain_name,
+                    universal_incentives: chain.universal_incentives || false,
+                    updated_date: new Date(),
+                    updated_by: adminCheck.userId
+                }
+            },
+            { new: true }
+        );
+
         if (!business) {
             return NextResponse.json(
                 { message: 'Business not found' },
@@ -61,36 +67,13 @@ export async function handleAddLocationToChain(request) {
             );
         }
 
-        // Check if business is already part of a chain
-        if (business.chain_id && business.chain_id.toString() !== chain_id) {
-            return NextResponse.json(
-                { message: 'Business is already part of another chain' },
-                { status: 409 }
-            );
-        }
-
-        // Add business to chain
-        const updateResult = await Business.findByIdAndUpdate(
-            business_id,
-            {
-                $set: {
-                    chain_id: new ObjectId(chain_id),
-                    chain_name: chain.chain_name,
-                    universal_incentives: chain.universal_incentives,
-                    is_chain_location: true,
-                    updated_date: new Date()
-                }
-            },
-            { new: true }
-        );
-
         console.log(`✅ Business ${business.bname} added to chain ${chain.chain_name}`);
-        console.log(`   - Universal incentives inherited: ${chain.universal_incentives}`);
 
         return NextResponse.json({
             success: true,
             message: 'Location added to chain successfully',
-            business: updateResult
+            business,
+            chain_universal_incentives: chain.universal_incentives
         });
 
     } catch (error) {
@@ -103,23 +86,16 @@ export async function handleAddLocationToChain(request) {
 }
 
 /**
- * Remove business location from chain
+ * Remove location from chain
  */
 export async function handleRemoveLocationFromChain(request) {
-    console.log("📍 CHAINS: Removing location from chain");
+    console.log("🗑️ CHAINS: Removing location from chain");
 
     const adminCheck = await verifyAdminAccess(request);
     if (!adminCheck.success) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -136,8 +112,23 @@ export async function handleRemoveLocationFromChain(request) {
 
         await connectDB();
 
-        // Get business details before removal
-        const business = await Business.findById(business_id);
+        // Remove chain references from business
+        const business = await Business.findByIdAndUpdate(
+            business_id,
+            {
+                $unset: {
+                    chain_id: 1,
+                    chain_name: 1,
+                    universal_incentives: 1
+                },
+                $set: {
+                    updated_date: new Date(),
+                    updated_by: adminCheck.userId
+                }
+            },
+            { new: true }
+        );
+
         if (!business) {
             return NextResponse.json(
                 { message: 'Business not found' },
@@ -145,31 +136,12 @@ export async function handleRemoveLocationFromChain(request) {
             );
         }
 
-        const chainName = business.chain_name || 'Unknown';
-
-        // Remove chain association
-        const updateResult = await Business.findByIdAndUpdate(
-            business_id,
-            {
-                $unset: {
-                    chain_id: 1,
-                    chain_name: 1,
-                    universal_incentives: 1,
-                    is_chain_location: 1
-                },
-                $set: {
-                    updated_date: new Date()
-                }
-            },
-            { new: true }
-        );
-
-        console.log(`✅ Business ${business.bname} removed from chain ${chainName}`);
+        console.log(`✅ Business ${business.bname} removed from chain`);
 
         return NextResponse.json({
             success: true,
             message: 'Location removed from chain successfully',
-            business: updateResult
+            business
         });
 
     } catch (error) {
@@ -182,7 +154,7 @@ export async function handleRemoveLocationFromChain(request) {
 }
 
 /**
- * Get all locations for a specific chain
+ * Get chain locations
  */
 export async function handleGetChainLocations(request) {
     try {
@@ -196,12 +168,15 @@ export async function handleGetChainLocations(request) {
             );
         }
 
-        console.log(`📍 CHAINS: Getting locations for chain ${chain_id}`);
+        console.log(`🏢 CHAINS: Getting locations for chain ${chain_id}`);
 
         await connectDB();
 
-        // Get chain details
-        const chain = await Chain.findById(chain_id).select('chain_name universal_incentives');
+        // Get chain info
+        const chain = await Chain.findById(chain_id)
+            .select('chain_name universal_incentives')
+            .lean();
+
         if (!chain) {
             return NextResponse.json(
                 { message: 'Chain not found' },
@@ -209,28 +184,20 @@ export async function handleGetChainLocations(request) {
             );
         }
 
-        // Get all locations for this chain
+        // Get all businesses associated with this chain
         const locations = await Business.find({ chain_id: chain_id })
-            .select('bname address city state zip phone universal_incentives created_date')
+            .select('bname address1 address2 city state zip phone status universal_incentives incentives')
             .sort({ bname: 1 })
             .lean();
 
-        console.log(`📊 Chain ${chain.chain_name}: ${locations.length} locations`);
-
-        // Add status information for each location
-        const locationsWithStatus = locations.map(location => ({
-            ...location,
-            inheritance_status: location.universal_incentives === true ?
-                'enabled' :
-                location.universal_incentives === false ? 'disabled' : 'undefined'
-        }));
+        console.log(`📊 Found ${locations.length} locations for chain ${chain.chain_name}`);
 
         return NextResponse.json({
             success: true,
             chain_name: chain.chain_name,
-            chain_universal_incentives: chain.universal_incentives,
-            locations: locationsWithStatus,
-            total_locations: locations.length
+            universal_incentives: chain.universal_incentives,
+            location_count: locations.length,
+            locations
         });
 
     } catch (error) {
@@ -243,23 +210,16 @@ export async function handleGetChainLocations(request) {
 }
 
 /**
- * NEW: Sync chain locations - ensures all locations have proper inheritance settings
+ * Sync chain universal incentives to all locations
  */
 export async function handleSyncChainLocations(request) {
-    console.log("🔄 CHAINS: Syncing chain locations");
+    console.log("🔄 CHAINS: Syncing chain universal incentives to locations");
 
     const adminCheck = await verifyAdminAccess(request);
     if (!adminCheck.success) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -276,7 +236,7 @@ export async function handleSyncChainLocations(request) {
 
         await connectDB();
 
-        // Get chain details
+        // Get chain info
         const chain = await Chain.findById(chain_id);
         if (!chain) {
             return NextResponse.json(
@@ -285,38 +245,27 @@ export async function handleSyncChainLocations(request) {
             );
         }
 
-        console.log(`🔄 Syncing locations for chain: ${chain.chain_name}`);
-        console.log(`   - Target universal_incentives: ${chain.universal_incentives}`);
-
-        // Update all locations to match chain settings
-        const syncResult = await Business.updateMany(
+        // Update all businesses associated with this chain
+        const updateResult = await Business.updateMany(
             { chain_id: chain_id },
             {
                 $set: {
-                    chain_name: chain.chain_name, // Ensure chain name is current
-                    universal_incentives: chain.universal_incentives,
-                    is_chain_location: true,
-                    updated_date: new Date()
+                    universal_incentives: chain.universal_incentives || false,
+                    updated_date: new Date(),
+                    updated_by: adminCheck.userId
                 }
             }
         );
 
-        console.log(`✅ Synced ${syncResult.modifiedCount} locations`);
-
-        // Get updated stats
-        const totalLocations = await Business.countDocuments({ chain_id: chain_id });
-        const enabledLocations = await Business.countDocuments({
-            chain_id: chain_id,
-            universal_incentives: true
-        });
+        console.log(`✅ Synced ${updateResult.modifiedCount} locations for chain ${chain.chain_name}`);
+        console.log(`   - Universal incentives set to: ${chain.universal_incentives}`);
 
         return NextResponse.json({
             success: true,
             message: 'Chain locations synced successfully',
             chain_name: chain.chain_name,
-            total_locations: totalLocations,
-            synced_count: syncResult.modifiedCount,
-            enabled_count: enabledLocations
+            universal_incentives: chain.universal_incentives,
+            locations_updated: updateResult.modifiedCount
         });
 
     } catch (error) {

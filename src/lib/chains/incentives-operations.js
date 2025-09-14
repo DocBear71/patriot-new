@@ -1,10 +1,10 @@
-// file: /src/app/api/chains/operations/incentives/route.js v1 - Incentive management operations for chains
+// file: /src/lib/chains/incentives-operations.js v1 - Incentive management operations for chains
 
 import { NextResponse } from 'next/server';
-import connectDB from '../../../../../lib/mongodb';
-import { verifyAdminAccess } from '../../../../../lib/admin-auth';
+import connectDB from '../mongodb';
+import { verifyAdminAccess } from '../admin-auth';
 import mongoose from 'mongoose';
-import Chain from '../../../../../models/Chain';
+import Chain from '../../models/Chain';
 
 const { ObjectId } = mongoose.Types;
 
@@ -19,13 +19,6 @@ export async function handleAddChainIncentive(request) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -93,7 +86,7 @@ export async function handleAddChainIncentive(request) {
 }
 
 /**
- * NEW: Update chain incentive
+ * Update chain incentive
  */
 export async function handleUpdateChainIncentive(request) {
     console.log("✏️ CHAINS: Updating chain incentive");
@@ -103,13 +96,6 @@ export async function handleUpdateChainIncentive(request) {
         return NextResponse.json(
             { message: adminCheck.message },
             { status: adminCheck.status }
-        );
-    }
-
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
         );
     }
 
@@ -194,13 +180,6 @@ export async function handleRemoveChainIncentive(request) {
         );
     }
 
-    if (request.method !== 'POST') {
-        return NextResponse.json(
-            { message: 'Method not allowed' },
-            { status: 405 }
-        );
-    }
-
     try {
         const body = await request.json();
         const { chain_id, incentive_id } = body;
@@ -252,7 +231,7 @@ export async function handleRemoveChainIncentive(request) {
 }
 
 /**
- * ENHANCED: Get chain incentives with detailed logging
+ * Get chain incentives with detailed logging
  */
 export async function handleGetChainIncentives(request) {
     try {
