@@ -100,7 +100,10 @@ export async function DELETE(request) {
         const { searchParams } = new URL(request.url);
         const operation = searchParams.get('operation');
 
-        switch (operation) {
+        // If no operation specified, default to admin-delete-business for DELETE requests
+        const deleteOperation = operation || 'admin-delete-business';
+
+        switch (deleteOperation) {
             case 'admin-delete-business':
                 return await handleAdminDeleteBusiness(request);
             default:
@@ -743,12 +746,27 @@ async function handleAdminDeleteBusiness(request) {
     }
 
     try {
-        // Get business ID from request body
-        const { businessId } = await request.json();
+        // Get business ID from either request body or query parameters
+        let businessId;
+        const { searchParams } = new URL(request.url);
+
+        // Try query parameter first (more RESTful for DELETE)
+        businessId = searchParams.get('businessId') || searchParams.get('id');
+
+        // If not in query params, try request body
+        if (!businessId) {
+            try {
+                const body = await request.json();
+                businessId = body.businessId || body.id;
+            } catch (jsonError) {
+                // Request might not have a JSON body
+                console.log('No JSON body in DELETE request');
+            }
+        }
 
         if (!businessId) {
             return Response.json(
-                { message: 'Business ID is required' },
+                { message: 'Business ID is required (provide as ?businessId=... or ?id=... or in request body)' },
                 { status: 400 }
             );
         }
