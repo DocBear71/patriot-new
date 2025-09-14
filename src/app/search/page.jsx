@@ -421,6 +421,18 @@ export default function SearchPage() {
             setResults([]);
         } finally {
             setLoading(false);
+
+            // Auto-scroll to results after search completes
+            setTimeout(() => {
+                const resultsElement = document.getElementById('search-results');
+                if (resultsElement) {
+                    resultsElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                }
+            }, 100);
         }
     };
 
@@ -911,15 +923,16 @@ export default function SearchPage() {
 
                             {/* Results */}
                             {hasSearched && (
-                                    <div>
+                                    <div id="search-results">
                                         <div className="flex justify-between items-center mb-6">
                                             <h2 className="text-2xl font-bold text-gray-900">
                                                 Search Results
                                             </h2>
                                             <span className="text-gray-600">
-                                        {results.length} businesses found
-                                    </span>
+                                                {results.length} businesses found
+                                            </span>
                                         </div>
+
 
                                         {loading ? (
                                                 <div className="text-center py-12">

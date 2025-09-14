@@ -315,11 +315,7 @@ export default function BusinessAddPage() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage({
-                    type: 'success',
-                    content: 'Business added successfully! Thank you for contributing to our database.'
-                });
-                // Reset form
+                // Reset form first
                 setFormData({
                     bname: '',
                     address1: '',
@@ -334,6 +330,18 @@ export default function BusinessAddPage() {
                     isChainLocation: false,
                     latitude: '',
                     longitude: ''
+                });
+
+                // Set success message
+                setMessage({
+                    type: 'success',
+                    content: 'Business added successfully! Thank you for contributing to our database.'
+                });
+
+                // Scroll to top to show success message
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
                 });
             } else {
                 setMessage({
@@ -380,7 +388,7 @@ export default function BusinessAddPage() {
                 <div className="pt-20 pb-12">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                         {/* Header */}
-                        <div className="text-center mb-8">
+                        <div id="page-top" className="text-center mb-8">
                             <h1 className="text-3xl font-bold text-gray-900 mb-4">
                                 Add a Business
                             </h1>

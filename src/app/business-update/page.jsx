@@ -394,19 +394,37 @@ export default function BusinessUpdatePage() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage({
-                    type: 'success',
-                    content: 'Business updated successfully! Thank you for keeping our database current.'
+                // Clear selections and reset form
+                setSelectedBusiness(null);
+                setSearchResults([]);
+                setHasSearched(false);
+                setSearchData({
+                    businessName: '',
+                    address: ''
+                });
+                setFormData({
+                    bname: '',
+                    address1: '',
+                    address2: '',
+                    city: '',
+                    state: '',
+                    zip: '',
+                    phone: '',
+                    type: '',
+                    status: 'active'
                 });
 
-                // Update the business in search results
-                setSearchResults(prev =>
-                        prev.map(business =>
-                                business._id === selectedBusiness._id
-                                        ? { ...business, ...formData }
-                                        : business
-                        )
-                );
+                // Set success message
+                setMessage({
+                    type: 'success',
+                    content: 'Business updated successfully! Thank you for keeping our database current. You can search for another business to update.'
+                });
+
+                // Scroll to top to show success message
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
             } else {
                 setMessage({
                     type: 'error',
@@ -452,7 +470,7 @@ export default function BusinessUpdatePage() {
                 <div className="pt-20 pb-12">
                     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                         {/* Header */}
-                        <div className="text-center mb-8">
+                        <div id="page-top" className="text-center mb-8">
                             <h1 className="text-3xl font-bold text-gray-900 mb-4">
                                 Update a Business
                             </h1>
