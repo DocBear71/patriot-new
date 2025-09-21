@@ -95,13 +95,11 @@ export async function PUT(request) {
     console.log("👤 USER API: Processing PUT request, operation:", operation);
 
     // Connect to database
-   await connectDB();
-    if (!connectDB.success) {
+    try {
+        await connectDB();
+    } catch (error) {
         return NextResponse.json(
-            {
-                message: connectDB.message,
-                error: connectDB.error?.message
-            },
+            { message: 'Database connection error: ' + error.message },
             { status: 500 }
         );
     }
