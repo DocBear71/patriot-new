@@ -45,7 +45,7 @@ async function verifyAdminAccess() {
  */
 async function verifyUserAccess() {
     try {
-        const session = await auth();
+        const session = await getSession();
 
         if (!session || !session.user) {
             return { success: false, status: 401, message: 'Authentication required' };

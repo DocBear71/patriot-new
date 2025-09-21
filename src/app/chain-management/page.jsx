@@ -1,16 +1,16 @@
 'use client';
 
-// file: /src/pages/chain-management.jsx v1 - Admin page for managing business chains and locations
+// file: /src/app/chain-management/page.jsx v2 - Updated to use NextAuth session
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Footer from '../../components/legal/Footer';
 
 export default function ChainManagementPage() {
     const router = useRouter();
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: session, status } = useSession();
     const [chains, setChains] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedChain, setSelectedChain] = useState(null);
@@ -25,54 +25,30 @@ export default function ChainManagementPage() {
     });
 
     useEffect(() => {
-        checkAdminStatus();
-        loadChains();
-    }, []);
+        if (status === 'loading') return;
 
-    const checkAdminStatus = async () => {
-        try {
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                router.push('../../auth/signin?redirect=/chain-management');
-                return;
-            }
-
-            const response = await fetch('/api/admin-access', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.isAdmin) {
-                    setIsAdmin(true);
-                } else {
-                    router.push('/');
-                }
-            } else {
-                router.push('../../auth/signin?redirect=/chain-management');
-            }
-        } catch (error) {
-            console.error('Error checking admin status:', error);
-            router.push('/');
-        } finally {
-            setIsLoading(false);
+        if (!session) {
+            router.push('/auth/signin?redirect=/chain-management');
+            return;
         }
-    };
+
+        if (!session.user?.isAdmin) {
+            router.push('/dashboard');
+            return;
+        }
+
+        loadChains();
+    }, [session, status, router]);
 
     const loadChains = async () => {
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chains', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch('/api/chains?operation=list');
 
             if (response.ok) {
                 const data = await response.json();
                 setChains(data.chains || []);
+            } else {
+                console.error('Failed to load chains:', response.status);
             }
         } catch (error) {
             console.error('Error loading chains:', error);
@@ -82,12 +58,10 @@ export default function ChainManagementPage() {
     const handleAddChain = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chains', {
+            const response = await fetch('/api/chains?operation=create', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(newChain)
             });
@@ -114,12 +88,10 @@ export default function ChainManagementPage() {
 
     const handleUpdateChain = async (chainId, updates) => {
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chains', {
+            const response = await fetch('/api/chains?operation=update', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ chainId, ...updates })
             });
@@ -142,12 +114,10 @@ export default function ChainManagementPage() {
         }
 
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chains', {
+            const response = await fetch('/api/chains?operation=delete', {
                 method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ chainId })
             });
@@ -169,7 +139,7 @@ export default function ChainManagementPage() {
             chain.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (isLoading) {
+    if (status === 'loading') {
         return (
                 <div className="min-h-screen bg-gray-100 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -177,7 +147,7 @@ export default function ChainManagementPage() {
         );
     }
 
-    if (!isAdmin) {
+    if (!session || !session.user?.isAdmin) {
         return null;
     }
 
@@ -201,7 +171,7 @@ export default function ChainManagementPage() {
                                 </div>
                             </div>
                             <nav className="flex space-x-4">
-                                <Link href="/admin-dashboard" className="text-gray-600 hover:text-gray-900">
+                                <Link href="/admin/dashboard" className="text-gray-600 hover:text-gray-900">
                                     Dashboard
                                 </Link>
                                 <Link href="/admin-business" className="text-gray-600 hover:text-gray-900">
@@ -284,15 +254,14 @@ export default function ChainManagementPage() {
                                         </div>
 
                                         {chain.website && (
-                                                <a
-                                                        href={chain.website}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:text-blue-800 text-sm"
-                                                >
-                                                    Visit Website →
-                                                </a>
-                                        )}
+                                            <a href={chain.website}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 text-sm"
+                                            >
+                                            Visit Website →
+                                            </a>
+                                            )}
                                     </div>
 
                                     <div className="bg-gray-50 px-6 py-3 flex justify-between items-center">
@@ -323,7 +292,7 @@ export default function ChainManagementPage() {
                                         </button>
                                     </div>
                                 </div>
-                        ))}
+                            ))}
                     </div>
 
                     {filteredChains.length === 0 && (
@@ -341,188 +310,188 @@ export default function ChainManagementPage() {
 
                 {/* Add Chain Modal */}
                 {showAddModal && (
-                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                                <div className="mt-3">
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Chain</h3>
-                                    <form onSubmit={handleAddChain} className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Name *</label>
-                                            <input
-                                                    type="text"
-                                                    required
-                                                    value={newChain.name}
-                                                    onChange={(e) => setNewChain({...newChain, name: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Category *</label>
-                                            <select
-                                                    required
-                                                    value={newChain.category}
-                                                    onChange={(e) => setNewChain({...newChain, category: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                <option value="">Select category</option>
-                                                <option value="Restaurant">Restaurant</option>
-                                                <option value="Retail">Retail</option>
-                                                <option value="Automotive">Automotive</option>
-                                                <option value="Healthcare">Healthcare</option>
-                                                <option value="Fitness">Fitness</option>
-                                                <option value="Entertainment">Entertainment</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Website</label>
-                                            <input
-                                                    type="url"
-                                                    value={newChain.website}
-                                                    onChange={(e) => setNewChain({...newChain, website: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="https://example.com"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                                            <textarea
-                                                    value={newChain.description}
-                                                    onChange={(e) => setNewChain({...newChain, description: e.target.value})}
-                                                    rows={3}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center">
-                                            <input
-                                                    type="checkbox"
-                                                    checked={newChain.isActive}
-                                                    onChange={(e) => setNewChain({...newChain, isActive: e.target.checked})}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label className="ml-2 block text-sm text-gray-900">
-                                                Active
-                                            </label>
-                                        </div>
-
-                                        <div className="flex justify-end space-x-3 pt-4">
-                                            <button
-                                                    type="button"
-                                                    onClick={() => setShowAddModal(false)}
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                    type="submit"
-                                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                                            >
-                                                Add Chain
-                                            </button>
-                                        </div>
-                                    </form>
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                        <div className="mt-3">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Chain</h3>
+                            <form onSubmit={handleAddChain} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Name *</label>
+                                    <input
+                                            type="text"
+                                            required
+                                            value={newChain.name}
+                                            onChange={(e) => setNewChain({...newChain, name: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
                                 </div>
-                            </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Category *</label>
+                                    <select
+                                            required
+                                            value={newChain.category}
+                                            onChange={(e) => setNewChain({...newChain, category: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select category</option>
+                                        <option value="Restaurant">Restaurant</option>
+                                        <option value="Retail">Retail</option>
+                                        <option value="Automotive">Automotive</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Fitness">Fitness</option>
+                                        <option value="Entertainment">Entertainment</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Website</label>
+                                    <input
+                                            type="url"
+                                            value={newChain.website}
+                                            onChange={(e) => setNewChain({...newChain, website: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="https://example.com"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea
+                                            value={newChain.description}
+                                            onChange={(e) => setNewChain({...newChain, description: e.target.value})}
+                                            rows={3}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div className="flex items-center">
+                                    <input
+                                            type="checkbox"
+                                            checked={newChain.isActive}
+                                            onChange={(e) => setNewChain({...newChain, isActive: e.target.checked})}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <label className="ml-2 block text-sm text-gray-900">
+                                        Active
+                                    </label>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 pt-4">
+                                    <button
+                                            type="button"
+                                            onClick={() => setShowAddModal(false)}
+                                            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                            type="submit"
+                                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        Add Chain
+                                    </button>
+                                </div>
+                            </form>
                         </div>
+                    </div>
+                </div>
                 )}
 
                 {/* Edit Chain Modal */}
                 {showEditModal && selectedChain && (
-                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                                <div className="mt-3">
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Chain</h3>
-                                    <form onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handleUpdateChain(selectedChain._id, selectedChain);
-                                        setShowEditModal(false);
-                                    }} className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Name *</label>
-                                            <input
-                                                    type="text"
-                                                    required
-                                                    value={selectedChain.name}
-                                                    onChange={(e) => setSelectedChain({...selectedChain, name: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Category *</label>
-                                            <select
-                                                    required
-                                                    value={selectedChain.category}
-                                                    onChange={(e) => setSelectedChain({...selectedChain, category: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                <option value="">Select category</option>
-                                                <option value="Restaurant">Restaurant</option>
-                                                <option value="Retail">Retail</option>
-                                                <option value="Automotive">Automotive</option>
-                                                <option value="Healthcare">Healthcare</option>
-                                                <option value="Fitness">Fitness</option>
-                                                <option value="Entertainment">Entertainment</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Website</label>
-                                            <input
-                                                    type="url"
-                                                    value={selectedChain.website || ''}
-                                                    onChange={(e) => setSelectedChain({...selectedChain, website: e.target.value})}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="https://example.com"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                                            <textarea
-                                                    value={selectedChain.description || ''}
-                                                    onChange={(e) => setSelectedChain({...selectedChain, description: e.target.value})}
-                                                    rows={3}
-                                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center">
-                                            <input
-                                                    type="checkbox"
-                                                    checked={selectedChain.isActive}
-                                                    onChange={(e) => setSelectedChain({...selectedChain, isActive: e.target.checked})}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label className="ml-2 block text-sm text-gray-900">
-                                                Active
-                                            </label>
-                                        </div>
-
-                                        <div className="flex justify-end space-x-3 pt-4">
-                                            <button
-                                                    type="button"
-                                                    onClick={() => setShowEditModal(false)}
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                    type="submit"
-                                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                                            >
-                                                Update Chain
-                                            </button>
-                                        </div>
-                                    </form>
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                        <div className="mt-3">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Chain</h3>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handleUpdateChain(selectedChain._id, selectedChain);
+                                setShowEditModal(false);
+                            }} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Name *</label>
+                                    <input
+                                            type="text"
+                                            required
+                                            value={selectedChain.name}
+                                            onChange={(e) => setSelectedChain({...selectedChain, name: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
                                 </div>
-                            </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Category *</label>
+                                    <select
+                                            required
+                                            value={selectedChain.category}
+                                            onChange={(e) => setSelectedChain({...selectedChain, category: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select category</option>
+                                        <option value="Restaurant">Restaurant</option>
+                                        <option value="Retail">Retail</option>
+                                        <option value="Automotive">Automotive</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Fitness">Fitness</option>
+                                        <option value="Entertainment">Entertainment</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Website</label>
+                                    <input
+                                            type="url"
+                                            value={selectedChain.website || ''}
+                                            onChange={(e) => setSelectedChain({...selectedChain, website: e.target.value})}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="https://example.com"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea
+                                            value={selectedChain.description || ''}
+                                            onChange={(e) => setSelectedChain({...selectedChain, description: e.target.value})}
+                                            rows={3}
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div className="flex items-center">
+                                    <input
+                                            type="checkbox"
+                                            checked={selectedChain.isActive}
+                                            onChange={(e) => setSelectedChain({...selectedChain, isActive: e.target.checked})}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <label className="ml-2 block text-sm text-gray-900">
+                                        Active
+                                    </label>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 pt-4">
+                                    <button
+                                            type="button"
+                                            onClick={() => setShowEditModal(false)}
+                                            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                            type="submit"
+                                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        Update Chain
+                                    </button>
+                                </div>
+                            </form>
                         </div>
+                    </div>
+                </div>
                 )}
                 <Footer />
             </div>
