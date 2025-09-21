@@ -135,8 +135,8 @@ export default function ChainManagementPage() {
     };
 
     const filteredChains = chains.filter(chain =>
-            chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            chain.category.toLowerCase().includes(searchTerm.toLowerCase())
+            (chain.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (chain.category || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (status === 'loading') {
