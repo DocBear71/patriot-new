@@ -159,7 +159,7 @@ async function loadChains(options = {}) {
         if (category) params.append('category', category);
         if (status && status !== 'all') params.append('status', status);
 
-        const response = await fetch(`${baseURL}/api/chain-management?${params}`, {
+        const response = await fetch(`${baseURL}/api/chains?${params}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -204,7 +204,7 @@ async function createChain(chainData) {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management`, {
+        const response = await fetch(`${baseURL}/api/chains`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -251,7 +251,7 @@ async function updateChain(chainId, updates) {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management`, {
+        const response = await fetch(`${baseURL}/api/chains`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -301,7 +301,7 @@ async function deleteChain(chainId) {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management`, {
+        const response = await fetch(`${baseURL}/api/chains`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -346,7 +346,7 @@ async function loadChainLocations(chainId) {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management/${chainId}/locations`, {
+        const response = await fetch(`${baseURL}/api/chains/${chainId}/locations`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -385,7 +385,7 @@ async function addChainLocation(chainId, locationData) {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management/${chainId}/locations`, {
+        const response = await fetch(`${baseURL}/api/chains/${chainId}/locations`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -638,7 +638,7 @@ async function getChainStatistics() {
         }
 
         const baseURL = getBaseUrl();
-        const response = await fetch(`${baseURL}/api/chain-management/statistics`, {
+        const response = await fetch(`${baseURL}/api/chains/statistics`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

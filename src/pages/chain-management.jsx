@@ -64,7 +64,7 @@ export default function ChainManagementPage() {
     const loadChains = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chain-management', {
+            const response = await fetch('/api/chains', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -83,7 +83,7 @@ export default function ChainManagementPage() {
         e.preventDefault();
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chain-management', {
+            const response = await fetch('/api/chains', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export default function ChainManagementPage() {
     const handleUpdateChain = async (chainId, updates) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chain-management', {
+            const response = await fetch('/api/chains', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export default function ChainManagementPage() {
 
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/chain-management', {
+            const response = await fetch('/api/chains', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
