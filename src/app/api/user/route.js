@@ -258,7 +258,14 @@ async function handleUserUpdate(request) {
         }
 
         // Find the user by ID to verify it exists
-        const existingUser = await User.findOne({ _id: new ObjectId(userData._id) });
+// Try with ObjectId first, fallback to string if that fails
+        let existingUser;
+        try {
+            existingUser = await User.findOne({ _id: new ObjectId(userData._id) });
+        } catch (error) {
+            console.log("Trying with string ID after ObjectId error:", error.message);
+            existingUser = await User.findOne({ _id: userData._id });
+        }
 
         if (!existingUser) {
             return NextResponse.json(
@@ -278,9 +285,9 @@ async function handleUserUpdate(request) {
         // Set updated timestamp
         userData.updated_at = new Date();
 
-        // Update the user
+        // Update the user - use the same ID format that worked for finding the user
         const updatedUser = await User.findOneAndUpdate(
-            { _id: new ObjectId(userData._id) },
+            { _id: existingUser._id },  // Use the _id from the found user
             { $set: userData },
             { new: true, runValidators: true }
         );
