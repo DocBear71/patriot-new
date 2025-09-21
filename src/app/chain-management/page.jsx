@@ -46,7 +46,18 @@ export default function ChainManagementPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                setChains(data.chains || []);
+                // Map the API fields to match frontend expectations
+                const mappedChains = (data.chains || []).map(chain => ({
+                    _id: chain._id,
+                    name: chain.chain_name,
+                    category: chain.business_type,
+                    description: chain.corporate_info?.description || '',
+                    website: chain.corporate_info?.website || '',
+                    isActive: chain.status === 'active',
+                    locationCount: chain.location_count || 0,
+                    createdAt: chain.created_date
+                }));
+                setChains(mappedChains);
             } else {
                 console.error('Failed to load chains:', response.status);
             }
@@ -58,12 +69,23 @@ export default function ChainManagementPage() {
     const handleAddChain = async (e) => {
         e.preventDefault();
         try {
+            // Map frontend fields to API fields
+            const chainData = {
+                chain_name: newChain.name,
+                business_type: newChain.category,
+                corporate_info: {
+                    description: newChain.description,
+                    website: newChain.website
+                },
+                status: newChain.isActive ? 'active' : 'inactive'
+            };
+
             const response = await fetch('/api/chains?operation=create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(newChain)
+                body: JSON.stringify(chainData)
             });
 
             if (response.ok) {
@@ -88,12 +110,26 @@ export default function ChainManagementPage() {
 
     const handleUpdateChain = async (chainId, updates) => {
         try {
+            // Map frontend fields to API fields
+            const updateData = {
+                _id: chainId,
+                ...(updates.name && { chain_name: updates.name }),
+                ...(updates.category && { business_type: updates.category }),
+                ...(updates.isActive !== undefined && { status: updates.isActive ? 'active' : 'inactive' }),
+                ...((updates.description || updates.website) && {
+                    corporate_info: {
+                        ...(updates.description && { description: updates.description }),
+                        ...(updates.website && { website: updates.website })
+                    }
+                })
+            };
+
             const response = await fetch('/api/chains?operation=update', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ chainId, ...updates })
+                body: JSON.stringify(updateData)
             });
 
             if (response.ok) {
@@ -119,7 +155,7 @@ export default function ChainManagementPage() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ chainId })
+                body: JSON.stringify({ _id: chainId })
             });
 
             if (response.ok) {
