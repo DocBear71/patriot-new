@@ -10,7 +10,7 @@ import AboutUs from './AboutUs';
 
 export default function Footer() {
     const [showModal, setShowModal] = useState(null);
-    const { data: session } = useSession();
+    // const { data: session } = useSession();
 
     const openModal = (modalType) => {
         setShowModal(modalType);
