@@ -261,7 +261,7 @@ export default function AdminDashboard() {
                             </Link>
 
                             <Link
-                                    href="../../../pages/chain-management.jsx"
+                                    href="/chain-management"
                                     className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
                             >
                                 <div className="text-blue-900 mb-2 group-hover:text-blue-700">
