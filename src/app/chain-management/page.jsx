@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Footer from '../components/legal/Footer';
+import Footer from '../../components/legal/Footer';
 
 export default function ChainManagementPage() {
     const router = useRouter();
