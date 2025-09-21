@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Verifying pin:", pinInput);
 
             // get user ID from session if available
-            const userId = getUserIdFromSession();
+            const userId = null;
 
             // Determine the base URL
             const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -231,40 +231,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper function to get user ID from session
     function getUserIdFromSession() {
-        try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            if (sessionData) {
-                const session = JSON.parse(sessionData);
-                return session.user._id;
-            }
-        } catch (error) {
-            console.error("Error getting user ID from session:", error);
-        }
+        console.warn("getUserIdFromSession is deprecated - pass userId as parameter instead");
         return null;
     }
 
-    // Function to update UI if user status changed
+    // Function to update user status - NOW HANDLED BY NEXTAUTH SESSION UPDATE
     function updateUserStatusIfNeeded(userId) {
         if (!userId) return;
 
-        try {
-            // Get current session data
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            if (sessionData) {
-                const session = JSON.parse(sessionData);
+        console.log("User admin status verified - NextAuth will handle session update on next request");
 
-                // Update session with admin status
-                session.user.status = 'AD';
-                session.user.isAdmin = true;
-
-                // Save updated session
-                localStorage.setItem('patriotThanksSession', JSON.stringify(session));
-
-                console.log("User session updated with admin status");
-            }
-        } catch (error) {
-            console.error("Error updating user session:", error);
-        }
     }
 });
 
@@ -291,7 +267,7 @@ window.PinValidation = {
 
         const verificationData = {
             code: code,
-            userId: userId || getUserIdFromSession()
+            userId: userId // NextAuth handles user identification server-side
         };
 
         try {

@@ -1,14 +1,14 @@
 'use client';
-// file: /src/app/profile/page.jsx v1 - User Profile Management for Patriot Thanks
+// file: /src/app/profile/page.jsx v2 - Updated to use NextAuth session instead of localStorage
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Navigation from '../../components/layout/Navigation';
 
 export default function ProfilePage() {
     const router = useRouter();
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: session, status } = useSession();
     const [profile, setProfile] = useState({
         _id: '',
         fname: '',
@@ -38,38 +38,12 @@ export default function ProfilePage() {
         match: false
     });
 
+    // Fetch user profile when session is available
     useEffect(() => {
-        checkLoginStatus();
-    }, []);
-
-    const checkLoginStatus = async () => {
-        try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            if (!sessionData) {
-                setIsLoggedIn(false);
-                setIsLoading(false);
-                return;
-            }
-
-            const session = JSON.parse(sessionData);
-            const currentTime = new Date().getTime();
-
-            // Check if session is still valid
-            if (currentTime < session.timestamp + session.expiresIn) {
-                setIsLoggedIn(true);
-                await fetchUserProfile(session.user._id);
-            } else {
-                // Session expired
-                localStorage.removeItem('patriotThanksSession');
-                setIsLoggedIn(false);
-            }
-        } catch (error) {
-            console.error('Error checking login status:', error);
-            setIsLoggedIn(false);
-        } finally {
-            setIsLoading(false);
+        if (status === 'authenticated' && session?.user?.id) {
+            fetchUserProfile(session.user.id);
         }
-    };
+    }, [status, session]);
 
     const fetchUserProfile = async (userId) => {
         try {
@@ -145,16 +119,7 @@ export default function ProfilePage() {
             });
 
             if (response.ok) {
-                const data = await response.json();
                 setMessage({ type: 'success', text: 'Profile updated successfully!' });
-
-                // Update session data
-                const sessionData = localStorage.getItem('patriotThanksSession');
-                if (sessionData) {
-                    const session = JSON.parse(sessionData);
-                    session.user = { ...session.user, ...profile };
-                    localStorage.setItem('patriotThanksSession', JSON.stringify(session));
-                }
             } else {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to update profile');
@@ -236,7 +201,8 @@ export default function ProfilePage() {
         'Supporter'
     ];
 
-    if (isLoading) {
+    // Show loading state while checking authentication
+    if (status === 'loading') {
         return (
                 <div style={{ paddingTop: '70px', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                     <div>Loading profile...</div>
@@ -244,7 +210,8 @@ export default function ProfilePage() {
         );
     }
 
-    if (!isLoggedIn) {
+    // Redirect if not authenticated
+    if (status === 'unauthenticated') {
         return (
                 <div style={{ paddingTop: '70px' }} id="page_layout">
                     <Navigation />
@@ -259,7 +226,7 @@ export default function ProfilePage() {
                         }}>
                             <h3>You must be logged in to view this page.</h3>
                             <button
-                                    onClick={() => router.push('../../auth/signin')}
+                                    onClick={() => router.push('/auth/signin')}
                                     style={{
                                         padding: '10px 20px',
                                         backgroundColor: '#007bff',

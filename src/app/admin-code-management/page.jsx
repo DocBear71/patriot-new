@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Navigation from '../../components/layout/Navigation';
 
 export default function AdminCodeManagementPage() {
@@ -15,6 +16,7 @@ export default function AdminCodeManagementPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [codeToDelete, setCodeToDelete] = useState(null);
     const [showHelpSection, setShowHelpSection] = useState(false);
+    const { data: session, status } = useSession();
 
     // Form state
     const [codeForm, setCodeForm] = useState({
@@ -35,17 +37,22 @@ export default function AdminCodeManagementPage() {
 
     const checkAdminAccess = async () => {
         try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            if (!sessionData) {
-                router.push('../../auth/signin');
-                return;
+            // Handle loading state
+            if (status === 'loading') {
+                return <div>Loading...</div>;
             }
 
-            const session = JSON.parse(sessionData);
+            // Handle unauthenticated
+            if (status === 'unauthenticated' || !session) {
+                router.push('/auth/signin');
+                return null;
+            }
+
+            // Handle non-admin users
             if (!session.user.isAdmin && session.user.level !== 'Admin') {
                 alert('Admin access required');
                 router.push('/');
-                return;
+                return null;
             }
 
             setIsAdmin(true);
@@ -59,8 +66,11 @@ export default function AdminCodeManagementPage() {
 
     const loadExistingCodes = async () => {
         try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            const session = JSON.parse(sessionData);
+            if (status === 'loading') return <div>Loading...</div>;
+            if (!session || !session.user.isAdmin) {
+                router.push('/auth/signin');
+                return;
+            }
 
             const response = await fetch('/api/admin-codes?operation=list', {
                 headers: {
@@ -124,8 +134,11 @@ export default function AdminCodeManagementPage() {
         }
 
         try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            const session = JSON.parse(sessionData);
+            if (status === 'loading') return <div>Loading...</div>;
+            if (!session || !session.user.isAdmin) {
+                router.push('/auth/signin');
+                return;
+            }
 
             const codeData = {
                 code: codeForm.code.trim(),
@@ -169,8 +182,11 @@ export default function AdminCodeManagementPage() {
         setIsSubmitting(true);
 
         try {
-            const sessionData = localStorage.getItem('patriotThanksSession');
-            const session = JSON.parse(sessionData);
+            if (status === 'loading') return <div>Loading...</div>;
+            if (!session || !session.user.isAdmin) {
+                router.push('/auth/signin');
+                return;
+            }
 
             const response = await fetch('/api/admin-codes?operation=delete', {
                 method: 'DELETE',

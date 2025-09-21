@@ -343,14 +343,20 @@ async function deleteUser(userId) {
 
 /**
  * Get current logged-in user
+ * NOTE: This function is deprecated for NextAuth
+ * In React components, use useSession() hook instead
+ * For utility functions, pass user data as parameters
  * @returns {object|null} Current user data
  */
 function getCurrentUser() {
+    console.warn('getCurrentUser is deprecated - use useSession() hook in components or pass user data as parameter');
+
+    // Try to get from old admin token system (different from NextAuth)
     try {
-        const sessionData = localStorage.getItem('patriotThanksSession');
-        if (sessionData) {
-            const session = JSON.parse(sessionData);
-            return session.user;
+        const token = getAuthToken();
+        if (token) {
+            // Return minimal info - full user data should come from NextAuth in components
+            return { fromLegacyToken: true };
         }
     } catch (error) {
         console.error('Error getting current user:', error);
