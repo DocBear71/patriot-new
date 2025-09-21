@@ -509,8 +509,10 @@ export default function ProfilePage() {
                                             }}
                                     >
                                         <option value="">Select Status</option>
-                                        {statusOptions.map(status => (
-                                                <option key={status} value={status}>{status}</option>
+                                        {statusOptions.map(option => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
                                         ))}
                                     </select>
                                 </div>
