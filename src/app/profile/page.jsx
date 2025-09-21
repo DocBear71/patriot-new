@@ -110,6 +110,7 @@ export default function ProfilePage() {
         setIsUpdating(true);
 
         try {
+            console.log("Submitting profile:", profile);
             const response = await fetch('/api/user?operation=update', {
                 method: 'PUT',
                 headers: {

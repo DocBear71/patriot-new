@@ -248,62 +248,74 @@ async function handleUserUpdate(request) {
     try {
         // Extract user data from request body
         const userData = await request.json();
+        console.log("Received userData:", JSON.stringify(userData, null, 2));
 
         // Basic validation
         if (!userData._id) {
+            console.error("❌ No user ID provided");
             return NextResponse.json(
                 { message: 'User ID is required' },
                 { status: 400 }
             );
         }
 
-        // Find the user by ID to verify it exists
-// Try with ObjectId first, fallback to string if that fails
+        console.log("Looking for user with ID:", userData._id);
+
+        // Find the user - try both ObjectId and string
         let existingUser;
         try {
-            existingUser = await User.findOne({ _id: new ObjectId(userData._id) });
+            // First try with ObjectId
+            existingUser = await User.findById(userData._id);
+            console.log("Found user with findById");
         } catch (error) {
-            console.log("Trying with string ID after ObjectId error:", error.message);
+            console.log("FindById failed, trying alternative method:", error.message);
+            // Try alternative query methods
             existingUser = await User.findOne({ _id: userData._id });
+            console.log("Found user with findOne");
         }
 
         if (!existingUser) {
+            console.error("❌ User not found with ID:", userData._id);
             return NextResponse.json(
                 { message: 'User not found' },
                 { status: 404 }
             );
         }
 
-        console.log("👤 Updating user:", userData._id);
+        console.log("✅ Found existing user:", existingUser._id);
 
         // Remove sensitive fields that shouldn't be updated via this endpoint
         delete userData.password;
         delete userData.level;
         delete userData.isAdmin;
         delete userData.created_at;
+        delete userData._id; // Remove _id from update data
 
         // Set updated timestamp
         userData.updated_at = new Date();
 
-        // Update the user - use the same ID format that worked for finding the user
-        const updatedUser = await User.findOneAndUpdate(
-            { _id: existingUser._id },  // Use the _id from the found user
+        console.log("Updating with data:", JSON.stringify(userData, null, 2));
+
+        // Update the user using the existing user's _id
+        const updatedUser = await User.findByIdAndUpdate(
+            existingUser._id,
             { $set: userData },
             { new: true, runValidators: true }
         );
 
         if (!updatedUser) {
+            console.error("❌ Update operation returned null");
             return NextResponse.json(
                 { message: 'Failed to update user' },
                 { status: 500 }
             );
         }
 
+        console.log("✅ User updated successfully");
+
         // Remove password from response
         const responseData = updatedUser.toObject();
         delete responseData.password;
-
-        console.log("✅ User updated successfully");
 
         return NextResponse.json({
             message: 'User updated successfully',
@@ -313,6 +325,7 @@ async function handleUserUpdate(request) {
 
     } catch (error) {
         console.error('❌ Error updating user:', error);
+        console.error('Error stack:', error.stack);
 
         // Handle validation errors
         if (error.name === 'ValidationError') {
@@ -325,8 +338,21 @@ async function handleUserUpdate(request) {
             );
         }
 
+        // Handle cast errors (invalid ObjectId)
+        if (error.name === 'CastError') {
+            return NextResponse.json(
+                {
+                    message: 'Invalid user ID format: ' + error.message
+                },
+                { status: 400 }
+            );
+        }
+
         return NextResponse.json(
-            { message: 'Error updating user: ' + error.message },
+            {
+                message: 'Error updating user: ' + error.message,
+                errorType: error.name
+            },
             { status: 500 }
         );
     }
