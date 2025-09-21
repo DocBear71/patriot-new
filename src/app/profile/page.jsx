@@ -52,7 +52,22 @@ export default function ProfilePage() {
             if (response.ok) {
                 const data = await response.json();
                 if (data.user) {
-                    setProfile(data.user);
+                    // Clean the user data - remove any asterisk fields and ensure consistent naming
+                    const cleanedUser = {
+                        _id: data.user._id || data.user.id,
+                        fname: data.user.fname || '',
+                        lname: data.user.lname || '',
+                        email: data.user.email || '',
+                        address1: data.user.address1 || '',
+                        address2: data.user.address2 || '',
+                        city: data.user.city || '',
+                        state: data.user.state || '',
+                        zip: data.user.zip || '',
+                        status: data.user.status || '',
+                        level: data.user.level || ''
+                    };
+                    console.log('Setting cleaned profile:', cleanedUser);
+                    setProfile(cleanedUser);
                 }
             } else {
                 throw new Error('Failed to fetch profile');
@@ -110,13 +125,27 @@ export default function ProfilePage() {
         setIsUpdating(true);
 
         try {
-            console.log("Submitting profile:", profile);
+            // Only send the fields that should be updated
+            const updateData = {
+                _id: profile._id,
+                fname: profile.fname,
+                lname: profile.lname,
+                address1: profile.address1,
+                address2: profile.address2,
+                city: profile.city,
+                state: profile.state,
+                zip: profile.zip,
+                status: profile.status
+            };
+
+            console.log('Submitting update data:', updateData);
+
             const response = await fetch('/api/user?operation=update', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(profile)
+                body: JSON.stringify(updateData)
             });
 
             if (response.ok) {
