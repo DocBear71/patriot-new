@@ -225,10 +225,12 @@ export default function ProfilePage() {
 
     // Status options
     const statusOptions = [
-        'Active Military',
-        'Veteran',
-        'Military Family',
-        'Supporter'
+        { value: 'VT', label: 'Veteran' },
+        { value: 'AD', label: 'Active-Duty' },
+        { value: 'FR', label: 'First Responder' },
+        { value: 'SP', label: 'Spouse' },
+        { value: 'BO', label: 'Business Owner' },
+        { value: 'SU', label: 'Supporter' }
     ];
 
     // Show loading state while checking authentication
