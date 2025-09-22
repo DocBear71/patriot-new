@@ -165,15 +165,12 @@ export default function AdminUsersPage() {
                 ...(editingUser && { userId: editingUser._id })
             };
 
-            const response = await fetch('/api/auth', {
+            const response = await fetch(`/api/auth?operation=${editingUser ? 'update-user' : 'register'}`, {
                 method: editingUser ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    operation: editingUser ? 'update-user' : 'register',
-                    userData: editingUser ? userData : userForm
-                })
+                body: JSON.stringify(editingUser ? userData : userForm)
             });
 
             if (response.ok) {
