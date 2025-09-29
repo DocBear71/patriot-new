@@ -11,7 +11,7 @@ import Donation from '../../../models/Donation';
 const { ObjectId } = mongoose.Types;
 
 // Create email transporter for donation confirmations
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'mail.patriotthanks.com',
     port: 465,
     secure: true,
