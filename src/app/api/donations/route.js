@@ -1,4 +1,4 @@
-// file: /src/app/api/donations/route.js v1 - Donation management API for Next.js App Router
+// file: /src/app/api/donations/route.js v2 - Fixed naming conflict with connectDB
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
@@ -74,7 +74,7 @@ async function verifyAdminAccess(request) {
 /**
  * Helper to establish database connection
  */
-async function connectDB() {
+async function establishDBConnection() {
     try {
         await connectDB();
         console.log("✅ Database connection established");
@@ -151,7 +151,7 @@ export async function GET(request) {
     console.log("💰 DONATIONS API: Processing GET request, operation:", operation);
 
     // Connect to database
-    const dbConnection = await connectDB();
+    const dbConnection = await establishDBConnection();
     if (!dbConnection.success) {
         return NextResponse.json(
             {
@@ -201,7 +201,7 @@ export async function POST(request) {
     console.log("💰 DONATIONS API: Processing POST request, operation:", operation);
 
     // Connect to database
-    const dbConnection = await connectDB();
+    const dbConnection = await establishDBConnection();
     if (!dbConnection.success) {
         return NextResponse.json(
             {
