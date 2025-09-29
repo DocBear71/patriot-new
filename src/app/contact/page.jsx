@@ -1,10 +1,12 @@
-// file: /src/pages/contact.jsx v1 - Contact form page for user inquiries and support
-
 'use client';
+
+// file: /src/pages/contact.jsx v1 - Contact form page for user inquiries and support
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Navigation from '../../components/layout/Navigation';
+import Footer from '../../components/legal/Footer';
 
 export default function ContactPage() {
     const router = useRouter();
@@ -103,6 +105,7 @@ export default function ContactPage() {
 
     return (
             <div className="min-h-screen bg-gray-50">
+                <Navigation />
                 {/* Header */}
                 <header className="bg-white shadow-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -407,26 +410,7 @@ export default function ContactPage() {
                 </main>
 
                 {/* Footer */}
-                <footer className="bg-gray-800">
-                    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                        <div className="text-center text-gray-300">
-                            <p>&copy; 2024 Doc Bear Enterprises, LLC. All rights reserved.</p>
-                            <div className="mt-2 space-x-4">
-                                <Link href="/terms" className="text-gray-400 hover:text-white">
-                                    Terms of Use
-                                </Link>
-                                <span className="text-gray-600">|</span>
-                                <Link href="/privacy" className="text-gray-400 hover:text-white">
-                                    Privacy Policy
-                                </Link>
-                                <span className="text-gray-600">|</span>
-                                <Link href="/contact" className="text-gray-400 hover:text-white">
-                                    Contact Us
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </footer>
+                <Footer />
             </div>
     );
 }

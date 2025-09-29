@@ -42,6 +42,10 @@ export default function Navigation() {
                                 Search Businesses
                             </Link>
 
+                            <Link href="/donate" className="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md">
+                                Support Our Mission
+                            </Link>
+
                             {/* Show Incentive View for everyone */}
                             <Link href="/incentive-view" className="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md">
                                 View Incentives
@@ -182,6 +186,10 @@ export default function Navigation() {
                                 <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
                                     <Link href="/search" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
                                         Search Businesses
+                                    </Link>
+
+                                    <Link href="/donate" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
+                                        Support Our Mission
                                     </Link>
 
                                     {/* Show Incentive View for everyone */}
