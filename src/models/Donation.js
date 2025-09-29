@@ -26,7 +26,11 @@ const DonationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Keep existing field for backwards compatibility
     paymentId: String,
+    // Add new fields for API compatibility
+    paymentIntentId: String,    // For Stripe payments
+    paypalOrderId: String,      // For PayPal payments
     transactionId: String,
     status: {
         type: String,
@@ -40,7 +44,8 @@ const DonationSchema = new mongoose.Schema({
     created_at: {
         type: Date,
         default: Date.now
-    }
+    },
+    updated_at: Date            // Add this for API compatibility
 });
 
 // Use your existing collection name

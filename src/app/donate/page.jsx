@@ -1,15 +1,23 @@
 'use client';
-// file: /src/app/donate/page.jsx v2 - Original styling with Stripe integration
+// file: /src/app/donate/page.jsx v3 - Real PayPal and Stripe integration
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import Navigation from '../../components/layout/Navigation';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+// PayPal configuration
+const paypalOptions = {
+    "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+    currency: "USD",
+    intent: "capture",
+};
 
 // Card Element styles to match your design
 const cardElementOptions = {
@@ -171,7 +179,14 @@ function DonationForm() {
 
             if (paymentIntent.status === 'succeeded') {
                 // Save donation to database
-                await saveDonationToDatabase(paymentIntent);
+                await saveDonationToDatabase({
+                    ...donorForm,
+                    amount: selectedAmount,
+                    paymentMethod: 'stripe',
+                    paymentIntentId: paymentIntent.id,
+                    transactionId: paymentIntent.id,
+                    status: 'completed'
+                });
                 return true;
             } else {
                 setMessage({ type: 'error', text: 'Payment was not completed successfully.' });
@@ -185,25 +200,14 @@ function DonationForm() {
     };
 
     // Save donation to database
-    const saveDonationToDatabase = async (paymentIntent) => {
+    const saveDonationToDatabase = async (donationData) => {
         try {
             const response = await fetch('/api/donations?operation=save-donation', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    amount: selectedAmount,
-                    name: donorForm.name,
-                    email: donorForm.email,
-                    anonymous: donorForm.anonymous,
-                    recurring: donorForm.recurring,
-                    message: donorForm.message,
-                    paymentMethod: 'stripe',
-                    paymentIntentId: paymentIntent.id,
-                    transactionId: paymentIntent.id,
-                    status: 'completed'
-                }),
+                body: JSON.stringify(donationData),
             });
 
             if (!response.ok) {
@@ -212,39 +216,6 @@ function DonationForm() {
             }
         } catch (error) {
             console.error('Error saving donation to database:', error);
-        }
-    };
-
-    // Handle PayPal payment (existing logic)
-    const handlePayPalPayment = async () => {
-        try {
-            const response = await fetch('/api/donations?operation=create-paypal-order', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    amount: selectedAmount,
-                    name: donorForm.name,
-                    email: donorForm.email,
-                    anonymous: donorForm.anonymous,
-                    recurring: donorForm.recurring,
-                    message: donorForm.message
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.approvalUrl) {
-                window.location.href = data.approvalUrl;
-                return true;
-            } else {
-                throw new Error(data.message || 'PayPal payment creation failed');
-            }
-        } catch (error) {
-            console.error('PayPal payment error:', error);
-            setMessage({ type: 'error', text: error.message || 'PayPal payment failed' });
-            return false;
         }
     };
 
@@ -257,27 +228,98 @@ function DonationForm() {
             return;
         }
 
-        setIsProcessing(true);
-        setMessage({ type: '', text: '' });
+        if (paymentMethod === 'card') {
+            setIsProcessing(true);
+            setMessage({ type: '', text: '' });
 
-        let success = false;
+            const success = await handleStripePayment();
 
-        try {
-            if (paymentMethod === 'card') {
-                success = await handleStripePayment();
-            } else if (paymentMethod === 'paypal') {
-                success = await handlePayPalPayment();
-            }
+            setIsProcessing(false);
 
             if (success) {
                 setShowSuccess(true);
             }
+        }
+        // PayPal is handled by the PayPalButtons component
+    };
+
+    // PayPal payment handlers
+    const createPayPalOrder = async () => {
+        const errors = validateDonationForm();
+        if (errors.length > 0) {
+            setMessage({ type: 'error', text: errors.join('. ') });
+            throw new Error('Form validation failed');
+        }
+
+        try {
+            const response = await fetch('/api/donations?operation=create-paypal-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: selectedAmount,
+                    name: donorForm.name,
+                    email: donorForm.email,
+                    anonymous: donorForm.anonymous,
+                    recurring: donorForm.recurring,
+                    message: donorForm.message
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create PayPal order');
+            }
+
+            return data.orderID;
         } catch (error) {
-            console.error('Donation error:', error);
-            setMessage({ type: 'error', text: error.message || 'Donation processing failed' });
+            console.error('PayPal order creation error:', error);
+            setMessage({ type: 'error', text: error.message });
+            throw error;
+        }
+    };
+
+    const onPayPalApprove = async (data) => {
+        setIsProcessing(true);
+        setMessage({ type: '', text: '' });
+
+        try {
+            const response = await fetch('/api/donations?operation=capture-paypal-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderID: data.orderID,
+                    amount: selectedAmount,
+                    name: donorForm.name,
+                    email: donorForm.email,
+                    anonymous: donorForm.anonymous,
+                    recurring: donorForm.recurring,
+                    message: donorForm.message
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setShowSuccess(true);
+            } else {
+                throw new Error(result.message || 'Payment capture failed');
+            }
+        } catch (error) {
+            console.error('PayPal capture error:', error);
+            setMessage({ type: 'error', text: error.message });
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    const onPayPalError = (error) => {
+        console.error('PayPal error:', error);
+        setMessage({ type: 'error', text: 'PayPal payment failed. Please try again.' });
     };
 
     if (showSuccess) {
@@ -424,23 +466,27 @@ function DonationForm() {
                                 Quick PayPal Donation
                             </h5>
                             <p style={{ marginBottom: '20px', lineHeight: '1.5' }}>
-                                Make a donation directly through PayPal without creating an account.
+                                Make a quick ${selectedAmount} donation with PayPal.
                             </p>
 
-                            {/* PayPal Button Placeholder */}
-                            <div style={{
-                                backgroundColor: '#ffc439',
-                                padding: '15px',
-                                borderRadius: '6px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                color: '#003087'
-                            }}>
-                                🅿️ Donate with PayPal
+                            {/* Quick PayPal Button */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <PayPalButtons
+                                        style={{
+                                            layout: 'horizontal',
+                                            color: 'gold',
+                                            shape: 'rect',
+                                            label: 'donate',
+                                            height: 40
+                                        }}
+                                        createOrder={createPayPalOrder}
+                                        onApprove={onPayPalApprove}
+                                        onError={onPayPalError}
+                                        disabled={isProcessing}
+                                />
                             </div>
 
-                            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '15px', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#666', textAlign: 'center' }}>
                                 For custom amounts and options, use the form below
                             </p>
                         </div>
@@ -639,7 +685,7 @@ function DonationForm() {
                                         </div>
                                     </div>
 
-                                    {/* Stripe Card Element - replaces the original credit card form */}
+                                    {/* Payment Method Specific Content */}
                                     {paymentMethod === 'card' && (
                                             <div style={{
                                                 padding: '20px',
@@ -662,24 +708,49 @@ function DonationForm() {
                                             </div>
                                     )}
 
-                                    {/* Submit Button */}
-                                    <button
-                                            type="submit"
-                                            disabled={isProcessing || (paymentMethod === 'card' && !stripe)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '15px',
-                                                backgroundColor: isProcessing ? '#6c757d' : '#28a745',
-                                                color: 'white',
-                                                border: 'none',
+                                    {paymentMethod === 'paypal' && (
+                                            <div style={{
+                                                padding: '20px',
+                                                backgroundColor: '#f8f9fa',
                                                 borderRadius: '6px',
-                                                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                                                fontSize: '18px',
-                                                fontWeight: 'bold'
-                                            }}
-                                    >
-                                        {isProcessing ? 'Processing...' : `Donate $${selectedAmount.toFixed(2)}`}
-                                    </button>
+                                                marginBottom: '20px'
+                                            }}>
+                                                <h6 style={{ marginBottom: '15px' }}>PayPal Payment:</h6>
+                                                <PayPalButtons
+                                                        style={{
+                                                            layout: 'vertical',
+                                                            color: 'gold',
+                                                            shape: 'rect',
+                                                            label: 'donate'
+                                                        }}
+                                                        createOrder={createPayPalOrder}
+                                                        onApprove={onPayPalApprove}
+                                                        onError={onPayPalError}
+                                                        disabled={isProcessing}
+                                                />
+                                            </div>
+                                    )}
+
+                                    {/* Submit Button for Credit Card */}
+                                    {paymentMethod === 'card' && (
+                                            <button
+                                                    type="submit"
+                                                    disabled={isProcessing || !stripe}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '15px',
+                                                        backgroundColor: isProcessing ? '#6c757d' : '#28a745',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        cursor: isProcessing ? 'not-allowed' : 'pointer',
+                                                        fontSize: '18px',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                            >
+                                                {isProcessing ? 'Processing...' : `Donate $${selectedAmount.toFixed(2)}`}
+                                            </button>
+                                    )}
                                 </div>
                             </div>
                         </form>
@@ -694,7 +765,7 @@ function DonationForm() {
                         textAlign: 'center'
                     }}>
                         <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
-                            🔒 Your donation is secure and encrypted. We use Stripe for credit card processing and never store your card information on our servers.
+                            🔒 Your donation is secure and encrypted. We use Stripe for credit card processing and PayPal for PayPal payments. We never store your payment information on our servers.
                         </p>
                     </div>
                 </main>
@@ -702,11 +773,13 @@ function DonationForm() {
     );
 }
 
-// Main component wrapped with Stripe Elements
+// Main component wrapped with both Stripe and PayPal providers
 export default function DonatePage() {
     return (
-            <Elements stripe={stripePromise}>
-                <DonationForm />
-            </Elements>
+            <PayPalScriptProvider options={paypalOptions}>
+                <Elements stripe={stripePromise}>
+                    <DonationForm />
+                </Elements>
+            </PayPalScriptProvider>
     );
 }

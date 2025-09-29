@@ -1,4 +1,4 @@
-// file: /src/app/api/donations/route.js v3 - Added Stripe Integration
+// file: /src/app/api/donations/route.js v4 - Real PayPal and Stripe Integration
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import Stripe from 'stripe';
+import paypal from '@paypal/checkout-server-sdk';
 import User from '../../../models/User';
 import Donation from '../../../models/Donation';
 
@@ -16,14 +17,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16',
 });
 
+// Initialize PayPal
+const environment = process.env.PAYPAL_MODE === 'live'
+    ? new paypal.core.LiveEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET)
+    : new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
+
+const paypalClient = new paypal.core.PayPalHttpClient(environment);
+
 // Create email transporter for donation confirmations
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransporter({
     host: 'mail.patriotthanks.com',
     port: 465,
     secure: true,
     auth: {
-        user: process.env.DONATION_EMAIL_USER || 'donations@patriotthanks.com',
-        pass: process.env.DONATION_EMAIL_PASS
+        user: process.env.DONATION_EMAIL_USER || process.env.EMAIL_USER || 'donations@patriotthanks.com',
+        pass: process.env.DONATION_EMAIL_PASS || process.env.EMAIL_PASS || '1369Bkcsdp55chtdp81??'
     },
     tls: {
         rejectUnauthorized: false
@@ -51,14 +59,9 @@ async function verifyAdminAccess(request) {
         }
 
         const token = authHeader.split(' ')[1];
-
-        // Verify JWT token
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
 
-        // Connect to database
         await connectDB();
-
-        // Check if user exists and is admin
         const user = await User.findById(decoded.userId);
 
         if (!user) {
@@ -101,7 +104,7 @@ async function establishDBConnection() {
 async function sendDonationConfirmationEmail(donation) {
     try {
         const mailOptions = {
-            from: process.env.DONATION_EMAIL_USER || 'donations@patriotthanks.com',
+            from: process.env.DONATION_EMAIL_USER || process.env.EMAIL_USER || 'donations@patriotthanks.com',
             to: donation.email,
             subject: 'Thank you for your donation to Patriot Thanks',
             html: `
@@ -118,6 +121,7 @@ async function sendDonationConfirmationEmail(donation) {
                             <p><strong>Donation Amount:</strong> $${donation.amount.toFixed(2)}</p>
                             <p><strong>Date:</strong> ${new Date(donation.created_at).toLocaleDateString()}</p>
                             <p><strong>Transaction ID:</strong> ${donation.transactionId || donation.paymentIntentId}</p>
+                            <p><strong>Payment Method:</strong> ${donation.paymentMethod === 'stripe' ? 'Credit Card' : 'PayPal'}</p>
                             <p><strong>Status:</strong> ${donation.status}</p>
                             ${donation.recurring ? '<p><strong>Type:</strong> Recurring donation</p>' : ''}
                         </div>
@@ -164,7 +168,6 @@ export async function GET(request) {
 
     console.log("💰 DONATIONS API: Processing GET request, operation:", operation);
 
-    // Connect to database
     const dbConnection = await establishDBConnection();
     if (!dbConnection.success) {
         return NextResponse.json(
@@ -187,13 +190,12 @@ export async function GET(request) {
             case 'export':
                 return await handleExportDonations(request);
             default:
-                // Default response - list available operations
                 return NextResponse.json({
                     message: 'Donations API is available',
                     operations: [
                         'create-payment-intent', 'save-donation', 'create-paypal-order',
-                        'confirm', 'list', 'stats', 'cancel-recurring', 'get',
-                        'send-receipt', 'export'
+                        'capture-paypal-order', 'confirm', 'list', 'stats', 'cancel-recurring',
+                        'get', 'send-receipt', 'export'
                     ]
                 });
         }
@@ -215,7 +217,6 @@ export async function POST(request) {
 
     console.log("💰 DONATIONS API: Processing POST request, operation:", operation);
 
-    // Connect to database
     const dbConnection = await establishDBConnection();
     if (!dbConnection.success) {
         return NextResponse.json(
@@ -235,6 +236,8 @@ export async function POST(request) {
                 return await handleSaveDonation(request);
             case 'create-paypal-order':
                 return await handleCreatePayPalOrder(request);
+            case 'capture-paypal-order':
+                return await handleCapturePayPalOrder(request);
             case 'confirm':
                 return await handleConfirmDonation(request);
             case 'cancel-recurring':
@@ -257,23 +260,6 @@ export async function POST(request) {
 }
 
 /**
- * Handle OPTIONS requests for CORS
- */
-export async function OPTIONS() {
-    return NextResponse.json(
-        { message: 'CORS preflight successful' },
-        {
-            status: 200,
-            headers: {
-                'Allow': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            },
-        }
-    );
-}
-
-/**
  * Create Stripe PaymentIntent
  */
 async function handleCreatePaymentIntent(request) {
@@ -282,7 +268,6 @@ async function handleCreatePaymentIntent(request) {
     try {
         const { amount, currency = 'usd', name, email, recurring, metadata } = await request.json();
 
-        // Validate required fields
         if (!amount || amount < 1) {
             return NextResponse.json(
                 { message: 'Amount must be at least $1.00' },
@@ -297,10 +282,8 @@ async function handleCreatePaymentIntent(request) {
             );
         }
 
-        // Convert amount to cents for Stripe
         const amountInCents = Math.round(amount * 100);
 
-        // Create payment intent
         const paymentIntent = await stripe.paymentIntents.create({
             amount: amountInCents,
             currency: currency,
@@ -331,6 +314,166 @@ async function handleCreatePaymentIntent(request) {
 }
 
 /**
+ * Create PayPal order
+ */
+async function handleCreatePayPalOrder(request) {
+    console.log("🅿️ Creating PayPal order");
+
+    try {
+        const { amount, name, email, anonymous, recurring, message } = await request.json();
+
+        if (!amount || amount < 1) {
+            return NextResponse.json(
+                { message: 'Amount must be at least $1.00' },
+                { status: 400 }
+            );
+        }
+
+        if (!name || !email) {
+            return NextResponse.json(
+                { message: 'Name and email are required' },
+                { status: 400 }
+            );
+        }
+
+        const orderRequest = new paypal.orders.OrdersCreateRequest();
+        orderRequest.prefer("return=representation");
+        orderRequest.requestBody({
+            intent: 'CAPTURE',
+            purchase_units: [{
+                amount: {
+                    currency_code: 'USD',
+                    value: amount.toFixed(2)
+                },
+                description: `Donation to Patriot Thanks${recurring ? ' (Monthly)' : ''}`,
+                custom_id: `donation_${Date.now()}`,
+                invoice_id: `INV-${Date.now()}`
+            }],
+            application_context: {
+                brand_name: 'Patriot Thanks',
+                locale: 'en-US',
+                landing_page: 'BILLING',
+                shipping_preference: 'NO_SHIPPING',
+                user_action: 'PAY_NOW',
+                return_url: `${process.env.NEXTAUTH_URL}/donate?success=true`,
+                cancel_url: `${process.env.NEXTAUTH_URL}/donate?cancelled=true`
+            }
+        });
+
+        const order = await paypalClient.execute(orderRequest);
+
+        // Save pending donation to database
+        const donation = new Donation({
+            amount,
+            name,
+            email,
+            anonymous: anonymous || false,
+            recurring: recurring || false,
+            message: message || '',
+            paymentMethod: 'paypal',
+            paypalOrderId: order.result.id,
+            status: 'pending',
+            created_at: new Date()
+        });
+
+        await donation.save();
+
+        console.log("✅ PayPal order created:", order.result.id);
+
+        return NextResponse.json({
+            orderID: order.result.id,
+            donationId: donation._id
+        });
+
+    } catch (error) {
+        console.error('❌ Error creating PayPal order:', error);
+        return NextResponse.json(
+            { message: 'Failed to create PayPal order: ' + error.message },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * Capture PayPal order
+ */
+async function handleCapturePayPalOrder(request) {
+    console.log("🅿️ Capturing PayPal order");
+
+    try {
+        const { orderID, amount, name, email, anonymous, recurring, message } = await request.json();
+
+        if (!orderID) {
+            return NextResponse.json(
+                { message: 'Order ID is required' },
+                { status: 400 }
+            );
+        }
+
+        // Capture the order
+        const captureRequest = new paypal.orders.OrdersCaptureRequest(orderID);
+        captureRequest.requestBody({});
+
+        const capture = await paypalClient.execute(captureRequest);
+
+        if (capture.result.status === 'COMPLETED') {
+            // Find and update the donation
+            let donation = await Donation.findOne({ paypalOrderId: orderID });
+
+            if (!donation) {
+                // Create new donation if not found
+                donation = new Donation({
+                    amount,
+                    name,
+                    email,
+                    anonymous: anonymous || false,
+                    recurring: recurring || false,
+                    message: message || '',
+                    paymentMethod: 'paypal',
+                    paypalOrderId: orderID,
+                    status: 'completed',
+                    created_at: new Date()
+                });
+            } else {
+                // Update existing donation
+                donation.status = 'completed';
+                donation.updated_at = new Date();
+            }
+
+            // Get transaction ID from capture
+            const captureId = capture.result.purchase_units[0].payments.captures[0].id;
+            donation.transactionId = captureId;
+
+            await donation.save();
+
+            // Send confirmation email
+            await sendDonationConfirmationEmail(donation);
+
+            console.log("✅ PayPal order captured:", orderID);
+
+            return NextResponse.json({
+                message: 'Payment captured successfully',
+                donationId: donation._id,
+                transactionId: captureId
+            });
+
+        } else {
+            return NextResponse.json(
+                { message: 'Payment capture failed' },
+                { status: 400 }
+            );
+        }
+
+    } catch (error) {
+        console.error('❌ Error capturing PayPal order:', error);
+        return NextResponse.json(
+            { message: 'Failed to capture PayPal order: ' + error.message },
+            { status: 500 }
+        );
+    }
+}
+
+/**
  * Save completed donation to database
  */
 async function handleSaveDonation(request) {
@@ -339,7 +482,6 @@ async function handleSaveDonation(request) {
     try {
         const donationData = await request.json();
 
-        // Validate required fields
         if (!donationData.amount || !donationData.name || !donationData.email) {
             return NextResponse.json(
                 { message: 'Amount, name, and email are required' },
@@ -347,7 +489,6 @@ async function handleSaveDonation(request) {
             );
         }
 
-        // Create donation record
         const donation = new Donation({
             amount: donationData.amount,
             name: donationData.name,
@@ -378,66 +519,6 @@ async function handleSaveDonation(request) {
         console.error('❌ Error saving donation:', error);
         return NextResponse.json(
             { message: 'Failed to save donation: ' + error.message },
-            { status: 500 }
-        );
-    }
-}
-
-/**
- * Create PayPal order (placeholder - would integrate with PayPal SDK)
- */
-async function handleCreatePayPalOrder(request) {
-    console.log("🅿️ Creating PayPal order");
-
-    try {
-        const donationData = await request.json();
-
-        // Validate required fields
-        if (!donationData.amount || donationData.amount < 1) {
-            return NextResponse.json(
-                { message: 'Amount must be at least $1.00' },
-                { status: 400 }
-            );
-        }
-
-        if (!donationData.name || !donationData.email) {
-            return NextResponse.json(
-                { message: 'Name and email are required' },
-                { status: 400 }
-            );
-        }
-
-        // In a real implementation, you would:
-        // 1. Create a PayPal order using PayPal SDK
-        // 2. Return the approval URL for user to complete payment
-
-        // For now, return a mock response
-        const mockOrderId = 'PAYPAL-ORDER-' + Date.now();
-        const mockApprovalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${mockOrderId}`;
-
-        // Create pending donation record
-        const donation = new Donation({
-            ...donationData,
-            paymentMethod: 'paypal',
-            paymentId: mockOrderId,
-            status: 'pending',
-            created_at: new Date()
-        });
-
-        await donation.save();
-
-        console.log("✅ PayPal order created (mock):", mockOrderId);
-
-        return NextResponse.json({
-            orderId: mockOrderId,
-            approvalUrl: mockApprovalUrl,
-            donationId: donation._id
-        });
-
-    } catch (error) {
-        console.error('❌ Error creating PayPal order:', error);
-        return NextResponse.json(
-            { message: 'Failed to create PayPal order: ' + error.message },
             { status: 500 }
         );
     }
@@ -886,4 +967,21 @@ async function handleExportDonations(request) {
             { status: 500 }
         );
     }
+}
+
+/**
+ * Handle OPTIONS requests for CORS
+ */
+export async function OPTIONS() {
+    return NextResponse.json(
+        { message: 'CORS preflight successful' },
+        {
+            status: 200,
+            headers: {
+                'Allow': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+        }
+    );
 }
