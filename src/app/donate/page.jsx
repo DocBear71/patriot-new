@@ -1,0 +1,722 @@
+'use client';
+// file: /src/app/donate/page.jsx v1 - Donation Page for Patriot Thanks
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import Navigation from '../../components/layout/Navigation';
+
+export default function DonatePage() {
+    const router = useRouter();
+    const { data: session } = useSession();
+    const [selectedAmount, setSelectedAmount] = useState(25);
+    const [customAmount, setCustomAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('paypal');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    // Donor form state
+    const [donorForm, setDonorForm] = useState({
+        name: '',
+        email: '',
+        anonymous: false,
+        recurring: false,
+        message: ''
+    });
+
+    // Credit card form state
+    const [cardForm, setCardForm] = useState({
+        name: '',
+        number: '',
+        expiry: '',
+        cvc: ''
+    });
+
+    // Predefined donation amounts
+    const donationAmounts = [5, 10, 25, 50, 100, 250];
+
+    useEffect(() => {
+        if (session?.user) {
+            setDonorForm(prev => ({
+                ...prev,
+                name: `${session.user.fname} ${session.user.lname}`,
+                email: session.user.email
+            }));
+        }
+    }, [session]);
+
+    const handleAmountSelect = (amount) => {
+        setSelectedAmount(amount);
+        setCustomAmount('');
+    };
+
+    const handleCustomAmountChange = (e) => {
+        const value = e.target.value;
+        setCustomAmount(value);
+        if (value && !isNaN(value) && parseFloat(value) > 0) {
+            setSelectedAmount(parseFloat(value));
+        }
+    };
+
+    const handleDonorFormChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setDonorForm(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleCardFormChange = (e) => {
+        const { name, value } = e.target;
+        setCardForm(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const validateDonationForm = () => {
+        const errors = [];
+
+        // Check amount
+        if (!selectedAmount || selectedAmount <= 0) {
+            errors.push('Please select or enter a valid donation amount');
+        }
+
+        // Check required donor info
+        if (!donorForm.name.trim()) errors.push('Name is required');
+        if (!donorForm.email.trim()) errors.push('Email is required');
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (donorForm.email && !emailRegex.test(donorForm.email)) {
+            errors.push('Please enter a valid email address');
+        }
+
+        // Credit card validation if paying by card
+        if (paymentMethod === 'card') {
+            if (!cardForm.name.trim()) errors.push('Cardholder name is required');
+            if (!cardForm.number.trim()) errors.push('Card number is required');
+            if (!cardForm.expiry.trim()) errors.push('Expiry date is required');
+            if (!cardForm.cvc.trim()) errors.push('CVC is required');
+
+            // Basic card number validation (should be 16 digits)
+            const cardNumber = cardForm.number.replace(/\s/g, '');
+            if (cardNumber && cardNumber.length !== 16) {
+                errors.push('Card number must be 16 digits');
+            }
+
+            // Expiry date validation (MM/YY format)
+            if (cardForm.expiry && !/^\d{2}\/\d{2}$/.test(cardForm.expiry)) {
+                errors.push('Expiry date must be in MM/YY format');
+            }
+
+            // CVC validation (3 digits)
+            if (cardForm.cvc && !/^\d{3,4}$/.test(cardForm.cvc)) {
+                errors.push('CVC must be 3 or 4 digits');
+            }
+        }
+
+        return errors;
+    };
+
+    const handleDonationSubmit = async (e) => {
+        e.preventDefault();
+
+        const errors = validateDonationForm();
+        if (errors.length > 0) {
+            setMessage({ type: 'error', text: errors.join('. ') });
+            return;
+        }
+
+        setIsProcessing(true);
+        setMessage({ type: '', text: '' });
+
+        try {
+            // Prepare donation data
+            const donationData = {
+                amount: selectedAmount,
+                name: donorForm.name,
+                email: donorForm.email,
+                anonymous: donorForm.anonymous,
+                recurring: donorForm.recurring,
+                message: donorForm.message,
+                paymentMethod: paymentMethod
+            };
+
+            // Add card data if paying by card
+            if (paymentMethod === 'card') {
+                donationData.card = {
+                    name: cardForm.name,
+                    number: cardForm.number.replace(/\s/g, ''),
+                    expiry: cardForm.expiry,
+                    cvc: cardForm.cvc
+                };
+            }
+
+            // Send donation request
+            const response = await fetch('/api/donations?operation=create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(donationData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (paymentMethod === 'paypal' && result.requiresApproval) {
+                    // For PayPal, would typically redirect to PayPal for approval
+                    // For demo purposes, we'll show success immediately
+                    setShowSuccess(true);
+                } else {
+                    // Card payment processed immediately
+                    setShowSuccess(true);
+                }
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Donation failed');
+            }
+        } catch (error) {
+            console.error('Donation error:', error);
+            setMessage({ type: 'error', text: error.message });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const formatCardNumber = (value) => {
+        // Remove non-digits and add spaces every 4 digits
+        const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        const matches = v.match(/\d{4,16}/g);
+        const match = matches && matches[0] || '';
+        const parts = [];
+
+        for (let i = 0, len = match.length; i < len; i += 4) {
+            parts.push(match.substring(i, i + 4));
+        }
+
+        if (parts.length) {
+            return parts.join(' ');
+        } else {
+            return v;
+        }
+    };
+
+    const handleCardNumberChange = (e) => {
+        const formatted = formatCardNumber(e.target.value);
+        setCardForm(prev => ({
+            ...prev,
+            number: formatted
+        }));
+    };
+
+    const formatExpiry = (value) => {
+        // Remove non-digits and add slash after 2 digits
+        const v = value.replace(/\D/g, '');
+        if (v.length >= 2) {
+            return v.slice(0, 2) + '/' + v.slice(2, 4);
+        }
+        return v;
+    };
+
+    const handleExpiryChange = (e) => {
+        const formatted = formatExpiry(e.target.value);
+        setCardForm(prev => ({
+            ...prev,
+            expiry: formatted
+        }));
+    };
+
+    if (showSuccess) {
+        return (
+                <div style={{ paddingTop: '70px' }} id="page_layout">
+                    <Navigation />
+
+                    <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+                        <div style={{
+                            backgroundColor: 'white',
+                            padding: '40px',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            textAlign: 'center',
+                            border: '2px solid #28a745'
+                        }}>
+                            <div style={{ fontSize: '4rem', color: '#28a745', marginBottom: '20px' }}>
+                                ✅
+                            </div>
+                            <h2 style={{ color: '#28a745', marginBottom: '20px' }}>
+                                Thank You for Your Support!
+                            </h2>
+                            <h3 style={{ marginBottom: '20px' }}>
+                                Your donation of ${selectedAmount.toFixed(2)} has been received
+                            </h3>
+                            <p style={{ fontSize: '1.1rem', marginBottom: '30px', lineHeight: '1.6' }}>
+                                Your support helps us continue connecting heroes with businesses that appreciate their service.
+                            </p>
+
+                            <div style={{
+                                backgroundColor: '#f8f9fa',
+                                padding: '20px',
+                                borderRadius: '6px',
+                                marginBottom: '30px'
+                            }}>
+                                <p style={{ margin: '0 0 10px 0' }}>
+                                    A confirmation email has been sent to: <strong>{donorForm.email}</strong>
+                                </p>
+                                {donorForm.recurring && (
+                                        <p style={{ margin: 0, fontWeight: 'bold', color: '#007bff' }}>
+                                            Your donation will recur monthly. You can cancel at any time by contacting us.
+                                        </p>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button
+                                        onClick={() => router.push('/')}
+                                        style={{
+                                            padding: '12px 30px',
+                                            backgroundColor: '#007bff',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                >
+                                    Return to Home
+                                </button>
+                                <button
+                                        onClick={() => router.push('/contact')}
+                                        style={{
+                                            padding: '12px 30px',
+                                            backgroundColor: 'transparent',
+                                            color: '#007bff',
+                                            border: '2px solid #007bff',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                >
+                                    Contact Us
+                                </button>
+                            </div>
+
+                            <div style={{ marginTop: '30px', fontSize: '0.9rem', color: '#666' }}>
+                                <p>Problem with your donation? Please <span
+                                        style={{ color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+                                        onClick={() => router.push('/contact')}
+                                >contact us</span> for assistance.</p>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+        );
+    }
+
+    return (
+            <div style={{ paddingTop: '70px' }} id="page_layout">
+                <Navigation />
+
+                <header style={{ padding: '20px', borderBottom: '1px solid #ddd' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
+                        <div style={{ marginRight: '20px' }}>
+                            <img
+                                    src="/images/patriotthankslogo6-13-2025.png"
+                                    alt="Patriot Thanks logo"
+                                    style={{ height: '60px' }}
+                            />
+                        </div>
+                        <div>
+                            <h1 style={{ margin: 0, color: '#003366' }}>Patriot Thanks</h1>
+                            <h4 style={{ margin: '5px 0 0 0', color: '#666' }}>Support Our Mission</h4>
+                        </div>
+                    </div>
+                </header>
+
+                <main style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px', marginBottom: '40px' }}>
+                        {/* Mission Statement */}
+                        <div>
+                            <h2 style={{ color: '#003366', marginBottom: '20px' }}>Help Us Serve Those Who Serve</h2>
+                            <p style={{ fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>
+                                Patriot Thanks connects veterans, active-duty military, first responders, and their families
+                                with businesses that offer special discounts and incentives. Your donation helps us maintain
+                                and grow this valuable resource for our community.
+                            </p>
+
+                            <h4 style={{ color: '#003366', marginBottom: '15px' }}>Your Donation Helps Us:</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <ul style={{ lineHeight: '1.8' }}>
+                                    <li>Cover hosting and operational costs</li>
+                                    <li>Develop enhanced features and tools</li>
+                                </ul>
+                                <ul style={{ lineHeight: '1.8' }}>
+                                    <li>Expand our database of participating businesses</li>
+                                    <li>Improve the user experience for both heroes and businesses</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Quick PayPal Donation */}
+                        <div style={{
+                            backgroundColor: '#f8f9fa',
+                            padding: '30px',
+                            borderRadius: '8px',
+                            border: '2px solid #007bff'
+                        }}>
+                            <h5 style={{ color: '#007bff', marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
+                                <span style={{ marginRight: '10px', fontSize: '1.2rem' }}>⚡</span>
+                                Quick PayPal Donation
+                            </h5>
+                            <p style={{ marginBottom: '20px', lineHeight: '1.5' }}>
+                                Make a donation directly through PayPal without creating an account.
+                            </p>
+
+                            {/* PayPal Button Placeholder */}
+                            <div style={{
+                                backgroundColor: '#ffc439',
+                                padding: '15px',
+                                borderRadius: '6px',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                color: '#003087'
+                            }}>
+                                🅿️ Donate with PayPal
+                            </div>
+
+                            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '15px', textAlign: 'center' }}>
+                                For custom amounts and options, use the form below
+                            </p>
+                        </div>
+                    </div>
+
+                    {message.text && (
+                            <div style={{
+                                padding: '15px',
+                                marginBottom: '20px',
+                                borderRadius: '4px',
+                                backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
+                                border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+                                color: message.type === 'success' ? '#155724' : '#721c24'
+                            }}>
+                                {message.text}
+                            </div>
+                    )}
+
+                    {/* Donation Form */}
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '40px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}>
+                        <h3 style={{ marginBottom: '30px', color: '#003366' }}>Customize Your Donation</h3>
+
+                        <form onSubmit={handleDonationSubmit}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
+                                {/* Amount Selection */}
+                                <div>
+                                    <h4 style={{ marginBottom: '20px' }}>Choose Amount:</h4>
+
+                                    {/* Preset Amounts */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '10px',
+                                        marginBottom: '20px'
+                                    }}>
+                                        {donationAmounts.map(amount => (
+                                                <button
+                                                        key={amount}
+                                                        type="button"
+                                                        onClick={() => handleAmountSelect(amount)}
+                                                        style={{
+                                                            padding: '12px',
+                                                            border: '2px solid',
+                                                            borderColor: selectedAmount === amount && !customAmount ? '#007bff' : '#ddd',
+                                                            backgroundColor: selectedAmount === amount && !customAmount ? '#007bff' : 'white',
+                                                            color: selectedAmount === amount && !customAmount ? 'white' : '#333',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '16px'
+                                                        }}
+                                                >
+                                                    ${amount}
+                                                </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Custom Amount */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                                            Custom Amount ($):
+                                        </label>
+                                        <input
+                                                type="number"
+                                                value={customAmount}
+                                                onChange={handleCustomAmountChange}
+                                                min="1"
+                                                step="0.01"
+                                                placeholder="Enter amount"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    border: '2px solid #ddd',
+                                                    borderRadius: '6px',
+                                                    fontSize: '16px'
+                                                }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Donor Information */}
+                                <div>
+                                    <h4 style={{ marginBottom: '20px' }}>Donor Information:</h4>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                Name *
+                                            </label>
+                                            <input
+                                                    type="text"
+                                                    name="name"
+                                                    value={donorForm.name}
+                                                    onChange={handleDonorFormChange}
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '4px'
+                                                    }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                Email *
+                                            </label>
+                                            <input
+                                                    type="email"
+                                                    name="email"
+                                                    value={donorForm.email}
+                                                    onChange={handleDonorFormChange}
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '4px'
+                                                    }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="anonymous"
+                                                    checked={donorForm.anonymous}
+                                                    onChange={handleDonorFormChange}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Make my donation anonymous
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="recurring"
+                                                    checked={donorForm.recurring}
+                                                    onChange={handleDonorFormChange}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Make this a monthly donation
+                                        </label>
+                                    </div>
+
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                            Message (Optional):
+                                        </label>
+                                        <textarea
+                                                name="message"
+                                                value={donorForm.message}
+                                                onChange={handleDonorFormChange}
+                                                rows="3"
+                                                placeholder="Leave a message of support..."
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '4px',
+                                                    resize: 'vertical'
+                                                }}
+                                        />
+                                    </div>
+
+                                    {/* Payment Method */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <h5 style={{ marginBottom: '15px' }}>Payment Method:</h5>
+                                        <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <input
+                                                        type="radio"
+                                                        value="paypal"
+                                                        checked={paymentMethod === 'paypal'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        style={{ marginRight: '8px' }}
+                                                />
+                                                🅿️ PayPal
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <input
+                                                        type="radio"
+                                                        value="card"
+                                                        checked={paymentMethod === 'card'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        style={{ marginRight: '8px' }}
+                                                />
+                                                💳 Credit Card
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Credit Card Form */}
+                                    {paymentMethod === 'card' && (
+                                            <div style={{
+                                                padding: '20px',
+                                                backgroundColor: '#f8f9fa',
+                                                borderRadius: '6px',
+                                                marginBottom: '20px'
+                                            }}>
+                                                <h6 style={{ marginBottom: '15px' }}>Credit Card Information:</h6>
+
+                                                <div style={{ marginBottom: '15px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                        Cardholder Name *
+                                                    </label>
+                                                    <input
+                                                            type="text"
+                                                            name="name"
+                                                            value={cardForm.name}
+                                                            onChange={handleCardFormChange}
+                                                            required={paymentMethod === 'card'}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '10px',
+                                                                border: '1px solid #ddd',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                    />
+                                                </div>
+
+                                                <div style={{ marginBottom: '15px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                        Card Number *
+                                                    </label>
+                                                    <input
+                                                            type="text"
+                                                            value={cardForm.number}
+                                                            onChange={handleCardNumberChange}
+                                                            placeholder="1234 5678 9012 3456"
+                                                            maxLength="19"
+                                                            required={paymentMethod === 'card'}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '10px',
+                                                                border: '1px solid #ddd',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                    />
+                                                </div>
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                                    <div>
+                                                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                            Expiry (MM/YY) *
+                                                        </label>
+                                                        <input
+                                                                type="text"
+                                                                value={cardForm.expiry}
+                                                                onChange={handleExpiryChange}
+                                                                placeholder="MM/YY"
+                                                                maxLength="5"
+                                                                required={paymentMethod === 'card'}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '10px',
+                                                                    border: '1px solid #ddd',
+                                                                    borderRadius: '4px'
+                                                                }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                            CVC *
+                                                        </label>
+                                                        <input
+                                                                type="text"
+                                                                name="cvc"
+                                                                value={cardForm.cvc}
+                                                                onChange={handleCardFormChange}
+                                                                placeholder="123"
+                                                                maxLength="4"
+                                                                required={paymentMethod === 'card'}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '10px',
+                                                                    border: '1px solid #ddd',
+                                                                    borderRadius: '4px'
+                                                                }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                    )}
+
+                                    {/* Submit Button */}
+                                    <button
+                                            type="submit"
+                                            disabled={isProcessing}
+                                            style={{
+                                                width: '100%',
+                                                padding: '15px',
+                                                backgroundColor: isProcessing ? '#6c757d' : '#28a745',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                                                fontSize: '18px',
+                                                fontWeight: 'bold'
+                                            }}
+                                    >
+                                        {isProcessing ? 'Processing...' : `Donate $${selectedAmount.toFixed(2)}`}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Security Note */}
+                    <div style={{
+                        marginTop: '30px',
+                        padding: '20px',
+                        backgroundColor: '#e9ecef',
+                        borderRadius: '6px',
+                        textAlign: 'center'
+                    }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
+                            🔒 Your donation is secure and encrypted. We never store credit card information on our servers.
+                        </p>
+                    </div>
+                </main>
+            </div>
+    );
+}
