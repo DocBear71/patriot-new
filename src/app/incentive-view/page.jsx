@@ -148,6 +148,14 @@ export default function IncentiveViewPage() {
                         type: 'success',
                         text: `Found ${data.results.length} business${data.results.length !== 1 ? 'es' : ''}`,
                     });
+
+                    // Auto-scroll to search results after they're rendered
+                    setTimeout(() => {
+                        const searchResultsHeading = document.querySelector('h3');
+                        if (searchResultsHeading && searchResultsHeading.textContent.includes('Search Results')) {
+                            searchResultsHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
                 } else {
                     setSearchResults([]);
                     setMessage({
@@ -855,7 +863,13 @@ export default function IncentiveViewPage() {
                                         <div style={{textAlign: 'center', padding: '20px'}}>
                                             <p>No incentives found for this business.</p>
                                             <button
-                                                    onClick={() => router.push('/incentive-add')}
+                                                    onClick={() => {
+                                                        // Store business context for incentive-add page
+                                                        if (selectedBusiness) {
+                                                            sessionStorage.setItem('selectedBusinessForIncentive', JSON.stringify(selectedBusiness));
+                                                        }
+                                                        router.push('/incentive-add');
+                                                    }}
                                                     style={{
                                                         padding: '10px 20px',
                                                         backgroundColor: '#28a745',

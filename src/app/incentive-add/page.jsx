@@ -44,6 +44,28 @@ export default function IncentiveAddPage() {
         // React handles this through conditional rendering
     }, [incentiveForm.incentiveType]);
 
+    // Load business from context if passed from incentive-view page
+    useEffect(() => {
+        const storedBusiness = sessionStorage.getItem('selectedBusinessForIncentive');
+        if (storedBusiness) {
+            try {
+                const business = JSON.parse(storedBusiness);
+                console.log('Loading business from context:', business);
+
+                // Preload the business
+                setSelectedBusiness(business);
+                setShowBusinessInfo(true);
+                setShowIncentiveForm(true);
+                setMessage({ type: 'success', text: `Business ${business.bname} loaded. You can now add an incentive.` });
+
+                // Clear the stored business
+                sessionStorage.removeItem('selectedBusinessForIncentive');
+            } catch (error) {
+                console.error('Error loading business from context:', error);
+            }
+        }
+    }, []);
+
     // Handle business search
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -58,15 +80,17 @@ export default function IncentiveAddPage() {
 
         try {
             const queryParams = new URLSearchParams();
+            queryParams.append('operation', 'search');
+
             if (searchForm.businessName.trim()) {
                 queryParams.append('business_name', searchForm.businessName.trim());
             }
             if (searchForm.address.trim()) {
                 queryParams.append('address', searchForm.address.trim());
             }
-            queryParams.append('operation', 'business');
 
-            const response = await fetch(`/api/combined-api?${queryParams}`);
+            console.log('Searching businesses with URL:', `/api/business?${queryParams}`);
+            const response = await fetch(`/api/business?${queryParams}`);
 
             if (!response.ok) {
                 throw new Error(`Search failed: ${response.status}`);
