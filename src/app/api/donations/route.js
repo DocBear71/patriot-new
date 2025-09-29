@@ -25,7 +25,7 @@ const environment = process.env.PAYPAL_MODE === 'live'
 const paypalClient = new paypal.core.PayPalHttpClient(environment);
 
 // Create email transporter for donation confirmations
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'mail.patriotthanks.com',
     port: 465,
     secure: true,
