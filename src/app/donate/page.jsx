@@ -1,5 +1,5 @@
 'use client';
-// file: /src/app/donate/page.jsx v2 - Donation Page with Stripe Integration
+// file: /src/app/donate/page.jsx v2 - Original styling with Stripe integration
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,21 +7,20 @@ import { useSession } from 'next-auth/react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Navigation from '../../components/layout/Navigation';
-import Footer from '../../components/legal/Footer';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-// Card Element styles
+// Card Element styles to match your design
 const cardElementOptions = {
     style: {
         base: {
             fontSize: '16px',
             color: '#424770',
+            fontFamily: 'Arial, sans-serif',
             '::placeholder': {
                 color: '#aab7c4',
             },
-            padding: '10px',
         },
         invalid: {
             color: '#9e2146',
@@ -39,11 +38,10 @@ function DonationForm() {
 
     const [selectedAmount, setSelectedAmount] = useState(25);
     const [customAmount, setCustomAmount] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('stripe');
+    const [paymentMethod, setPaymentMethod] = useState('paypal');
     const [isProcessing, setIsProcessing] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const [clientSecret, setClientSecret] = useState('');
 
     // Donor form state
     const [donorForm, setDonorForm] = useState({
@@ -113,9 +111,21 @@ function DonationForm() {
         return errors;
     };
 
-    // Create PaymentIntent on the server
-    const createPaymentIntent = async () => {
+    // Handle Stripe payment
+    const handleStripePayment = async () => {
+        if (!stripe || !elements) {
+            setMessage({ type: 'error', text: 'Payment system not ready. Please try again.' });
+            return false;
+        }
+
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+            setMessage({ type: 'error', text: 'Card element not found. Please refresh the page.' });
+            return false;
+        }
+
         try {
+            // Create payment intent
             const response = await fetch('/api/donations?operation=create-payment-intent', {
                 method: 'POST',
                 headers: {
@@ -138,35 +148,12 @@ function DonationForm() {
 
             const data = await response.json();
 
-            if (response.ok) {
-                return data.clientSecret;
-            } else {
+            if (!response.ok) {
                 throw new Error(data.message || 'Failed to create payment intent');
             }
-        } catch (error) {
-            console.error('Error creating payment intent:', error);
-            throw error;
-        }
-    };
-
-    const handleStripePayment = async () => {
-        if (!stripe || !elements) {
-            setMessage({ type: 'error', text: 'Stripe is not loaded yet. Please try again.' });
-            return;
-        }
-
-        const cardElement = elements.getElement(CardElement);
-        if (!cardElement) {
-            setMessage({ type: 'error', text: 'Card element not found. Please refresh the page.' });
-            return;
-        }
-
-        try {
-            // Create payment intent
-            const clientSecret = await createPaymentIntent();
 
             // Confirm payment
-            const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+            const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
                 payment_method: {
                     card: cardElement,
                     billing_details: {
@@ -197,6 +184,7 @@ function DonationForm() {
         }
     };
 
+    // Save donation to database
     const saveDonationToDatabase = async (paymentIntent) => {
         try {
             const response = await fetch('/api/donations?operation=save-donation', {
@@ -221,14 +209,13 @@ function DonationForm() {
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('Failed to save donation:', errorData);
-                // Don't throw error here since payment succeeded
             }
         } catch (error) {
             console.error('Error saving donation to database:', error);
-            // Don't throw error here since payment succeeded
         }
     };
 
+    // Handle PayPal payment (existing logic)
     const handlePayPalPayment = async () => {
         try {
             const response = await fetch('/api/donations?operation=create-paypal-order', {
@@ -249,7 +236,6 @@ function DonationForm() {
             const data = await response.json();
 
             if (response.ok && data.approvalUrl) {
-                // Redirect to PayPal for approval
                 window.location.href = data.approvalUrl;
                 return true;
             } else {
@@ -277,7 +263,7 @@ function DonationForm() {
         let success = false;
 
         try {
-            if (paymentMethod === 'stripe') {
+            if (paymentMethod === 'card') {
                 success = await handleStripePayment();
             } else if (paymentMethod === 'paypal') {
                 success = await handlePayPalPayment();
@@ -296,341 +282,422 @@ function DonationForm() {
 
     if (showSuccess) {
         return (
-                <div className="min-h-screen bg-gray-50">
+                <div style={{ paddingTop: '70px' }} id="page_layout">
                     <Navigation />
-                    <div className="pt-20 pb-12">
-                        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <div className="bg-white rounded-lg shadow-md p-8 text-center border-2 border-green-500">
-                                <div className="text-6xl text-green-500 mb-6">✅</div>
-                                <h2 className="text-3xl font-bold text-green-600 mb-4">
-                                    Thank You for Your Support!
-                                </h2>
-                                <h3 className="text-xl text-gray-800 mb-6">
-                                    Your donation of ${selectedAmount.toFixed(2)} has been processed successfully
-                                </h3>
-                                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                                    Your support helps us continue connecting heroes with businesses that appreciate their service.
+
+                    <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+                        <div style={{
+                            backgroundColor: 'white',
+                            padding: '40px',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            textAlign: 'center',
+                            border: '2px solid #28a745'
+                        }}>
+                            <div style={{ fontSize: '4rem', color: '#28a745', marginBottom: '20px' }}>
+                                ✅
+                            </div>
+                            <h2 style={{ color: '#28a745', marginBottom: '20px' }}>
+                                Thank You for Your Support!
+                            </h2>
+                            <h3 style={{ marginBottom: '20px' }}>
+                                Your donation of ${selectedAmount.toFixed(2)} has been received
+                            </h3>
+                            <p style={{ fontSize: '1.1rem', marginBottom: '30px', lineHeight: '1.6' }}>
+                                Your support helps us continue connecting heroes with businesses that appreciate their service.
+                            </p>
+
+                            <div style={{
+                                backgroundColor: '#f8f9fa',
+                                padding: '20px',
+                                borderRadius: '6px',
+                                marginBottom: '30px'
+                            }}>
+                                <p style={{ margin: '0 0 10px 0' }}>
+                                    A confirmation email has been sent to: <strong>{donorForm.email}</strong>
                                 </p>
+                                {donorForm.recurring && (
+                                        <p style={{ margin: 0, fontWeight: 'bold', color: '#007bff' }}>
+                                            Your donation will recur monthly. You can cancel at any time by contacting us.
+                                        </p>
+                                )}
+                            </div>
 
-                                <div className="bg-gray-50 p-6 rounded-lg mb-8">
-                                    <p className="text-gray-700 mb-2">
-                                        A confirmation email has been sent to: <strong>{donorForm.email}</strong>
-                                    </p>
-                                    {donorForm.recurring && (
-                                            <p className="text-blue-600 font-semibold">
-                                                Your donation will recur monthly. You can manage your subscription by contacting us.
-                                            </p>
-                                    )}
-                                </div>
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button
+                                        onClick={() => router.push('/')}
+                                        style={{
+                                            padding: '12px 30px',
+                                            backgroundColor: '#007bff',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                >
+                                    Return to Home
+                                </button>
+                                <button
+                                        onClick={() => router.push('/contact')}
+                                        style={{
+                                            padding: '12px 30px',
+                                            backgroundColor: 'transparent',
+                                            color: '#007bff',
+                                            border: '2px solid #007bff',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                >
+                                    Contact Us
+                                </button>
+                            </div>
 
-                                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <button
-                                            onClick={() => router.push('/')}
-                                            className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-                                    >
-                                        Return to Home
-                                    </button>
-                                    <button
-                                            onClick={() => router.push('/contact')}
-                                            className="bg-transparent border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors"
-                                    >
-                                        Contact Us
-                                    </button>
-                                </div>
-
-                                <div className="mt-8 text-sm text-gray-500">
-                                    <p>Problem with your donation? Please{' '}
-                                        <span
-                                                className="text-blue-600 cursor-pointer underline"
-                                                onClick={() => router.push('/contact')}
-                                        >
-                                        contact us
-                                    </span>{' '}
-                                        for assistance.
-                                    </p>
-                                </div>
+                            <div style={{ marginTop: '30px', fontSize: '0.9rem', color: '#666' }}>
+                                <p>Problem with your donation? Please <span
+                                        style={{ color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+                                        onClick={() => router.push('/contact')}
+                                >contact us</span> for assistance.</p>
                             </div>
                         </div>
-                    </div>
-                    <Footer />
+                    </main>
                 </div>
         );
     }
 
     return (
-            <div className="min-h-screen bg-gray-50">
+            <div style={{ paddingTop: '70px' }} id="page_layout">
                 <Navigation />
 
-                <div className="pt-20 pb-12">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {/* Header */}
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl font-bold text-gray-900 mb-4">Support Our Mission</h1>
-                            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                                Help us connect veterans, active-duty military, first responders, and their families
-                                with businesses that appreciate their service.
+                <header style={{ padding: '20px', borderBottom: '1px solid #ddd' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
+                        <div style={{ marginRight: '20px' }}>
+                            <img
+                                    src="/images/patriotthankslogo6-13-2025.png"
+                                    alt="Patriot Thanks logo"
+                                    style={{ height: '60px' }}
+                            />
+                        </div>
+                        <div>
+                            <h1 style={{ margin: 0, color: '#003366' }}>Patriot Thanks</h1>
+                            <h4 style={{ margin: '5px 0 0 0', color: '#666' }}>Support Our Mission</h4>
+                        </div>
+                    </div>
+                </header>
+
+                <main style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px', marginBottom: '40px' }}>
+                        {/* Mission Statement */}
+                        <div>
+                            <h2 style={{ color: '#003366', marginBottom: '20px' }}>Help Us Serve Those Who Serve</h2>
+                            <p style={{ fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>
+                                Patriot Thanks connects veterans, active-duty military, first responders, and their families
+                                with businesses that offer special discounts and incentives. Your donation helps us maintain
+                                and grow this valuable resource for our community.
                             </p>
-                        </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                            {/* Mission Statement */}
-                            <div className="lg:col-span-2">
-                                <div className="bg-white rounded-lg shadow-md p-8">
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Help Us Serve Those Who Serve</h2>
-                                    <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                                        Patriot Thanks connects veterans, active-duty military, first responders, and their families
-                                        with businesses that offer special discounts and incentives. Your donation helps us maintain
-                                        and grow this valuable resource for our community.
-                                    </p>
-
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Donation Helps Us:</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <ul className="space-y-3 text-gray-700">
-                                            <li className="flex items-start">
-                                                <span className="text-blue-600 mr-2">•</span>
-                                                Cover hosting and operational costs
-                                            </li>
-                                            <li className="flex items-start">
-                                                <span className="text-blue-600 mr-2">•</span>
-                                                Develop enhanced features and tools
-                                            </li>
-                                        </ul>
-                                        <ul className="space-y-3 text-gray-700">
-                                            <li className="flex items-start">
-                                                <span className="text-blue-600 mr-2">•</span>
-                                                Expand our database of participating businesses
-                                            </li>
-                                            <li className="flex items-start">
-                                                <span className="text-blue-600 mr-2">•</span>
-                                                Improve user experience for heroes and businesses
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Quick PayPal Option */}
-                            <div className="lg:col-span-1">
-                                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                                    <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                                        <span className="mr-2">⚡</span>
-                                        Quick PayPal Donation
-                                    </h3>
-                                    <p className="text-blue-700 mb-6">
-                                        Make a donation directly through PayPal without creating an account.
-                                    </p>
-
-                                    <div className="bg-yellow-400 hover:bg-yellow-500 transition-colors p-4 rounded-lg text-center cursor-pointer font-bold text-blue-900">
-                                        🅿️ Donate with PayPal
-                                    </div>
-
-                                    <p className="text-sm text-blue-600 mt-4 text-center">
-                                        For custom amounts and options, use the form below
-                                    </p>
-                                </div>
+                            <h4 style={{ color: '#003366', marginBottom: '15px' }}>Your Donation Helps Us:</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <ul style={{ lineHeight: '1.8' }}>
+                                    <li>Cover hosting and operational costs</li>
+                                    <li>Develop enhanced features and tools</li>
+                                </ul>
+                                <ul style={{ lineHeight: '1.8' }}>
+                                    <li>Expand our database of participating businesses</li>
+                                    <li>Improve the user experience for both heroes and businesses</li>
+                                </ul>
                             </div>
                         </div>
 
-                        {/* Message Display */}
-                        {message.text && (
-                                <div className={`mb-6 p-4 rounded-md ${
-                                        message.type === 'success'
-                                                ? 'bg-green-50 border border-green-200 text-green-800'
-                                                : 'bg-red-50 border border-red-200 text-red-800'
-                                }`}>
-                                    {message.text}
-                                </div>
-                        )}
+                        {/* Quick PayPal Donation */}
+                        <div style={{
+                            backgroundColor: '#f8f9fa',
+                            padding: '30px',
+                            borderRadius: '8px',
+                            border: '2px solid #007bff'
+                        }}>
+                            <h5 style={{ color: '#007bff', marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
+                                <span style={{ marginRight: '10px', fontSize: '1.2rem' }}>⚡</span>
+                                Quick PayPal Donation
+                            </h5>
+                            <p style={{ marginBottom: '20px', lineHeight: '1.5' }}>
+                                Make a donation directly through PayPal without creating an account.
+                            </p>
 
-                        {/* Main Donation Form */}
-                        <div className="bg-white rounded-lg shadow-md p-8">
-                            <h3 className="text-2xl font-bold text-gray-900 mb-8">Customize Your Donation</h3>
+                            {/* PayPal Button Placeholder */}
+                            <div style={{
+                                backgroundColor: '#ffc439',
+                                padding: '15px',
+                                borderRadius: '6px',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                color: '#003087'
+                            }}>
+                                🅿️ Donate with PayPal
+                            </div>
 
-                            <form onSubmit={handleDonationSubmit}>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* Amount Selection */}
-                                    <div>
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-6">Choose Amount:</h4>
-
-                                        {/* Preset Amounts */}
-                                        <div className="grid grid-cols-3 gap-3 mb-6">
-                                            {donationAmounts.map(amount => (
-                                                    <button
-                                                            key={amount}
-                                                            type="button"
-                                                            onClick={() => handleAmountSelect(amount)}
-                                                            className={`p-3 border-2 rounded-lg font-semibold text-lg transition-colors ${
-                                                                    selectedAmount === amount && !customAmount
-                                                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                                                            : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                                                            }`}
-                                                    >
-                                                        ${amount}
-                                                    </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Amount */}
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Custom Amount ($):
-                                            </label>
-                                            <input
-                                                    type="number"
-                                                    value={customAmount}
-                                                    onChange={handleCustomAmountChange}
-                                                    min="1"
-                                                    step="0.01"
-                                                    placeholder="Enter amount"
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-
-                                        {/* Payment Method Selection */}
-                                        <div className="mb-6">
-                                            <h5 className="text-lg font-semibold text-gray-900 mb-4">Payment Method:</h5>
-                                            <div className="space-y-3">
-                                                <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                                    <input
-                                                            type="radio"
-                                                            value="stripe"
-                                                            checked={paymentMethod === 'stripe'}
-                                                            onChange={(e) => setPaymentMethod(e.target.value)}
-                                                            className="mr-3"
-                                                    />
-                                                    <span className="mr-2">💳</span>
-                                                    Credit/Debit Card
-                                                </label>
-                                                <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                                    <input
-                                                            type="radio"
-                                                            value="paypal"
-                                                            checked={paymentMethod === 'paypal'}
-                                                            onChange={(e) => setPaymentMethod(e.target.value)}
-                                                            className="mr-3"
-                                                    />
-                                                    <span className="mr-2">🅿️</span>
-                                                    PayPal
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Donor Information */}
-                                    <div>
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-6">Donor Information:</h4>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Name *
-                                                </label>
-                                                <input
-                                                        type="text"
-                                                        name="name"
-                                                        value={donorForm.name}
-                                                        onChange={handleDonorFormChange}
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Email *
-                                                </label>
-                                                <input
-                                                        type="email"
-                                                        name="email"
-                                                        value={donorForm.email}
-                                                        onChange={handleDonorFormChange}
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                            <label className="flex items-center cursor-pointer">
-                                                <input
-                                                        type="checkbox"
-                                                        name="anonymous"
-                                                        checked={donorForm.anonymous}
-                                                        onChange={handleDonorFormChange}
-                                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                                />
-                                                Make my donation anonymous
-                                            </label>
-                                            <label className="flex items-center cursor-pointer">
-                                                <input
-                                                        type="checkbox"
-                                                        name="recurring"
-                                                        checked={donorForm.recurring}
-                                                        onChange={handleDonorFormChange}
-                                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                                />
-                                                Make this a monthly donation
-                                            </label>
-                                        </div>
-
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Message (Optional):
-                                            </label>
-                                            <textarea
-                                                    name="message"
-                                                    value={donorForm.message}
-                                                    onChange={handleDonorFormChange}
-                                                    rows="3"
-                                                    placeholder="Leave a message of support..."
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
-                                            />
-                                        </div>
-
-                                        {/* Stripe Card Element */}
-                                        {paymentMethod === 'stripe' && (
-                                                <div className="mb-6">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Card Information *
-                                                    </label>
-                                                    <div className="p-4 border border-gray-300 rounded-md bg-gray-50">
-                                                        <CardElement options={cardElementOptions} />
-                                                    </div>
-                                                </div>
-                                        )}
-
-                                        {/* Submit Button */}
-                                        <button
-                                                type="submit"
-                                                disabled={isProcessing || !stripe}
-                                                className="w-full bg-green-600 text-white py-4 px-6 rounded-lg text-lg font-semibold hover:bg-green-700 focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isProcessing ? (
-                                                    <span className="flex items-center justify-center">
-                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Processing...
-                                            </span>
-                                            ) : (
-                                                    `Donate $${selectedAmount.toFixed(2)}`
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                        {/* Security Note */}
-                        <div className="mt-8 bg-gray-100 border border-gray-200 rounded-lg p-6 text-center">
-                            <p className="text-sm text-gray-600 flex items-center justify-center">
-                                <span className="mr-2">🔒</span>
-                                Your donation is secure and encrypted. We use Stripe for payment processing and never store your card information.
+                            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '15px', textAlign: 'center' }}>
+                                For custom amounts and options, use the form below
                             </p>
                         </div>
                     </div>
-                </div>
-                <Footer />
+
+                    {message.text && (
+                            <div style={{
+                                padding: '15px',
+                                marginBottom: '20px',
+                                borderRadius: '4px',
+                                backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
+                                border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+                                color: message.type === 'success' ? '#155724' : '#721c24'
+                            }}>
+                                {message.text}
+                            </div>
+                    )}
+
+                    {/* Donation Form */}
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '40px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}>
+                        <h3 style={{ marginBottom: '30px', color: '#003366' }}>Customize Your Donation</h3>
+
+                        <form onSubmit={handleDonationSubmit}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
+                                {/* Amount Selection */}
+                                <div>
+                                    <h4 style={{ marginBottom: '20px' }}>Choose Amount:</h4>
+
+                                    {/* Preset Amounts */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '10px',
+                                        marginBottom: '20px'
+                                    }}>
+                                        {donationAmounts.map(amount => (
+                                                <button
+                                                        key={amount}
+                                                        type="button"
+                                                        onClick={() => handleAmountSelect(amount)}
+                                                        style={{
+                                                            padding: '12px',
+                                                            border: '2px solid',
+                                                            borderColor: selectedAmount === amount && !customAmount ? '#007bff' : '#ddd',
+                                                            backgroundColor: selectedAmount === amount && !customAmount ? '#007bff' : 'white',
+                                                            color: selectedAmount === amount && !customAmount ? 'white' : '#333',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '16px'
+                                                        }}
+                                                >
+                                                    ${amount}
+                                                </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Custom Amount */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                                            Custom Amount ($):
+                                        </label>
+                                        <input
+                                                type="number"
+                                                value={customAmount}
+                                                onChange={handleCustomAmountChange}
+                                                min="1"
+                                                step="0.01"
+                                                placeholder="Enter amount"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    border: '2px solid #ddd',
+                                                    borderRadius: '6px',
+                                                    fontSize: '16px'
+                                                }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Donor Information */}
+                                <div>
+                                    <h4 style={{ marginBottom: '20px' }}>Donor Information:</h4>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                Name *
+                                            </label>
+                                            <input
+                                                    type="text"
+                                                    name="name"
+                                                    value={donorForm.name}
+                                                    onChange={handleDonorFormChange}
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '4px'
+                                                    }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                Email *
+                                            </label>
+                                            <input
+                                                    type="email"
+                                                    name="email"
+                                                    value={donorForm.email}
+                                                    onChange={handleDonorFormChange}
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '4px'
+                                                    }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="anonymous"
+                                                    checked={donorForm.anonymous}
+                                                    onChange={handleDonorFormChange}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Make my donation anonymous
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="recurring"
+                                                    checked={donorForm.recurring}
+                                                    onChange={handleDonorFormChange}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Make this a monthly donation
+                                        </label>
+                                    </div>
+
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                            Message (Optional):
+                                        </label>
+                                        <textarea
+                                                name="message"
+                                                value={donorForm.message}
+                                                onChange={handleDonorFormChange}
+                                                rows="3"
+                                                placeholder="Leave a message of support..."
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '4px',
+                                                    resize: 'vertical'
+                                                }}
+                                        />
+                                    </div>
+
+                                    {/* Payment Method */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <h5 style={{ marginBottom: '15px' }}>Payment Method:</h5>
+                                        <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <input
+                                                        type="radio"
+                                                        value="paypal"
+                                                        checked={paymentMethod === 'paypal'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        style={{ marginRight: '8px' }}
+                                                />
+                                                🅿️ PayPal
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <input
+                                                        type="radio"
+                                                        value="card"
+                                                        checked={paymentMethod === 'card'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        style={{ marginRight: '8px' }}
+                                                />
+                                                💳 Credit Card
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Stripe Card Element - replaces the original credit card form */}
+                                    {paymentMethod === 'card' && (
+                                            <div style={{
+                                                padding: '20px',
+                                                backgroundColor: '#f8f9fa',
+                                                borderRadius: '6px',
+                                                marginBottom: '20px'
+                                            }}>
+                                                <h6 style={{ marginBottom: '15px' }}>Credit Card Information:</h6>
+                                                <div style={{
+                                                    padding: '12px',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '4px',
+                                                    backgroundColor: 'white'
+                                                }}>
+                                                    <CardElement options={cardElementOptions} />
+                                                </div>
+                                                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
+                                                    Your card information is secure and encrypted by Stripe.
+                                                </p>
+                                            </div>
+                                    )}
+
+                                    {/* Submit Button */}
+                                    <button
+                                            type="submit"
+                                            disabled={isProcessing || (paymentMethod === 'card' && !stripe)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '15px',
+                                                backgroundColor: isProcessing ? '#6c757d' : '#28a745',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                                                fontSize: '18px',
+                                                fontWeight: 'bold'
+                                            }}
+                                    >
+                                        {isProcessing ? 'Processing...' : `Donate $${selectedAmount.toFixed(2)}`}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Security Note */}
+                    <div style={{
+                        marginTop: '30px',
+                        padding: '20px',
+                        backgroundColor: '#e9ecef',
+                        borderRadius: '6px',
+                        textAlign: 'center'
+                    }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
+                            🔒 Your donation is secure and encrypted. We use Stripe for credit card processing and never store your card information on our servers.
+                        </p>
+                    </div>
+                </main>
             </div>
     );
 }
