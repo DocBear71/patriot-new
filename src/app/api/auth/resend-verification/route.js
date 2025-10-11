@@ -228,6 +228,17 @@ function getVerificationEmailHTML(firstName, verificationLink, verificationToken
         }
         .content {
             padding: 40px 30px;
+            background-color: #ffffff;
+            color: #333333;
+        }
+        .content p {
+            color: #333333;
+        }
+        .content h2 {
+            color: #1f2937;
+        }
+        .content h3 {
+            color: #1f2937;
         }
         .verification-section {
             text-align: center;

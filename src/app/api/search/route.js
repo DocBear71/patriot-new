@@ -55,13 +55,14 @@ export async function GET(request) {
             const zipPattern = /^\d{5}(-\d{4})?$/;
 
             if (zipPattern.test(addressTerm)) {
-                // Zip code search
+                // Zip code search - exact match
                 searchConditions.push({
-                    zip: new RegExp(addressTerm.replace('-', ''), 'i')
+                    zip: addressTerm.replace('-', '')
                 });
             } else {
                 // General address search - search all address components
-                const addressPattern = new RegExp(addressTerm, 'i');
+                const escapedTerm = addressTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const addressPattern = new RegExp(escapedTerm, 'i');
                 searchConditions.push({
                     $or: [
                         { address1: addressPattern },
@@ -76,8 +77,7 @@ export async function GET(request) {
 
         // Handle legacy zip parameter
         if (zip && zip.trim()) {
-            const zipPattern = new RegExp(zip.trim().replace('-', ''), 'i');
-            searchConditions.push({ zip: zipPattern });
+            searchConditions.push({ zip: zip.trim().replace('-', '') });
         }
 
         // LEGACY: Original query parameter (keywords/general search)
@@ -95,11 +95,13 @@ export async function GET(request) {
 
         // LEGACY: Specific field searches
         if (city && city.trim()) {
-            searchConditions.push({ city: new RegExp(city.trim(), 'i') });
+            const escapedCity = city.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            searchConditions.push({ city: new RegExp(escapedCity, 'i') });
         }
 
         if (state && state.trim()) {
-            searchConditions.push({ state: state.trim().toUpperCase() });
+            // State should be exact match (case-insensitive)
+            searchConditions.push({ state: new RegExp(`^${state.trim()}$`, 'i') });
         }
 
         if (type && type.trim()) {

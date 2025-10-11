@@ -189,6 +189,17 @@ function getWelcomeVerificationEmailHTML(firstName, verificationLink, verificati
         }
         .content {
             padding: 40px 30px;
+            background-color: #ffffff;
+            color: #333333;
+        }
+        .content p {
+            color: #333333;
+        }
+        .content h2 {
+            color: #1f2937;
+        }
+        .content h3 {
+            color: #1f2937;
         }
         .welcome-section {
             background: #f0f9ff;
@@ -197,6 +208,12 @@ function getWelcomeVerificationEmailHTML(firstName, verificationLink, verificati
             padding: 20px;
             margin: 20px 0;
             text-align: center;
+        }
+        .welcome-section h2 {
+            color: #0c4a6e;
+        }
+        .welcome-section p {
+            color: #0c4a6e;
         }
         .verification-section {
             text-align: center;

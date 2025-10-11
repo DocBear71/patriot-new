@@ -53,15 +53,17 @@ export default function IncentiveUpdatePage() {
 
         try {
             const queryParams = new URLSearchParams();
+            queryParams.append('operation', 'search');
+
             if (searchForm.businessName.trim()) {
                 queryParams.append('business_name', searchForm.businessName.trim());
             }
             if (searchForm.address.trim()) {
                 queryParams.append('address', searchForm.address.trim());
             }
-            queryParams.append('operation', 'business');
 
-            const response = await fetch(`/api/combined-api?${queryParams}`);
+            console.log('Searching businesses with URL:', `/api/business?${queryParams}`);
+            const response = await fetch(`/api/business?${queryParams}`);
 
             if (!response.ok) {
                 throw new Error(`Search failed: ${response.status}`);

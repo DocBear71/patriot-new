@@ -11,10 +11,11 @@ export default function SearchPage() {
         businessName: '',
         address: '',
         query: '',
-        city: '',
-        state: '',
+        cityState: '',  // Combined city and state
         serviceType: ''
     });
+    const [showOnlyWithIncentives, setShowOnlyWithIncentives] = useState(true); // Hide businesses without incentives by default
+    const [filteredResults, setFilteredResults] = useState([]);
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
@@ -389,13 +390,34 @@ export default function SearchPage() {
 
             // Primary search fields
             if (searchData.businessName) params.append('businessName', searchData.businessName);
-            if (searchData.address) params.append('address', searchData.address);
+
+            // Parse the address field for City, State combinations OR send as-is
+            if (searchData.address && searchData.address.trim()) {
+                const addressValue = searchData.address.trim();
+
+                // Check if it looks like "City, State" or "City State" format
+                // Pattern: text, optional comma/space, then 2-letter state code at end
+                const cityStatePattern = /^(.+?)[,\s]+([A-Z]{2})$/i;
+                const match = addressValue.match(cityStatePattern);
+
+                if (match) {
+                    // Looks like City, State format - send as separate parameters
+                    const city = match[1].trim();
+                    const state = match[2].trim().toUpperCase();
+                    params.append('city', city);
+                    params.append('state', state);
+                    console.log('Parsed as City/State:', city, state);
+                } else {
+                    // Not City, State format - send as address search
+                    params.append('address', addressValue);
+                    console.log('Sent as address:', addressValue);
+                }
+            }
 
             // Legacy/additional search fields for backward compatibility
             if (searchData.query) params.append('q', searchData.query);
-            if (searchData.city) params.append('city', searchData.city);
-            if (searchData.state) params.append('state', searchData.state);
             if (searchData.serviceType) params.append('serviceType', searchData.serviceType);
+
 
             // For zip code searches, also try the legacy 'q' parameter
             if (searchData.address && /^\d{5}(-\d{4})?$/.test(searchData.address.trim())) {
@@ -406,7 +428,11 @@ export default function SearchPage() {
             const data = await response.json();
 
             if (response.ok) {
-                setResults(data.results || []);
+                const allResults = data.results || [];
+                setResults(allResults);
+
+                // Apply filter based on toggle
+                filterResults(allResults, showOnlyWithIncentives);
 
                 // COMMENTED OUT: Display results on map
                 // if (mapInitialized) {
@@ -415,6 +441,7 @@ export default function SearchPage() {
             } else {
                 console.error('Search error:', data.error);
                 setResults([]);
+                setFilteredResults([]);
             }
         } catch (error) {
             console.error('Search failed:', error);
@@ -435,6 +462,25 @@ export default function SearchPage() {
             }, 100);
         }
     };
+
+    // Filter results based on incentives toggle
+    const filterResults = (resultsToFilter, onlyWithIncentives) => {
+        if (onlyWithIncentives) {
+            const filtered = resultsToFilter.filter(business =>
+                    business.incentives && business.incentives.length > 0
+            );
+            setFilteredResults(filtered);
+        } else {
+            setFilteredResults(resultsToFilter);
+        }
+    };
+
+    // Update filtered results when toggle changes
+    useEffect(() => {
+        if (results.length > 0) {
+            filterResults(results, showOnlyWithIncentives);
+        }
+    }, [showOnlyWithIncentives, results]);
 
     const handleInputChange = (e) => {
         setSearchData(prev => ({
@@ -734,10 +780,10 @@ export default function SearchPage() {
                                             <strong>Business Name:</strong> "Olive Garden", "McDonald's", "Home Depot"
                                         </div>
                                         <div>
-                                            <strong>Zip Code:</strong> "52402", "90210", "10001"
+                                            <strong>City & State:</strong> "Cedar Rapids IA", "Portland OR", "Miami FL"
                                         </div>
                                         <div>
-                                            <strong>City & State:</strong> "Cedar Rapids IA", "Los Angeles CA"
+                                            <strong>Zip Code:</strong> "52402", "90210", "10001"
                                         </div>
                                         <div>
                                             <strong>Street Address:</strong> "123 Main St", "Collins Rd NE"
@@ -769,7 +815,7 @@ export default function SearchPage() {
 
                                         <div>
                                             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                                                Address, City, State, or Zip Code
+                                                Address, City & State, or Zip Code
                                             </label>
                                             <input
                                                     type="text"
@@ -778,16 +824,16 @@ export default function SearchPage() {
                                                     value={searchData.address}
                                                     onChange={handleInputChange}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="e.g. 52402, Cedar Rapids IA, 1234 Main St"
+                                                    placeholder="e.g. 52402, Cedar Rapids IA, Portland OR, 1234 Main St"
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Any part of an address: street, city, state, or zip code</p>
+                                            <p className="text-xs text-gray-500 mt-1">Street address, city with state (Portland OR), or zip code</p>
                                         </div>
                                     </div>
 
-                                    {/* Advanced Search Options */}
+                                    {/* Filter Options */}
                                     <div className="border-t pt-4">
-                                        <h3 className="text-sm font-medium text-gray-700 mb-3">Advanced Search Options</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <h3 className="text-sm font-medium text-gray-700 mb-3">Filter Options</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
                                                     Keywords
@@ -799,60 +845,30 @@ export default function SearchPage() {
                                                         value={searchData.query}
                                                         onChange={handleInputChange}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="restaurant, auto repair, etc."
+                                                        placeholder="restaurant, auto repair, hotel, etc."
                                                 />
+                                                <p className="text-xs text-gray-500 mt-1">Business type or category keywords</p>
                                             </div>
 
                                             <div>
-                                                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    City
+                                                <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Service Type Filter
                                                 </label>
-                                                <input
-                                                        type="text"
-                                                        id="city"
-                                                        name="city"
-                                                        value={searchData.city}
+                                                <select
+                                                        id="serviceType"
+                                                        name="serviceType"
+                                                        value={searchData.serviceType}
                                                         onChange={handleInputChange}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="Cedar Rapids"
-                                                />
+                                                >
+                                                    {serviceTypes.map(type => (
+                                                            <option key={type.value} value={type.value}>
+                                                                {type.label}
+                                                            </option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-xs text-gray-500 mt-1">Filter results by who the business serves</p>
                                             </div>
-
-                                            <div>
-                                                <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    State
-                                                </label>
-                                                <input
-                                                        type="text"
-                                                        id="state"
-                                                        name="state"
-                                                        value={searchData.state}
-                                                        onChange={handleInputChange}
-                                                        maxLength="2"
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="IA"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4">
-                                            <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-2">
-                                                Service Type Filter
-                                            </label>
-                                            <select
-                                                    id="serviceType"
-                                                    name="serviceType"
-                                                    value={searchData.serviceType}
-                                                    onChange={handleInputChange}
-                                                    className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                {serviceTypes.map(type => (
-                                                        <option key={type.value} value={type.value}>
-                                                            {type.label}
-                                                        </option>
-                                                ))}
-                                            </select>
-                                            <p className="text-xs text-gray-500 mt-1">Filter results by who the business serves</p>
                                         </div>
                                     </div>
 
@@ -924,13 +940,45 @@ export default function SearchPage() {
                             {/* Results */}
                             {hasSearched && (
                                     <div id="search-results">
-                                        <div className="flex justify-between items-center mb-6">
-                                            <h2 className="text-2xl font-bold text-gray-900">
-                                                Search Results
-                                            </h2>
-                                            <span className="text-gray-600">
-                                                {results.length} businesses found
-                                            </span>
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-gray-900">
+                                                    Search Results
+                                                </h2>
+                                                <span className="text-gray-600">
+                                                    {filteredResults.length} of {results.length} businesses shown
+                                                </span>
+                                            </div>
+
+                                            {/* Toggle for businesses with/without incentives */}
+                                            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    Only show businesses with incentives
+                                                </span>
+                                                <button
+                                                        type="button"
+                                                        role="switch"
+                                                        aria-checked={showOnlyWithIncentives}
+                                                        onClick={() => setShowOnlyWithIncentives(!showOnlyWithIncentives)}
+                                                        className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                                        style={{
+                                                            width: '44px',
+                                                            height: '24px',
+                                                            backgroundColor: showOnlyWithIncentives ? '#16a34a' : '#d1d5db',
+                                                            transition: 'background-color 200ms'
+                                                        }}
+                                                >
+                                                    <span
+                                                            className="inline-block rounded-full bg-white shadow-lg"
+                                                            style={{
+                                                                width: '16px',
+                                                                height: '16px',
+                                                                transform: showOnlyWithIncentives ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 200ms'
+                                                            }}
+                                                    />
+                                                </button>
+                                            </div>
                                         </div>
 
 
@@ -939,9 +987,9 @@ export default function SearchPage() {
                                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
                                                     <p className="mt-4 text-gray-600">Searching...</p>
                                                 </div>
-                                        ) : results.length > 0 ? (
+                                        ) : filteredResults.length > 0 ? (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                    {results.map((business) => (
+                                                    {filteredResults.map((business) => (
                                                             <div key={business._id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">
                                                                     {business.bname}
@@ -991,8 +1039,15 @@ export default function SearchPage() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                                         </svg>
                                                     </div>
-                                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No businesses found</h3>
-                                                    <p className="text-gray-600">Try adjusting your search criteria or browse all businesses.</p>
+                                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                        {results.length > 0 ? 'No businesses match your filter' : 'No businesses found'}
+                                                    </h3>
+                                                    <p className="text-gray-600">
+                                                        {results.length > 0
+                                                                ? 'Try toggling the incentive filter to see all results.'
+                                                                : 'Try adjusting your search criteria or browse all businesses.'
+                                                        }
+                                                    </p>
                                                 </div>
                                         )}
                                     </div>
