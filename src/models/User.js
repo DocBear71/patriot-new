@@ -91,6 +91,22 @@ const UserSchema = new mongoose.Schema({
         favoriteCategories: [String]
     },
 
+    // NEW: Favorites system
+    favorites: {
+        businesses: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Business'
+        }],
+        incentives: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Incentive'
+        }],
+        addedAt: {
+            type: Date,
+            default: Date.now
+        }
+    },
+
     // Modern authentication fields
     isVerified: {
         type: Boolean,

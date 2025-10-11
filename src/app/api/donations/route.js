@@ -645,6 +645,17 @@ async function handleListDonations(request) {
             ];
         }
 
+        // NEW: Filter for recognition page
+        if (searchParams.get('showOnRecognitionPage') === 'true') {
+            filter.showOnRecognitionPage = true;
+            filter.anonymous = false; // Don't show anonymous donations
+        }
+
+        // NEW: Filter by exact email for user's own donations
+        if (searchParams.get('email')) {
+            filter.email = searchParams.get('email');
+        }
+
         // Get total count
         const total = await Donation.countDocuments(filter);
 

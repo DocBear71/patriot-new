@@ -22,10 +22,20 @@ const DonationSchema = new mongoose.Schema({
         default: false
     },
     message: String,
+    // NEW: Recognition page display options
+    showOnRecognitionPage: {
+        type: Boolean,
+        default: true
+    },
+    showAmount: {
+        type: Boolean,
+        default: false
+    },
     paymentMethod: {
         type: String,
         required: true
     },
+
     // Keep existing field for backwards compatibility
     paymentId: String,
     // Add new fields for API compatibility

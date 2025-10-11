@@ -46,6 +46,10 @@ export default function Navigation() {
                                 Support Our Mission
                             </Link>
 
+                            <Link href="/donor-recognition" className="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md">
+                                Donor Recognition
+                            </Link>
+
                             {/* Show Incentive View for everyone */}
                             <Link href="/incentive-view" className="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md">
                                 View Incentives
@@ -136,6 +140,12 @@ export default function Navigation() {
                                                 <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                     Profile
                                                 </Link>
+                                                <Link href="/my-donations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    My Donations
+                                                </Link>
+                                                <Link href="/my-favorites" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    My Favorites
+                                                </Link>
                                                 <button
                                                         onClick={handleSignOut}
                                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -190,6 +200,10 @@ export default function Navigation() {
 
                                     <Link href="/donate" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
                                         Support Our Mission
+                                    </Link>
+
+                                    <Link href="/donor-recognition" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
+                                        Donor Recognition
                                     </Link>
 
                                     {/* Show Incentive View for everyone */}
@@ -251,6 +265,12 @@ export default function Navigation() {
                                                 )}
                                                 <Link href="/profile" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
                                                     Profile
+                                                </Link>
+                                                <Link href="/my-donations" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
+                                                    My Donations
+                                                </Link>
+                                                <Link href="/my-favorites" className="block px-3 py-2 text-gray-700 hover:text-blue-500">
+                                                    My Favorites
                                                 </Link>
                                                 <button
                                                         onClick={handleSignOut}

@@ -3,10 +3,12 @@
 // file: /src/app/search/page.jsx v3 - Temporarily disabled Google Maps functionality
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
 
 export default function SearchPage() {
+    const router = useRouter();
     const [searchData, setSearchData] = useState({
         businessName: '',
         address: '',
@@ -990,7 +992,12 @@ export default function SearchPage() {
                                         ) : filteredResults.length > 0 ? (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                     {filteredResults.map((business) => (
-                                                            <div key={business._id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                                                            <div
+                                                                    key={business._id}
+                                                                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                    onClick={() => router.push(`/business/${business._id}`)}
+                                                                    style={{ cursor: 'pointer' }}
+                                                            >
                                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">
                                                                     {business.bname}
                                                                 </h3>
@@ -1029,6 +1036,28 @@ export default function SearchPage() {
                                                                             <p className="text-gray-500 text-sm">No specific incentives listed</p>
                                                                         </div>
                                                                 )}
+                                                                {/* ADD THIS SECTION */}
+                                                                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
+                                                                    <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                router.push(`/business/${business._id}`);
+                                                                            }}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                padding: '10px',
+                                                                                backgroundColor: '#007bff',
+                                                                                color: 'white',
+                                                                                border: 'none',
+                                                                                borderRadius: '6px',
+                                                                                cursor: 'pointer',
+                                                                                fontWeight: 'bold',
+                                                                                fontSize: '14px'
+                                                                            }}
+                                                                    >
+                                                                        View Details →
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                     ))}
                                                 </div>

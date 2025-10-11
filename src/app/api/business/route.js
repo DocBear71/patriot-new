@@ -154,13 +154,28 @@ async function handleBusinessSearch(request) {
 
         console.log("🔍 Search parameters:", { businessNameValue, addressValue });
 
+        // NEW: Check if searching by ID first
+        const idValue = searchParams.get('_id') || searchParams.get('id');
+        if (idValue && idValue.trim() !== '') {
+            console.log('🔑 Searching by ID:', idValue);
+            try {
+                // Convert to ObjectId if it's a valid MongoDB ObjectId format
+                if (mongoose.Types.ObjectId.isValid(idValue)) {
+                    query._id = new mongoose.Types.ObjectId(idValue);
+                } else {
+                    query._id = idValue;
+                }
+            } catch (error) {
+                console.error('Error converting ID:', error);
+                query._id = idValue;
+            }
+        }
+
         // Build MongoDB query
         if (businessNameValue && businessNameValue.trim() !== '') {
             // Use case-insensitive regex search with more flexible matching
             query.bname = new RegExp(businessNameValue.trim().replace(/\s+/g, '.*'), 'i');
-        }
-
-        if (addressValue && addressValue.trim() !== '') {
+        } else if (addressValue && addressValue.trim() !== '') {
             const addressRegex = { $regex: addressValue.trim(), $options: 'i' };
             query.$or = [
                 { address1: addressRegex },

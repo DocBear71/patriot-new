@@ -1109,6 +1109,20 @@ export default function IncentiveViewPage() {
                                             {/* Action buttons */}
                                             <div style={{textAlign: 'center', marginTop: '20px'}}>
                                                 <button
+                                                        onClick={() => router.push(`/business/${selectedBusiness._id}`)}
+                                                        style={{
+                                                            padding: '10px 20px',
+                                                            backgroundColor: '#007bff',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            cursor: 'pointer',
+                                                            marginRight: '10px',
+                                                        }}
+                                                >
+                                                    View Full Business Details
+                                                </button>
+                                                <button
                                                         onClick={() => router.push('/incentive-add')}
                                                         style={{
                                                             padding: '10px 20px',

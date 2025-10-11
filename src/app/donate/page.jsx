@@ -57,7 +57,9 @@ function DonationForm() {
         email: '',
         anonymous: false,
         recurring: false,
-        message: ''
+        message: '',
+        showOnRecognitionPage: true,
+        showAmount: false
     });
 
     // Predefined donation amounts
@@ -637,6 +639,45 @@ function DonationForm() {
                                             Make this a monthly donation
                                         </label>
                                     </div>
+
+                                    {/* NEW SECTION: Recognition page options */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '15px',
+                                        marginBottom: '15px',
+                                        padding: '15px',
+                                        backgroundColor: '#f8f9fa',
+                                        borderRadius: '6px'
+                                    }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="showOnRecognitionPage"
+                                                    checked={donorForm.showOnRecognitionPage}
+                                                    onChange={handleDonorFormChange}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Show my name on Recognition Page
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    name="showAmount"
+                                                    checked={donorForm.showAmount}
+                                                    onChange={handleDonorFormChange}
+                                                    disabled={!donorForm.showOnRecognitionPage || donorForm.anonymous}
+                                                    style={{ marginRight: '8px' }}
+                                            />
+                                            Show donation amount publicly
+                                        </label>
+                                    </div>
+                                    {donorForm.showOnRecognitionPage && (
+                                            <p style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic', marginBottom: '15px' }}>
+                                                Your name will appear on our Donor Recognition page to honor your support.
+                                                {donorForm.showAmount && ' Your donation amount will also be displayed.'}
+                                            </p>
+                                    )}
 
                                     <div style={{ marginBottom: '20px' }}>
                                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
