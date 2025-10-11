@@ -176,13 +176,13 @@ export default function ContactPage() {
                                     </h3>
                                     <div className="space-y-2">
                                         <Link
-                                                href="/business-search"
+                                                href="/search"
                                                 className="block text-blue-600 hover:text-blue-800"
                                         >
                                             Find Businesses
                                         </Link>
                                         <Link
-                                                href="/register"
+                                                href="/auth/signup"
                                                 className="block text-blue-600 hover:text-blue-800"
                                         >
                                             Create Account
@@ -199,7 +199,7 @@ export default function ContactPage() {
                         </div>
 
                         {/* Contact Form */}
-                        <div className="lg:col-span-2">
+                        <div className="md:col-span-2">
                             <div className="bg-white rounded-lg shadow-md p-6">
                                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
 
