@@ -13,16 +13,23 @@ import Incentive from '../../../models/Incentive';
  */
 export async function GET(request) {
     try {
+        console.log('📋 Favorites GET: Starting request');
+
         const session = await getServerSession(authOptions);
+        console.log('🔐 Session check:', session ? 'Session exists' : 'No session');
 
         if (!session || !session.user) {
+            console.log('❌ No session or user');
             return NextResponse.json(
                 { message: 'Authentication required' },
                 { status: 401 }
             );
         }
 
+        console.log('👤 User ID:', session.user.id);
+
         await connectDB;
+        console.log('✅ Database connected');
 
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // 'businesses', 'incentives', or 'all'
@@ -84,9 +91,14 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Error fetching favorites:', error);
+        console.error('❌ Error fetching favorites:', error);
+        console.error('Error stack:', error.stack);
         return NextResponse.json(
-            { message: 'Server error', error: error.message },
+            {
+                message: 'Server error',
+                error: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            },
             { status: 500 }
         );
     }
@@ -97,7 +109,10 @@ export async function GET(request) {
  */
 export async function POST(request) {
     try {
+        console.log('➕ Favorites POST: Starting request');
+
         const session = await getServerSession(authOptions);
+        console.log('🔐 Session check:', session ? 'Session exists' : 'No session');
 
         if (!session || !session.user) {
             return NextResponse.json(
