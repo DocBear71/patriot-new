@@ -28,8 +28,22 @@ export async function GET(request) {
 
         console.log('👤 User ID:', session.user.id);
 
-        await connectDB;
-        console.log('✅ Database connected');
+        // Connect with timeout handling
+        try {
+            await Promise.race([
+                connectDB(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Database connection timeout')), 8000)
+                )
+            ]);
+            console.log('✅ Database connected');
+        } catch (dbError) {
+            console.error('❌ Database connection failed:', dbError.message);
+            return NextResponse.json(
+                { message: 'Database connection failed', error: dbError.message },
+                { status: 503 }
+            );
+        }
 
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // 'businesses', 'incentives', or 'all'
@@ -121,7 +135,22 @@ export async function POST(request) {
             );
         }
 
-        await connectDB;
+        // Connect with timeout handling
+        try {
+            await Promise.race([
+                connectDB(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Database connection timeout')), 8000)
+                )
+            ]);
+            console.log('✅ Database connected');
+        } catch (dbError) {
+            console.error('❌ Database connection failed:', dbError.message);
+            return NextResponse.json(
+                { message: 'Database connection failed', error: dbError.message },
+                { status: 503 }
+            );
+        }
 
         const { itemId, type } = await request.json(); // type: 'business' or 'incentive'
 
@@ -195,7 +224,22 @@ export async function DELETE(request) {
             );
         }
 
-        await connectDB;
+        // Connect with timeout handling
+        try {
+            await Promise.race([
+                connectDB(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Database connection timeout')), 8000)
+                )
+            ]);
+            console.log('✅ Database connected');
+        } catch (dbError) {
+            console.error('❌ Database connection failed:', dbError.message);
+            return NextResponse.json(
+                { message: 'Database connection failed', error: dbError.message },
+                { status: 503 }
+            );
+        }
 
         const { searchParams } = new URL(request.url);
         const itemId = searchParams.get('itemId');
