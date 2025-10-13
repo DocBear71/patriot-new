@@ -81,24 +81,6 @@ async function verifyAdminAccess(request) {
 }
 
 /**
- * Helper to establish database connection
- */
-async function establishDBConnection() {
-    try {
-        await connectDB();
-        console.log("✅ Database connection established");
-        return { success: true };
-    } catch (dbError) {
-        console.error("❌ Database connection error:", dbError);
-        return {
-            success: false,
-            error: dbError,
-            message: 'Database connection error'
-        };
-    }
-}
-
-/**
  * Send donation confirmation email
  */
 async function sendDonationConfirmationEmail(donation) {
@@ -168,13 +150,14 @@ export async function GET(request) {
 
     console.log("💰 DONATIONS API: Processing GET request, operation:", operation);
 
-    // Connect to database
-    const dbConnection = await connectDB();
-    if (!dbConnection.success) {
+    try {
+        await connectDB();
+    } catch (error) {
+        console.error("❌ Database connection error:", error);
         return NextResponse.json(
             {
-                message: dbConnection.message,
-                error: dbConnection.error?.message
+                message: 'Database connection failed',
+                error: error.message
             },
             { status: 500 }
         );
@@ -223,12 +206,15 @@ export async function POST(request) {
 
     console.log("💰 DONATIONS API: Processing POST request, operation:", operation);
 
-    const dbConnection = await establishDBConnection();
-    if (!dbConnection.success) {
+    try {
+        await connectDB();
+        console.log("✅ Database connected for POST operation");
+    } catch (error) {
+        console.error("❌ Database connection failed:", error);
         return NextResponse.json(
             {
-                message: dbConnection.message,
-                error: dbConnection.error?.message
+                message: 'Database connection failed',
+                error: error.message
             },
             { status: 500 }
         );

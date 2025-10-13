@@ -90,7 +90,7 @@ export default function DonationsAdminPage() {
 
             const response = await fetch(`/api/donations?${params}`, {
                 headers: {
-                    'Authorization': `Bearer ${session.token}`
+                    'Content-Type': 'application/json'
                 }
             });
 
@@ -161,7 +161,7 @@ export default function DonationsAdminPage() {
 
             const response = await fetch('/api/donations?operation=stats', {
                 headers: {
-                    'Authorization': `Bearer ${session.token}`
+                    'Content-Type': 'application/json'
                 }
             });
 
@@ -217,8 +217,7 @@ export default function DonationsAdminPage() {
             const response = await fetch('/api/donations?operation=send-receipt', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ donationId })
             });
@@ -249,8 +248,7 @@ export default function DonationsAdminPage() {
             const response = await fetch('/api/donations?operation=cancel-recurring', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ donationId })
             });
@@ -284,7 +282,7 @@ export default function DonationsAdminPage() {
 
             const response = await fetch(`/api/donations?${params}`, {
                 headers: {
-                    'Authorization': `Bearer ${session.token}`
+                    'Content-Type': 'application/json'
                 }
             });
 
