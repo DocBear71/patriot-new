@@ -23,8 +23,8 @@ export default function DonorRecognitionPage() {
         try {
             setLoading(true);
 
-            // Build query params based on filter
-            let queryParams = '?status=completed&showOnRecognitionPage=true';
+            // Build query params based on filter - NEW: using recognition operation
+            let queryParams = 'operation=recognition';
 
             if (filter === 'month') {
                 const firstDayOfMonth = new Date();
@@ -36,27 +36,49 @@ export default function DonorRecognitionPage() {
                 queryParams += `&startDate=${firstDayOfYear.toISOString()}`;
             }
 
-            const response = await fetch(`/api/donations${queryParams}`);
+            const response = await fetch(`/api/donations?${queryParams}`);
 
             if (response.ok) {
                 const data = await response.json();
 
-                // Filter out anonymous donations that shouldn't be shown
-                const visibleDonors = (data.donations || []).filter(d =>
-                        d.showOnRecognitionPage && !d.anonymous
-                );
+                // Check if response has expected structure
+                if (data.success && data.donations) {
+                    const visibleDonors = data.donations;
+                    setDonors(visibleDonors);
+                    console.log('✅ Loaded', visibleDonors.length, 'donors for recognition page');
 
-                setDonors(visibleDonors);
-
-                // Calculate stats
-                calculateStats(data.donations || []);
+                    // Calculate stats from all donations (fetch separately for stats)
+                    await fetchStatsData();
+                } else {
+                    console.error('Unexpected response format:', data);
+                    setDonors([]);
+                }
             } else {
-                console.error('Failed to fetch donors');
+                const errorData = await response.json();
+                console.error('Failed to fetch donors:', response.status, errorData);
+                setDonors([]);
             }
         } catch (error) {
             console.error('Error fetching donors:', error);
+            setDonors([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchStatsData = async () => {
+        try {
+            // Fetch all completed donations for stats calculation (no filter)
+            const response = await fetch('/api/donations?operation=recognition');
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.donations) {
+                    calculateStats(data.donations);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching stats data:', error);
         }
     };
 

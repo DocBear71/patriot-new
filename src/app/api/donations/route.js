@@ -168,7 +168,8 @@ export async function GET(request) {
 
     console.log("💰 DONATIONS API: Processing GET request, operation:", operation);
 
-    const dbConnection = await establishDBConnection();
+    // Connect to database
+    const dbConnection = await connectDB();
     if (!dbConnection.success) {
         return NextResponse.json(
             {
@@ -182,20 +183,25 @@ export async function GET(request) {
     try {
         switch (operation) {
             case 'list':
-                return await handleListDonations(request);
+                return await handleListDonations(request); // Admin only
             case 'stats':
-                return await handleDonationStats(request);
+                return await handleDonationStats(request); // Admin only
             case 'get':
-                return await handleGetDonation(request);
+                return await handleGetDonation(request); // Admin only
             case 'export':
-                return await handleExportDonations(request);
+                return await handleExportDonations(request); // Admin only
+            case 'user-donations':
+                return await handleUserDonations(request); // Public - by email
+            case 'recognition':
+                return await handleRecognitionDonations(request); // Public - for recognition page
             default:
+                // Default response - list available operations
                 return NextResponse.json({
                     message: 'Donations API is available',
                     operations: [
-                        'create-payment-intent', 'save-donation', 'create-paypal-order',
-                        'capture-paypal-order', 'confirm', 'list', 'stats', 'cancel-recurring',
-                        'get', 'send-receipt', 'export'
+                        'create', 'confirm', 'list', 'stats',
+                        'cancel-recurring', 'get', 'send-receipt', 'export',
+                        'user-donations', 'recognition'
                     ]
                 });
         }
@@ -336,6 +342,20 @@ async function handleCreatePayPalOrder(request) {
             );
         }
 
+        let userId = null;
+        try {
+            const authHeader = request.headers.get('authorization');
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                userId = decoded.userId;
+                console.log('✅ User is logged in, userId captured:', userId);
+            }
+        } catch (error) {
+            // User not logged in, that's okay
+            console.log('ℹ️ No valid session found, proceeding without userId');
+        }
+
         const orderRequest = new paypal.orders.OrdersCreateRequest();
         orderRequest.prefer("return=representation");
         orderRequest.requestBody({
@@ -373,6 +393,7 @@ async function handleCreatePayPalOrder(request) {
             paymentMethod: 'paypal',
             paypalOrderId: order.result.id,
             status: 'pending',
+            userId: userId, // ADD THIS LINE
             created_at: new Date()
         });
 
@@ -410,6 +431,21 @@ async function handleCapturePayPalOrder(request) {
             );
         }
 
+        let userId = null;
+        try {
+            const authHeader = request.headers.get('authorization');
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                userId = decoded.userId;
+                console.log('✅ User is logged in, userId captured:', userId);
+            }
+        } catch (error) {
+            // User not logged in, that's okay
+            console.log('ℹ️ No valid session found, proceeding without userId');
+        }
+
+
         // Capture the order
         const captureRequest = new paypal.orders.OrdersCaptureRequest(orderID);
         captureRequest.requestBody({});
@@ -432,13 +468,18 @@ async function handleCapturePayPalOrder(request) {
                     paymentMethod: 'paypal',
                     paypalOrderId: orderID,
                     status: 'completed',
+                    userId: userId, // ADD THIS LINE
                     created_at: new Date()
                 });
             } else {
                 // Update existing donation
                 donation.status = 'completed';
+                if (userId && !donation.userId) {
+                    donation.userId = userId; // ADD THIS LINE
+                }
                 donation.updated_at = new Date();
             }
+
 
             // Get transaction ID from capture
             const captureId = capture.result.purchase_units[0].payments.captures[0].id;
@@ -489,6 +530,20 @@ async function handleSaveDonation(request) {
             );
         }
 
+        let userId = null;
+        try {
+            const authHeader = request.headers.get('authorization');
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                userId = decoded.userId;
+                console.log('✅ User is logged in, userId captured:', userId);
+            }
+        } catch (error) {
+            // User not logged in, that's okay
+            console.log('ℹ️ No valid session found, proceeding without userId');
+        }
+
         const donation = new Donation({
             amount: donationData.amount,
             name: donationData.name,
@@ -496,10 +551,13 @@ async function handleSaveDonation(request) {
             anonymous: donationData.anonymous || false,
             recurring: donationData.recurring || false,
             message: donationData.message || '',
+            showOnRecognitionPage: donationData.showOnRecognitionPage || false,
+            showAmount: donationData.showAmount || false,
             paymentMethod: donationData.paymentMethod || 'stripe',
             paymentIntentId: donationData.paymentIntentId,
             transactionId: donationData.transactionId || donationData.paymentIntentId,
             status: donationData.status || 'completed',
+            userId: userId, // ADD THIS LINE
             created_at: new Date()
         });
 
@@ -973,6 +1031,100 @@ async function handleExportDonations(request) {
 
     } catch (error) {
         console.error('❌ Error exporting donations:', error);
+        return NextResponse.json(
+            { message: 'Server error: ' + error.message },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * Handle user donations query - Public endpoint for logged-in users to see their donations
+ */
+async function handleUserDonations(request) {
+    console.log("📋 Getting user donations (public endpoint)");
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const email = searchParams.get('email');
+
+        if (!email) {
+            return NextResponse.json(
+                { message: 'Email parameter is required' },
+                { status: 400 }
+            );
+        }
+
+        // Query donations by email
+        const donations = await Donation.find({
+            email: email.toLowerCase(),
+            status: 'completed'
+        })
+            .sort({ created_at: -1 })
+            .select('-__v')
+            .lean();
+
+        console.log(`✅ Found ${donations.length} donations for user: ${email}`);
+
+        return NextResponse.json({
+            success: true,
+            donations,
+            total: donations.length
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching user donations:', error);
+        return NextResponse.json(
+            { message: 'Server error: ' + error.message },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * Handle recognition page donations - Public endpoint for donor recognition page
+ */
+async function handleRecognitionDonations(request) {
+    console.log("🏆 Getting donations for recognition page (public endpoint)");
+
+    try {
+        const { searchParams } = new URL(request.url);
+
+        // Build filter for public recognition page
+        const filter = {
+            status: 'completed',
+            showOnRecognitionPage: true,
+            anonymous: false
+        };
+
+        // Optional date filters
+        if (searchParams.get('startDate')) {
+            if (!filter.created_at) filter.created_at = {};
+            filter.created_at.$gte = new Date(searchParams.get('startDate'));
+        }
+
+        if (searchParams.get('endDate')) {
+            if (!filter.created_at) filter.created_at = {};
+            const endDate = new Date(searchParams.get('endDate'));
+            endDate.setDate(endDate.getDate() + 1);
+            filter.created_at.$lt = endDate;
+        }
+
+        // Get donations for recognition
+        const donations = await Donation.find(filter)
+            .sort({ created_at: -1 })
+            .select('name amount message showAmount recurring created_at')
+            .lean();
+
+        console.log(`✅ Found ${donations.length} donations for recognition page`);
+
+        return NextResponse.json({
+            success: true,
+            donations
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching recognition donations:', error);
         return NextResponse.json(
             { message: 'Server error: ' + error.message },
             { status: 500 }

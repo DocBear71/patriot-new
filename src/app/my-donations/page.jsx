@@ -30,23 +30,37 @@ export default function MyDonationsPage() {
         try {
             setLoading(true);
 
-            // Fetch donations by user email
-            const response = await fetch(`/api/donations?email=${encodeURIComponent(session.user.email)}`);
+            // NEW: Use the user-donations operation instead of querying directly
+            const response = await fetch(`/api/donations?operation=user-donations&email=${encodeURIComponent(session.user.email)}`);
 
             if (response.ok) {
                 const data = await response.json();
-                const userDonations = data.donations || [];
 
-                // Sort by date (newest first)
-                userDonations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                // Check if the response has the expected structure
+                if (data.success && data.donations) {
+                    const userDonations = data.donations;
 
-                setDonations(userDonations);
-                calculateStats(userDonations);
+                    // Sort by date (newest first)
+                    userDonations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                    setDonations(userDonations);
+                    calculateStats(userDonations);
+                    console.log('✅ Loaded', userDonations.length, 'donations for user');
+                } else {
+                    console.error('Unexpected response format:', data);
+                    setDonations([]);
+                    calculateStats([]);
+                }
             } else {
-                console.error('Failed to fetch donations');
+                const errorData = await response.json();
+                console.error('Failed to fetch donations:', response.status, errorData);
+                setDonations([]);
+                calculateStats([]);
             }
         } catch (error) {
             console.error('Error fetching donations:', error);
+            setDonations([]);
+            calculateStats([]);
         } finally {
             setLoading(false);
         }
