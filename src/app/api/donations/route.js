@@ -52,31 +52,38 @@ transporter.verify(function (error, success) {
  */
 async function verifyAdminAccess(request) {
     try {
-        const authHeader = request.headers.get('authorization');
+        // Import NextAuth server functions
+        const { getServerSession } = await import('next-auth/next');
+        const { authOptions } = await import('../auth/[...nextauth]/route');
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return { success: false, status: 401, message: 'Authorization required' };
+        // Get session from NextAuth cookies
+        const session = await getServerSession(authOptions);
+
+        console.log("🔐 Admin verification - Session:", session ? 'Found' : 'Not found');
+
+        if (!session || !session.user) {
+            console.log("❌ No session found");
+            return { success: false, status: 401, message: 'Not authenticated' };
         }
 
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+        console.log("👤 User level:", session.user.level, "isAdmin:", session.user.isAdmin);
 
-        await connectDB();
-        const user = await User.findById(decoded.userId);
-
-        if (!user) {
-            return { success: false, status: 404, message: 'User not found' };
-        }
-
-        if (user.level !== 'Admin' && user.isAdmin !== true) {
+        // Check if user is admin
+        if (session.user.level !== 'Admin' && !session.user.isAdmin) {
+            console.log("❌ User is not admin");
             return { success: false, status: 403, message: 'Admin access required' };
         }
 
-        return { success: true, userId: decoded.userId, user };
+        console.log("✅ Admin access verified");
+        return {
+            success: true,
+            userId: session.user.id,
+            user: session.user
+        };
 
     } catch (error) {
-        console.error("Admin verification error:", error);
-        return { success: false, status: 401, message: 'Invalid or expired token' };
+        console.error("❌ Admin verification error:", error);
+        return { success: false, status: 401, message: 'Session verification failed' };
     }
 }
 

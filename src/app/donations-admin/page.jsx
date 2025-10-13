@@ -75,8 +75,8 @@ export default function DonationsAdminPage() {
 
     const loadDonations = async () => {
         try {
-            if (status === 'loading') return <div>Loading...</div>;
-            if (!session || !session.user.isAdmin) {
+            if (status === 'loading') return;
+            if (!session || (!session.user.isAdmin && session.user.level !== 'Admin')) {
                 router.push('/auth/signin');
                 return;
             }
@@ -89,10 +89,9 @@ export default function DonationsAdminPage() {
             });
 
             const response = await fetch(`/api/donations?${params}`, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                credentials: 'include'
             });
+
 
             if (response.ok) {
                 const data = await response.json();
@@ -153,16 +152,14 @@ export default function DonationsAdminPage() {
 
     const loadStats = async () => {
         try {
-            if (status === 'loading') return <div>Loading...</div>;
-            if (!session || !session.user.isAdmin) {
+            if (status === 'loading') return;
+            if (!session || (!session.user.isAdmin && session.user.level !== 'Admin')) {
                 router.push('/auth/signin');
                 return;
             }
 
             const response = await fetch('/api/donations?operation=stats', {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                credentials: 'include'
             });
 
             if (response.ok) {
@@ -208,8 +205,8 @@ export default function DonationsAdminPage() {
 
     const sendReceiptEmail = async (donationId) => {
         try {
-            if (status === 'loading') return <div>Loading...</div>;
-            if (!session || !session.user.isAdmin) {
+            if (status === 'loading') return;
+            if (!session || (!session.user.isAdmin && session.user.level !== 'Admin')) {
                 router.push('/auth/signin');
                 return;
             }
@@ -219,6 +216,7 @@ export default function DonationsAdminPage() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({ donationId })
             });
 
@@ -239,8 +237,8 @@ export default function DonationsAdminPage() {
         }
 
         try {
-            if (status === 'loading') return <div>Loading...</div>;
-            if (!session || !session.user.isAdmin) {
+            if (status === 'loading') return;
+            if (!session || (!session.user.isAdmin && session.user.level !== 'Admin')) {
                 router.push('/auth/signin');
                 return;
             }
@@ -250,6 +248,7 @@ export default function DonationsAdminPage() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({ donationId })
             });
 
@@ -268,8 +267,8 @@ export default function DonationsAdminPage() {
     const exportDonations = async () => {
         setIsExporting(true);
         try {
-            if (status === 'loading') return <div>Loading...</div>;
-            if (!session || !session.user.isAdmin) {
+            if (status === 'loading') return;
+            if (!session || (!session.user.isAdmin && session.user.level !== 'Admin')) {
                 router.push('/auth/signin');
                 return;
             }
@@ -281,9 +280,7 @@ export default function DonationsAdminPage() {
             });
 
             const response = await fetch(`/api/donations?${params}`, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                credentials: 'include'
             });
 
             if (response.ok) {
