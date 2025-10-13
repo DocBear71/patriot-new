@@ -377,7 +377,7 @@ export default function DonationsAdminPage() {
                         </div>
                         <div>
                             <button
-                                    onClick={() => router.push('/admin-dashboard')}
+                                    onClick={() => router.push('/admin/dashboard')}
                                     style={{
                                         padding: '10px 20px',
                                         backgroundColor: '#6c757d',

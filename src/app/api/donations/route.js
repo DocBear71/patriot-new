@@ -54,7 +54,7 @@ async function verifyAdminAccess(request) {
     try {
         // Import NextAuth server functions
         const { getServerSession } = await import('next-auth/next');
-        const { authOptions } = await import('../auth/[...nextauth]/route');
+        const { authOptions } = await import('../../../lib/auth');  // ✅ CORRECT PATH
 
         // Get session from NextAuth cookies
         const session = await getServerSession(authOptions);
@@ -66,7 +66,7 @@ async function verifyAdminAccess(request) {
             return { success: false, status: 401, message: 'Not authenticated' };
         }
 
-        console.log("👤 User level:", session.user.level, "isAdmin:", session.user.isAdmin);
+        console.log("👤 User:", session.user.email, "Level:", session.user.level, "isAdmin:", session.user.isAdmin);
 
         // Check if user is admin
         if (session.user.level !== 'Admin' && !session.user.isAdmin) {
@@ -74,7 +74,7 @@ async function verifyAdminAccess(request) {
             return { success: false, status: 403, message: 'Admin access required' };
         }
 
-        console.log("✅ Admin access verified");
+        console.log("✅ Admin access verified for:", session.user.email);
         return {
             success: true,
             userId: session.user.id,
@@ -83,7 +83,7 @@ async function verifyAdminAccess(request) {
 
     } catch (error) {
         console.error("❌ Admin verification error:", error);
-        return { success: false, status: 401, message: 'Session verification failed' };
+        return { success: false, status: 401, message: 'Session verification failed: ' + error.message };
     }
 }
 
