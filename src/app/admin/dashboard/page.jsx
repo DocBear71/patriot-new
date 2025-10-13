@@ -74,7 +74,7 @@ export default function AdminDashboard() {
 
             try {
                 // This would be your business API - you might need to create this
-                const businessResponse = await fetch('/api/business?operation=admin-list-businesses&limit=5');
+                const businessResponse = await fetch('/api/business-admin?operation=admin-list-businesses&limit=5');
                 if (businessResponse.ok) {
                     const businessData = await businessResponse.json();
                     recentBusinesses = businessData.businesses || [];
