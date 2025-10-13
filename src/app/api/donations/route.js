@@ -17,12 +17,30 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16',
 });
 
-// Initialize PayPal
-const environment = process.env.PAYPAL_MODE === 'live'
-    ? new paypal.core.LiveEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET)
-    : new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
+// Initialize PayPal client dynamically to ensure fresh credentials
+function getPayPalClient() {
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+    const mode = process.env.PAYPAL_MODE || 'sandbox';
 
-const paypalClient = new paypal.core.PayPalHttpClient(environment);
+    console.log('🅿️ PayPal Configuration:', {
+        mode,
+        clientIdPresent: !!clientId,
+        clientSecretPresent: !!clientSecret,
+        clientIdStart: clientId ? clientId.substring(0, 10) + '...' : 'MISSING'
+    });
+
+    if (!clientId || !clientSecret) {
+        console.error('❌ PayPal credentials missing!');
+        throw new Error('PayPal credentials not configured');
+    }
+
+    const environment = mode === 'live'
+        ? new paypal.core.LiveEnvironment(clientId, clientSecret)
+        : new paypal.core.SandboxEnvironment(clientId, clientSecret);
+
+    return new paypal.core.PayPalHttpClient(environment);
+}
 
 // Create email transporter for donation confirmations
 const transporter = nodemailer.createTransport({
@@ -349,6 +367,7 @@ async function handleCreatePayPalOrder(request) {
             console.log('ℹ️ No valid session found, proceeding without userId');
         }
 
+        const paypalClient = getPayPalClient();
         const orderRequest = new paypal.orders.OrdersCreateRequest();
         orderRequest.prefer("return=representation");
         orderRequest.requestBody({
@@ -438,7 +457,7 @@ async function handleCapturePayPalOrder(request) {
             console.log('ℹ️ No valid session found, proceeding without userId');
         }
 
-
+        const paypalClient = getPayPalClient();
         // Capture the order
         const captureRequest = new paypal.orders.OrdersCaptureRequest(orderID);
         captureRequest.requestBody({});
