@@ -19,7 +19,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Initialize PayPal client dynamically to ensure fresh credentials
 function getPayPalClient() {
-    const clientId = process.env.PAYPAL_CLIENT_ID;
+    const clientId = process.env.PAYPAL_CLIENT_ID || process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
     const mode = process.env.PAYPAL_MODE || 'sandbox';
 
