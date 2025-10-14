@@ -96,6 +96,14 @@ function DonationForm() {
         }));
     };
 
+    // Check if name and email are filled in for PayPal
+    const isPayPalReady = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return donorForm.name.trim() !== '' &&
+                donorForm.email.trim() !== '' &&
+                emailRegex.test(donorForm.email);
+    };
+
     const validateDonationForm = () => {
         const errors = [];
 
@@ -471,6 +479,20 @@ function DonationForm() {
                                 Make a quick ${selectedAmount} donation with PayPal.
                             </p>
 
+                            {!isPayPalReady() && (
+                                    <div style={{
+                                        padding: '10px',
+                                        marginBottom: '15px',
+                                        backgroundColor: '#fff3cd',
+                                        border: '1px solid #ffc107',
+                                        borderRadius: '4px',
+                                        fontSize: '0.9rem',
+                                        color: '#856404'
+                                    }}>
+                                        ℹ️ PayPal requires your name and email address. Please fill them in below to enable PayPal donations.
+                                    </div>
+                            )}
+
                             {/* Quick PayPal Button */}
                             <div style={{ marginBottom: '15px' }}>
                                 <PayPalButtons
@@ -484,7 +506,8 @@ function DonationForm() {
                                         createOrder={createPayPalOrder}
                                         onApprove={onPayPalApprove}
                                         onError={onPayPalError}
-                                        disabled={isProcessing}
+                                        disabled={isProcessing || !isPayPalReady()}
+                                        forceReRender={[donorForm.name, donorForm.email]}
                                 />
                             </div>
 
@@ -757,6 +780,21 @@ function DonationForm() {
                                                 marginBottom: '20px'
                                             }}>
                                                 <h6 style={{ marginBottom: '15px' }}>PayPal Payment:</h6>
+
+                                                {!isPayPalReady() && (
+                                                        <div style={{
+                                                            padding: '12px',
+                                                            marginBottom: '15px',
+                                                            backgroundColor: '#fff3cd',
+                                                            border: '1px solid #ffc107',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.9rem',
+                                                            color: '#856404'
+                                                        }}>
+                                                            ℹ️ Please enter your name and email address above to enable PayPal donations.
+                                                        </div>
+                                                )}
+
                                                 <PayPalButtons
                                                         style={{
                                                             layout: 'vertical',
@@ -767,7 +805,8 @@ function DonationForm() {
                                                         createOrder={createPayPalOrder}
                                                         onApprove={onPayPalApprove}
                                                         onError={onPayPalError}
-                                                        disabled={isProcessing}
+                                                        disabled={isProcessing || !isPayPalReady()}
+                                                        forceReRender={[donorForm.name, donorForm.email]}
                                                 />
                                             </div>
                                     )}
