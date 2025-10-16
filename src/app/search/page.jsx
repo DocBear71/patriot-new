@@ -921,8 +921,8 @@ export default function SearchPage() {
                                 </div>
                             </div>
 
-
                             {/* Placeholder for Map - Shows when Maps would be displayed */}
+                            {/*
                             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
                                 <div className="text-center py-12">
                                     <div className="text-gray-400 mb-4">
@@ -934,7 +934,7 @@ export default function SearchPage() {
                                     <p className="text-gray-600">Interactive map functionality will be available in a future update.</p>
                                 </div>
                             </div>
-
+                            */}
                             {/* Results */}
                             {hasSearched && (
                                     <div id="search-results">
