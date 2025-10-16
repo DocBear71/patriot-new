@@ -70,13 +70,34 @@ export default function BusinessDetailPage() {
         initializeGoogleMaps();
     }, []);
 
-// Initialize map for single business
+    // Trigger map initialization when business data is loaded
+    useEffect(() => {
+        if (business && window.google?.maps) {
+            console.log('Business data available, initializing map');
+            setTimeout(() => initBusinessMap(), 500);
+        }
+    }, [business]);
+
+    // Initialize map for single business
     const initBusinessMap = async () => {
-        if (!business) return;
+        if (!business) {
+            console.log('Business data not available yet for map initialization');
+            return;
+        }
 
         try {
             const mapContainer = document.getElementById('business-map');
-            if (!mapContainer || !window.google) return;
+            if (!mapContainer) {
+                console.log('Map container not found');
+                return;
+            }
+
+            if (!window.google) {
+                console.log('Google Maps API not loaded yet');
+                return;
+            }
+
+            console.log('Initializing map for business:', business.bname);
 
             // Geocode the business address
             const geocoder = new window.google.maps.Geocoder();
@@ -137,6 +158,15 @@ export default function BusinessDetailPage() {
                     console.log('Business map initialized successfully');
                 } else {
                     console.error('Geocoding failed:', status);
+                    // Show error in map container
+                    mapContainer.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f8f9fa; color: #666;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 10px;">📍</div>
+                                <div>Unable to load map location</div>
+                            </div>
+                        </div>
+                    `;
                 }
             });
         } catch (error) {
