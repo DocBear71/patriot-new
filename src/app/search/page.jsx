@@ -22,10 +22,10 @@ export default function SearchPage() {
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     // COMMENTED OUT: Map-related state for future implementation
-    // const [mapInitialized, setMapInitialized] = useState(false);
-    // const [map, setMap] = useState(null);
-    // const [markers, setMarkers] = useState([]);
-    // const [infoWindow, setInfoWindow] = useState(null);
+    const [mapInitialized, setMapInitialized] = useState(false);
+    const [map, setMap] = useState(null);
+    const [markers, setMarkers] = useState([]);
+    const [infoWindow, setInfoWindow] = useState(null);
 
     const serviceTypes = [
         { value: '', label: 'All Service Types' },
@@ -36,78 +36,78 @@ export default function SearchPage() {
     ];
 
     // COMMENTED OUT: Google Maps configuration for future implementation
-    // const mapConfig = {
-    //     center: { lat: 41.9778, lng: -91.6656 }, // Cedar Rapids, IA
-    //     zoom: 11,
-    //     mapId: 'ebe8ec43a7bc252d', // Your map ID from the existing implementation
-    //     markerColors: {
-    //         primary: '#EA4335',    // RED - Primary search results (database)
-    //         database: '#28a745',   // GREEN - Nearby database businesses
-    //         nearby: '#4285F4',     // BLUE - Google Places results
-    //         chain: '#FF9800'       // ORANGE - Chain indicators
-    //     }
-    // };
+    const mapConfig = {
+        center: { lat: 41.9778, lng: -91.6656 }, // Cedar Rapids, IA
+        zoom: 11,
+        mapId: 'ebe8ec43a7bc252d', // Your map ID from the existing implementation
+        markerColors: {
+            primary: '#EA4335',    // RED - Primary search results (database)
+            database: '#28a745',   // GREEN - Nearby database businesses
+            nearby: '#4285F4',     // BLUE - Google Places results
+            chain: '#FF9800'       // ORANGE - Chain indicators
+        }
+    };
 
     // COMMENTED OUT: Initialize Google Maps using the same approach as the original HTML
-    // useEffect(() => {
-    //     // Set up the same window.appConfig as the original
-    //     window.appConfig = {
-    //         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
-    //         googleMapsMapId: 'ebe8ec43a7bc252d',
-    //         environment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    //                 ? 'development'
-    //                 : 'production',
-    //         debug: true,
-    //     };
+    useEffect(() => {
+        // Set up the same window.appConfig as the original
+        window.appConfig = {
+            googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+            googleMapsMapId: 'ebe8ec43a7bc252d',
+            environment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'development'
+                    : 'production',
+            debug: true,
+        };
 
-    //     // Define the initGoogleMap callback that matches the original
-    //     window.initGoogleMap = function() {
-    //         console.log('Google Maps callback executed');
-    //         initMap();
-    //         setMapInitialized(true);
-    //     };
+        // Define the initGoogleMap callback that matches the original
+        window.initGoogleMap = function() {
+            console.log('Google Maps callback executed');
+            initMap();
+            setMapInitialized(true);
+        };
 
-    //     const initializeGoogleMaps = () => {
-    //         if (window.google?.maps) {
-    //             window.initGoogleMap();
-    //             return;
-    //         }
+        const initializeGoogleMaps = () => {
+            if (window.google?.maps) {
+                window.initGoogleMap();
+                return;
+            }
 
-    //         // Get API key and mapId from runtime config (matching original)
-    //         const apiKey = window.appConfig.googleMapsApiKey;
-    //         const mapId = window.appConfig.googleMapsMapId;
+            // Get API key and mapId from runtime config (matching original)
+            const apiKey = window.appConfig.googleMapsApiKey;
+            const mapId = window.appConfig.googleMapsMapId;
 
-    //         console.log('Loading Google Maps with Map ID:', mapId);
+            console.log('Loading Google Maps with Map ID:', mapId);
 
-    //         // Create and insert the Google Maps script with all recommended parameters (matching original)
-    //         const script = document.createElement('script');
-    //         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&map_ids=${mapId}&libraries=places,geometry,marker&callback=initGoogleMap&loading=async&v=weekly`;
-    //         script.async = true;
-    //         script.defer = true;
+            // Create and insert the Google Maps script with all recommended parameters (matching original)
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&map_ids=${mapId}&libraries=places,geometry,marker&callback=initGoogleMap&loading=async&v=weekly`;
+            script.async = true;
+            script.defer = true;
 
-    //         script.onerror = function() {
-    //             console.error('Google Maps API failed to load. Check your API key.');
-    //             const mapContainer = document.getElementById('map');
-    //             if (mapContainer) {
-    //                 mapContainer.innerHTML = `
-    //                     <div style="text-align: center; padding: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px;">
-    //                         <p><strong>Error loading Google Maps</strong></p>
-    //                         <p>Please check your internet connection and try again.</p>
-    //                     </div>
-    //                 `;
-    //             } else {
-    //                 alert('Error loading Google Maps. Please try again later.');
-    //             }
-    //         };
+            script.onerror = function() {
+                console.error('Google Maps API failed to load. Check your API key.');
+                const mapContainer = document.getElementById('map');
+                if (mapContainer) {
+                    mapContainer.innerHTML = `
+                        <div style="text-align: center; padding: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px;">
+                            <p><strong>Error loading Google Maps</strong></p>
+                            <p>Please check your internet connection and try again.</p>
+                        </div>
+                    `;
+                } else {
+                    alert('Error loading Google Maps. Please try again later.');
+                }
+            };
 
-    //         document.head.appendChild(script);
-    //     };
+            document.head.appendChild(script);
+        };
 
-    //     initializeGoogleMaps();
-    // }, []);
+        initializeGoogleMaps();
+    }, []);
 
     // COMMENTED OUT: All Google Maps functions for future implementation
-    /*
+
     // Initialize the map
     const initMap = async () => {
         try {
@@ -379,7 +379,6 @@ export default function SearchPage() {
             map.setZoom(mapConfig.zoom);
         }
     };
-    */
 
     // Handle search
     const handleSearch = async (e) => {
@@ -437,9 +436,9 @@ export default function SearchPage() {
                 filterResults(allResults, showOnlyWithIncentives);
 
                 // COMMENTED OUT: Display results on map
-                // if (mapInitialized) {
-                //     await displayBusinessesOnMap(data.results || []);
-                // }
+                if (mapInitialized) {
+                    await displayBusinessesOnMap(data.results || []);
+                }
             } else {
                 console.error('Search error:', data.error);
                 setResults([]);
@@ -494,9 +493,7 @@ export default function SearchPage() {
     return (
             <>
                 {/* COMMENTED OUT: Map-related CSS - Keep for future implementation */}
-                {/*
                 <style jsx global>{`
-                    // Map Container Styles - Matching Original HTML
                     #map-container {
                         width: 90%;
                         margin: 20px auto;
@@ -757,8 +754,7 @@ export default function SearchPage() {
                             min-height: 300px;
                         }
                     }
-                \`}</style>
-                */}
+                `}</style>
 
                 <div className="min-h-screen bg-gray-50">
                     <Navigation />
@@ -887,7 +883,7 @@ export default function SearchPage() {
                             </div>
 
                             {/* COMMENTED OUT: Google Maps Container - Keep for future implementation */}
-                            {/*
+
                             <div id="map-container">
                                 <div className="map-controls">
                                     <div>
@@ -924,7 +920,7 @@ export default function SearchPage() {
                                     </div>
                                 </div>
                             </div>
-                            */}
+
 
                             {/* Placeholder for Map - Shows when Maps would be displayed */}
                             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
