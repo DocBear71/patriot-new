@@ -52,7 +52,7 @@ export default function SearchPage() {
     useEffect(() => {
         // Set up the same window.appConfig as the original
         window.appConfig = {
-            googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+            googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
             googleMapsMapId: 'ebe8ec43a7bc252d',
             environment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                     ? 'development'
