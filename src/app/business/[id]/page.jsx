@@ -73,8 +73,30 @@ export default function BusinessDetailPage() {
     // Trigger map initialization when business data is loaded
     useEffect(() => {
         if (business && window.google?.maps) {
-            console.log('Business data available, initializing map');
-            setTimeout(() => initBusinessMap(), 500);
+            console.log('Business data available, checking for map container');
+
+            // Use a retry mechanism to ensure DOM is ready
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            const tryInitMap = () => {
+                const mapContainer = document.getElementById('business-map');
+                if (mapContainer) {
+                    console.log('Map container found, initializing map');
+                    initBusinessMap();
+                } else {
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        console.log(`Map container not found, retrying... (${attempts}/${maxAttempts})`);
+                        setTimeout(tryInitMap, 200);
+                    } else {
+                        console.error('Map container not found after maximum attempts');
+                    }
+                }
+            };
+
+            // Start trying after a short delay
+            setTimeout(tryInitMap, 100);
         }
     }, [business]);
 
@@ -258,11 +280,6 @@ export default function BusinessDetailPage() {
             }
 
             setIncentives(allIncentives);
-
-            // Initialize map if Google Maps is ready
-            if (window.google?.maps && businessData) {
-                setTimeout(() => initBusinessMap(), 500);
-            }
 
         } catch (err) {
             console.error('Error fetching incentives:', err);
