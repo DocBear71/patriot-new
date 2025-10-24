@@ -190,22 +190,24 @@ export default function SearchPage() {
             let markerColor, markerClass;
 
             // FIXED: Check business properties to determine correct color
-            if (business.markerColor === 'primary' || business.isPrimaryResult || (business.isFromDatabase && !business.isNearbyDatabase)) {
+            // Priority order: chain > primary > nearby > database > default
+            if (business.markerColor === 'chain' || (business.chain_id && !business.isPrimaryResult)) {
+                markerColor = mapConfig.markerColors.chain; // ORANGE
+                markerClass = 'chain';
+                console.log(`🟠 ORANGE marker for: ${business.bname} (Chain)`);
+            } else if (business.markerColor === 'primary' || business.isPrimaryResult) {
                 markerColor = mapConfig.markerColors.primary; // RED
                 markerClass = 'primary';
                 console.log(`🔴 RED marker for: ${business.bname} (Primary)`);
-            } else if (business.markerColor === 'database' || business.isNearbyDatabase) {
-                markerColor = mapConfig.markerColors.database; // GREEN
-                markerClass = 'database';
-                console.log(`🟢 GREEN marker for: ${business.bname} (Nearby Database)`);
             } else if (business.markerColor === 'nearby' || business.isGooglePlace || business.isRelevantPlaces) {
                 markerColor = mapConfig.markerColors.nearby; // BLUE
                 markerClass = 'nearby';
                 console.log(`🔵 BLUE marker for: ${business.bname} (Google Places)`);
-            } else if (business.chain_id || business.markerColor === 'chain') {
-                markerColor = mapConfig.markerColors.chain; // ORANGE
-                markerClass = 'chain';
-                console.log(`🟠 ORANGE marker for: ${business.bname} (Chain)`);
+            } else if (business.markerColor === 'database' || business.isNearbyDatabase) {
+                markerColor = mapConfig.markerColors.database; // GREEN
+                markerClass = 'database';
+                console.log(`🟢 GREEN marker for: ${business.bname} (Nearby Database)`);
+            } else if (business.markerColor === 'primary' || business.isPrimaryResult || (business.isFromDatabase && !business.isNearbyDatabase)) {
             } else {
                 markerColor = mapConfig.markerColors.primary; // Default to RED
                 markerClass = 'primary';
@@ -402,16 +404,52 @@ export default function SearchPage() {
         const newMarkers = [];
         const bounds = new window.google.maps.LatLngBounds();
 
+        console.log('📍 Displaying businesses on map:', businesses.length);
+        console.log('🔍 Search criteria:', {
+            businessName: searchData.businessName,
+            address: searchData.address
+        });
+
         for (const business of businesses) {
-            // Determine business type for color coding
+            // ENHANCED: Determine business type based on search context
             let businessType = 'primary';
-            if (business.isFromDatabase && !business.isPrimaryResult) {
-                businessType = 'database';
-            } else if (business.isGooglePlace) {
-                businessType = 'nearby';
-            } else if (business.chain_id) {
-                businessType = 'chain';
+
+            // If searching by business name, match businesses get primary (RED)
+            if (searchData.businessName && searchData.businessName.trim()) {
+                const searchName = searchData.businessName.toLowerCase().trim();
+                const businessName = (business.bname || '').toLowerCase().trim();
+
+                if (businessName.includes(searchName)) {
+                    // This business matches the search name
+                    businessType = 'primary'; // RED
+                    business.isPrimaryResult = true;
+                    business.markerColor = 'primary';
+                } else {
+                    // This business doesn't match but was returned (nearby)
+                    businessType = 'database'; // GREEN
+                    business.isNearbyDatabase = true;
+                    business.markerColor = 'database';
+                }
+            } else {
+                // No business name search - all are nearby database results
+                businessType = 'database'; // GREEN
+                business.isNearbyDatabase = true;
+                business.markerColor = 'database';
             }
+
+            // Override with chain color if it's a chain
+            if (business.chain_id) {
+                businessType = 'chain'; // ORANGE
+                business.markerColor = 'chain';
+            }
+
+            // Override with Google Places color if from Google
+            if (business.isGooglePlace || business._id?.toString().startsWith('google_')) {
+                businessType = 'nearby'; // BLUE
+                business.markerColor = 'nearby';
+            }
+
+            console.log(`Setting ${business.bname} as: ${businessType} (${business.markerColor})`);
 
             const marker = await createBusinessMarker(business, businessType);
             if (marker) {
@@ -425,6 +463,11 @@ export default function SearchPage() {
                     position = new window.google.maps.LatLng(
                             parseFloat(business.coordinates.lat),
                             parseFloat(business.coordinates.lng)
+                    );
+                } else if (business.lat && business.lng) {
+                    position = new window.google.maps.LatLng(
+                            parseFloat(business.lat),
+                            parseFloat(business.lng)
                     );
                 }
 
@@ -452,6 +495,8 @@ export default function SearchPage() {
                 });
             }
         }
+
+        console.log('✅ Map display complete:', newMarkers.length, 'markers created');
     };
 
     // Reset map view

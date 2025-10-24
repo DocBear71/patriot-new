@@ -312,7 +312,7 @@ export default function AdminDashboard() {
                             </Link>
 
                             <Link
-                                    href="../coordinate-fix"
+                                    href="/admin/coordinate-fix"
                                     className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
                             >
                                 <div className="text-gray-500 mb-2 group-hover:text-gray-600">
