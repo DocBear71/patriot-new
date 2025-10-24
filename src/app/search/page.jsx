@@ -481,23 +481,30 @@ export default function SearchPage() {
 
     // Handle clicks on Google Places POI markers (not in our database)
     const handleGooglePlaceClick = (place) => {
-        if (!infoWindow || !place) return;
+        if (!infoWindow || !place) {
+            console.error('❌ No infoWindow or place:', { infoWindow, place });
+            return;
+        }
 
-        console.log('📍 Clicked Google Place:', place);
+        console.log('📍 Processing Google Place click...');
 
-        // Extract data from the new Place object
-        const businessName = place.displayName || place.name || 'Business';
-        const address = place.formattedAddress || '';
-        const phone = place.internationalPhoneNumber || place.nationalPhoneNumber || '';
-        const website = place.websiteURI || place.website || '';
+        // Extract data from the new Place object - it's nested in place.Cg
+        const placeData = place.Cg || place;
+
+        const businessName = placeData.displayName || 'Business';
+        const address = placeData.formattedAddress || '';
+        const phone = placeData.internationalPhoneNumber || placeData.nationalPhoneNumber || '';
+        const website = placeData.websiteURI || '';
+
+        console.log('📋 Extracted place data:', { businessName, address, phone, website });
 
         // Parse address components for city/state/zip
         let city = '';
         let state = '';
         let zip = '';
 
-        if (place.addressComponents) {
-            place.addressComponents.forEach(component => {
+        if (placeData.addressComponents) {
+            placeData.addressComponents.forEach(component => {
                 if (component.types.includes('locality')) {
                     city = component.longText || component.long_name || '';
                 }
@@ -511,7 +518,7 @@ export default function SearchPage() {
         }
 
         const content = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px; padding: 4px;">
             <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
                 <strong>ℹ️ Not in Database</strong>
                 <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">
@@ -552,19 +559,31 @@ export default function SearchPage() {
         </div>
     `;
 
-        infoWindow.setContent(content);
-
-        // Get location from place
+        // Get location from place - it's nested in place.Cg.location or place.Gg
         let position;
-        if (place.location) {
-            position = place.location;
-        } else if (place.geometry?.location) {
-            position = place.geometry.location;
+
+        if (placeData.location) {
+            // The location has lat/lng properties
+            position = new window.google.maps.LatLng(
+                    placeData.location.lat,
+                    placeData.location.lng
+            );
+        } else if (place.Gg) {
+            // Fallback to Gg object which has lat() and lng() functions
+            position = new window.google.maps.LatLng(
+                    place.Gg.lat(),
+                    place.Gg.lng()
+            );
         }
 
-        if (position) {
+        console.log('📍 Setting info window at position:', position);
+
+        if (position && map) {
+            infoWindow.setContent(content);
             infoWindow.setPosition(position);
             infoWindow.open(map);
+
+            console.log('✅ Info window opened');
 
             // Add click handler for "Add to Database" button after DOM renders
             setTimeout(() => {
@@ -580,9 +599,9 @@ export default function SearchPage() {
                             state: state,
                             zip: zip,
                             phone: phone,
-                            lat: position?.lat() || '',
-                            lng: position?.lng() || '',
-                            placeId: place.id || place.place_id || '',
+                            lat: placeData.location?.lat || '',
+                            lng: placeData.location?.lng || '',
+                            placeId: placeData.id || place.id || '',
                             website: website
                         };
 
@@ -596,6 +615,8 @@ export default function SearchPage() {
                     });
                 }
             }, 100);
+        } else {
+            console.error('❌ Could not open info window - missing position or map:', { position, map });
         }
     };
 
