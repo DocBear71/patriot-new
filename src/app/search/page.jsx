@@ -128,7 +128,19 @@ export default function SearchPage() {
                 scaleControl: true,
                 streetViewControl: false,
                 rotateControl: false,
-                fullscreenControl: true
+                fullscreenControl: true,
+                // CRITICAL: Hide default Google POI markers to avoid duplicates
+                styles: [
+                    {
+                        featureType: "poi",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "poi.business",
+                        stylers: [{ visibility: "off" }]
+                    }
+                ]
             });
 
             const newInfoWindow = new window.google.maps.InfoWindow({
@@ -212,37 +224,66 @@ export default function SearchPage() {
                 console.log(`⚠️ DEFAULT RED marker for: ${business.bname}`);
             }
 
-            // ALWAYS try to use AdvancedMarkerElement (preferred by Google)
+            // ALWAYS try to use AdvancedMarkerElement with custom HTML
             try {
                 // Import the marker library if not already imported
                 if (!window.google.maps.marker) {
                     await window.google.maps.importLibrary("marker");
                 }
 
-                const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+                const { AdvancedMarkerElement } = window.google.maps.marker;
 
-                // Create a custom pin with the correct color
-                const pinElement = new PinElement({
-                    background: markerColor,
-                    borderColor: '#ffffff',
-                    glyphColor: '#ffffff',
-                    scale: 1.2
-                });
+                // Create custom HTML pin element with icon and rotation
+                const pinElement = document.createElement('div');
+                pinElement.className = `custom-marker-pin ${markerClass}`;
+                pinElement.style.cssText = `
+                position: relative;
+                width: 40px;
+                height: 48px;
+                cursor: pointer;
+                transform-origin: center center;
+            `;
+
+                pinElement.innerHTML = `
+                <div style="
+                    position: absolute;
+                    width: 40px;
+                    height: 48px;
+                    background-color: ${markerColor};
+                    border: 3px solid white;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <div style="
+                        transform: rotate(45deg);
+                        font-size: 20px;
+                        color: white;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                        margin-top: -6px;
+                        margin-left: -6px;
+                    ">🏢</div>
+                </div>
+            `;
 
                 // Create the advanced marker
                 const marker = new AdvancedMarkerElement({
                     position: position,
                     map: map,
                     title: business.bname,
-                    content: pinElement.element
+                    content: pinElement,
+                    gmpClickable: true
                 });
 
-                // Add click listener
-                marker.addListener('click', () => {
+                // Add click listener to the pin element
+                pinElement.addEventListener('click', () => {
                     showBusinessInfo(business, marker, position);
                 });
 
-                console.log(`✅ Created AdvancedMarker for ${business.bname}`);
+                console.log(`✅ Created custom AdvancedMarker with icon for ${business.bname}`);
                 return marker;
 
             } catch (advancedError) {
