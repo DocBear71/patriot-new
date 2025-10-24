@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
+import SearchLoadingModal from '../../components/search/SearchLoadingModal';
 
 export default function SearchPage() {
     const router = useRouter();
@@ -21,7 +22,10 @@ export default function SearchPage() {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
-    // COMMENTED OUT: Map-related state for future implementation
+    const [loadingStep, setLoadingStep] = useState(1);
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingMessage, setLoadingMessage] = useState('Please wait while we find the best results...');
+// COMMENTED OUT: Map-related state for future implementation
     const [mapInitialized, setMapInitialized] = useState(false);
     const [map, setMap] = useState(null);
     const [markers, setMarkers] = useState([]);
@@ -271,34 +275,96 @@ export default function SearchPage() {
     const showBusinessInfo = (business, marker, position) => {
         if (!infoWindow) return;
 
+        const isGooglePlace = business.isGooglePlace || !business._id || business._id?.toString().startsWith('google_');
+        const isFromDatabase = business.isFromDatabase || (!isGooglePlace && business._id);
+
         const incentivesHtml = business.incentives && business.incentives.length > 0
                 ? business.incentives.map(incentive => `
-                <div class="incentive-item">
-                    <strong>${getServiceTypeLabel(incentive.type)}: ${incentive.amount}% off</strong>
-                    <br><small>${incentive.information}</small>
-                </div>
-            `).join('')
-                : '<div class="no-incentives">No specific incentives listed</div>';
+            <div style="padding: 8px; background: #e8f5e9; border-radius: 4px; margin: 4px 0;">
+                <strong>${getServiceTypeLabel(incentive.type)}: ${incentive.amount}% off</strong>
+                <br><small>${incentive.information}</small>
+            </div>
+        `).join('')
+                : '<div style="padding: 8px; color: #666; font-style: italic;">No specific incentives listed</div>';
+
+        // Status badge for Google Places
+        const statusBadge = isGooglePlace
+                ? `<div style="padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
+            <strong>ℹ️ Not in Database</strong>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">This business is from Google Maps and not yet in the Patriot Thanks database.</p>
+           </div>`
+                : `<div style="padding: 8px; background: #d4edda; border-left: 3px solid #28a745; margin-bottom: 12px; border-radius: 4px;">
+            <strong>✓ In Database</strong>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">This business is in the Patriot Thanks database.</p>
+           </div>`;
+
+        // Add to database button for Google Places
+        const addToDbButton = isGooglePlace
+                ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+            <button 
+                id="add-to-db-btn-${business.placeId || 'temp'}"
+                style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;"
+                onmouseover="this.style.background='#1976d2'"
+                onmouseout="this.style.background='#2196f3'"
+            >
+                ➕ Add to Database
+            </button>
+           </div>`
+                : '';
 
         const content = `
-            <div class="info-window-content">
-                <h3>${business.bname}</h3>
-                <div class="business-address">
-                    <p>${business.address1}</p>
-                    ${business.address2 ? `<p>${business.address2}</p>` : ''}
-                    <p>${business.city}, ${business.state} ${business.zip}</p>
-                    ${business.phone ? `<p>📞 ${business.phone}</p>` : ''}
-                </div>
-                <div class="business-incentives">
-                    <h4>Available Incentives:</h4>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 300px;">
+            ${statusBadge}
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #333;">${business.bname}</h3>
+            <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                <p style="margin: 2px 0;">${business.address1}</p>
+                ${business.address2 ? `<p style="margin: 2px 0;">${business.address2}</p>` : ''}
+                <p style="margin: 2px 0;">${business.city}, ${business.state} ${business.zip}</p>
+                ${business.phone ? `<p style="margin: 6px 0 0 0;">📞 ${business.phone}</p>` : ''}
+            </div>
+            ${isFromDatabase ? `
+                <div style="margin-top: 12px;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Available Incentives:</h4>
                     ${incentivesHtml}
                 </div>
-            </div>
-        `;
+            ` : ''}
+            ${addToDbButton}
+        </div>
+    `;
 
         infoWindow.setContent(content);
         infoWindow.setPosition(position);
         infoWindow.open(map);
+
+        // Add click handler for "Add to Database" button
+        if (isGooglePlace) {
+            setTimeout(() => {
+                const addBtn = document.getElementById(`add-to-db-btn-${business.placeId || 'temp'}`);
+                if (addBtn) {
+                    addBtn.addEventListener('click', () => {
+                        // Prepare data for business-add page
+                        const businessData = {
+                            bname: business.bname,
+                            address1: business.address1,
+                            address2: business.address2 || '',
+                            city: business.city,
+                            state: business.state,
+                            zip: business.zip,
+                            phone: business.phone || '',
+                            lat: business.coordinates?.lat || business.lat,
+                            lng: business.coordinates?.lng || business.lng,
+                            placeId: business.placeId || ''
+                        };
+
+                        // Store in sessionStorage to pre-fill the form
+                        sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+
+                        // Redirect to add business page
+                        router.push('/business-add');
+                    });
+                }
+            }, 100);
+        }
     };
 
     // Get service type label
@@ -385,6 +451,9 @@ export default function SearchPage() {
         e.preventDefault();
         setLoading(true);
         setHasSearched(true);
+        setLoadingStep(1);
+        setLoadingProgress(0);
+        setLoadingMessage('Finding location for your address...');
 
         try {
             const params = new URLSearchParams();
@@ -425,12 +494,30 @@ export default function SearchPage() {
                 params.append('zip', searchData.address);
             }
 
+            // Step 2: Searching Database
+            setLoadingStep(2);
+            setLoadingProgress(25);
+            setLoadingMessage('Searching our database for businesses...');
+
             const response = await fetch(`/api/search?${params}`);
             const data = await response.json();
 
             if (response.ok) {
                 const allResults = data.results || [];
                 setResults(allResults);
+
+                // Step 3: Finding Additional Locations
+                setLoadingStep(3);
+                setLoadingProgress(65);
+                setLoadingMessage('Finding additional locations from Google Maps...');
+
+                // Simulate additional search time
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 4: Organizing Results
+                setLoadingStep(4);
+                setLoadingProgress(90);
+                setLoadingMessage('Organizing and preparing results...');
 
                 // Apply filter based on toggle
                 filterResults(allResults, showOnlyWithIncentives);
@@ -444,11 +531,21 @@ export default function SearchPage() {
                 setResults([]);
                 setFilteredResults([]);
             }
+            // Complete
+            setLoadingProgress(100);
+            setLoadingMessage('Search completed successfully!');
+
+            // Brief delay to show completion
+            await new Promise(resolve => setTimeout(resolve, 500));
+
         } catch (error) {
             console.error('Search failed:', error);
             setResults([]);
         } finally {
             setLoading(false);
+            setLoading(false);
+            setLoadingStep(1);
+            setLoadingProgress(0);
 
             // Auto-scroll to results after search completes
             setTimeout(() => {
@@ -757,6 +854,17 @@ export default function SearchPage() {
                 `}</style>
 
                 <div className="min-h-screen bg-gray-50">
+                    <SearchLoadingModal
+                            isVisible={loading}
+                            currentStep={loadingStep}
+                            progress={loadingProgress}
+                            message={loadingMessage}
+                            onCancel={() => {
+                                setLoading(false);
+                                setLoadingStep(1);
+                                setLoadingProgress(0);
+                            }}
+                    />
                     <Navigation />
 
                     <div className="pt-20 pb-12">
@@ -901,22 +1009,141 @@ export default function SearchPage() {
                                 </div>
                                 <div id="map" style={{height: '800px', minHeight: '800px'}}></div>
 
-                                <div className="map-legend">
-                                    <div className="legend-item">
-                                        <div className="legend-color primary"></div>
-                                        <span>Primary Search Results</span>
+                                <div className="map-legend" style={{
+                                    background: 'white',
+                                    padding: '15px',
+                                    margin: '15px 0',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
+                                }}>
+                                    <div style={{
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        marginBottom: '10px',
+                                        color: '#333',
+                                        paddingBottom: '8px',
+                                        borderBottom: '2px solid #e0e0e0'
+                                    }}>
+                                        📍 Patriot Thanks Database Markers (Custom Pins)
                                     </div>
-                                    <div className="legend-item">
-                                        <div className="legend-color database"></div>
-                                        <span>Nearby Database Businesses</span>
+
+                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '24px',
+                                            marginRight: '10px',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '24px',
+                                                borderRadius: '50% 50% 50% 0',
+                                                background: '#EA4335',
+                                                transform: 'rotate(-45deg)',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                            }}></div>
+                                        </div>
+                                        <span><strong>Red Pin:</strong> Primary Search Results</span>
                                     </div>
-                                    <div className="legend-item">
-                                        <div className="legend-color nearby"></div>
-                                        <span>Additional Locations Found</span>
+
+                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '24px',
+                                            marginRight: '10px',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '24px',
+                                                borderRadius: '50% 50% 50% 0',
+                                                background: '#28a745',
+                                                transform: 'rotate(-45deg)',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                            }}></div>
+                                        </div>
+                                        <span><strong>Green Pin:</strong> Nearby Database Businesses</span>
                                     </div>
-                                    <div className="legend-item">
-                                        <div className="legend-color chain"></div>
-                                        <span>Chain Businesses</span>
+
+                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '24px',
+                                            marginRight: '10px',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '24px',
+                                                borderRadius: '50% 50% 50% 0',
+                                                background: '#4285F4',
+                                                transform: 'rotate(-45deg)',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                            }}></div>
+                                        </div>
+                                        <span><strong>Blue Pin:</strong> Additional Locations Found</span>
+                                    </div>
+
+                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '24px',
+                                            marginRight: '10px',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '24px',
+                                                borderRadius: '50% 50% 50% 0',
+                                                background: '#FF9800',
+                                                transform: 'rotate(-45deg)',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                            }}></div>
+                                        </div>
+                                        <span><strong>Orange Pin:</strong> Chain Businesses</span>
+                                    </div>
+
+                                    <div style={{
+                                        height: '1px',
+                                        background: '#e0e0e0',
+                                        margin: '12px 0'
+                                    }}></div>
+
+                                    <div style={{
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        marginBottom: '10px',
+                                        color: '#333',
+                                        paddingBottom: '8px',
+                                        borderBottom: '2px solid #e0e0e0'
+                                    }}>
+                                        ⭕ Google Maps Markers (Round Icons)
+                                    </div>
+
+                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                        <div style={{
+                                            width: '16px',
+                                            height: '16px',
+                                            marginRight: '10px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #FF6B6B 0%, #FFE66D 50%, #4ECDC4 100%)',
+                                            border: '2px solid white',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                        }}></div>
+                                        <span>Businesses from Google Maps (not in our database yet)</span>
+                                    </div>
+
+                                    <div style={{
+                                        marginTop: '10px',
+                                        padding: '8px',
+                                        background: '#f0f8ff',
+                                        borderLeft: '3px solid #4285F4',
+                                        fontSize: '12px',
+                                        color: '#666',
+                                        borderRadius: '4px'
+                                    }}>
+                                        💡 <em>Click any Google Maps marker to add that business to our database!</em>
                                     </div>
                                 </div>
                             </div>
