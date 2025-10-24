@@ -32,6 +32,21 @@ export default function CoordinateFixPage() {
         }
     }, [map]);
 
+    // Load Google Maps script
+    useEffect(() => {
+        if (typeof window === 'undefined' || window.google) return;
+
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+
+        return () => {
+            // Cleanup if needed
+        };
+    }, []);
+
     const loadBusinesses = async () => {
         try {
             setLoading(true);
@@ -321,13 +336,6 @@ export default function CoordinateFixPage() {
                         </div>
                     </div>
                 </div>
-
-                {/* Load Google Maps */}
-                <script
-                        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-                        async
-                        defer
-                />
             </>
     );
 }

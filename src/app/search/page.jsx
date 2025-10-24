@@ -157,78 +157,94 @@ export default function SearchPage() {
         setMarkers([]);
     };
 
-    // Create marker for business
-    const createBusinessMarker = async (business, businessType = 'primary') => {
-        if (!map || !window.google) return null;
+    // Create marker for a business
+    const createBusinessMarker = async (business, businessType) => {
+        if (!map || !business) return null;
 
         try {
-            // Geocode the business address if coordinates aren't available
-            let position;
+            // Get coordinates
+            let lat, lng;
             if (business.coordinates?.lat && business.coordinates?.lng) {
-                position = {
-                    lat: parseFloat(business.coordinates.lat),
-                    lng: parseFloat(business.coordinates.lng)
-                };
+                lat = parseFloat(business.coordinates.lat);
+                lng = parseFloat(business.coordinates.lng);
+            } else if (business.lat && business.lng) {
+                lat = parseFloat(business.lat);
+                lng = parseFloat(business.lng);
+            } else if (business.location?.coordinates) {
+                lng = parseFloat(business.location.coordinates[0]);
+                lat = parseFloat(business.location.coordinates[1]);
             } else {
-                // Geocode the address
-                const geocoder = new window.google.maps.Geocoder();
-                const address = `${business.address1}, ${business.city}, ${business.state} ${business.zip}`;
-
-                try {
-                    const result = await new Promise((resolve, reject) => {
-                        geocoder.geocode({ address }, (results, status) => {
-                            if (status === 'OK' && results[0]) {
-                                resolve(results[0]);
-                            } else {
-                                reject(new Error(`Geocoding failed: ${status}`));
-                            }
-                        });
-                    });
-
-                    position = {
-                        lat: result.geometry.location.lat(),
-                        lng: result.geometry.location.lng()
-                    };
-                } catch (geocodeError) {
-                    console.error(`Geocoding failed for ${business.bname}:`, geocodeError);
-                    return null;
-                }
+                console.warn(`No coordinates for business: ${business.bname}`);
+                return null;
             }
 
-            // Determine marker color based on business type
-            let markerColor = mapConfig.markerColors.primary;
-            let markerClass = 'primary';
+            // Validate coordinates
+            if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                console.warn(`Invalid coordinates for ${business.bname}: ${lat}, ${lng}`);
+                return null;
+            }
 
-            switch (businessType) {
-                case 'database':
-                    markerColor = mapConfig.markerColors.database;
-                    markerClass = 'database';
-                    break;
-                case 'nearby':
-                    markerColor = mapConfig.markerColors.nearby;
-                    markerClass = 'nearby';
-                    break;
-                case 'chain':
-                    markerColor = mapConfig.markerColors.chain;
-                    markerClass = 'chain';
-                    break;
-                default:
-                    markerColor = mapConfig.markerColors.primary;
-                    markerClass = 'primary';
+            const position = { lat, lng };
+
+            // Determine marker color based on business type
+            let markerColor, markerClass;
+
+            // FIXED: Check business properties to determine correct color
+            if (business.markerColor === 'primary' || business.isPrimaryResult || (business.isFromDatabase && !business.isNearbyDatabase)) {
+                markerColor = mapConfig.markerColors.primary; // RED
+                markerClass = 'primary';
+                console.log(`🔴 RED marker for: ${business.bname} (Primary)`);
+            } else if (business.markerColor === 'database' || business.isNearbyDatabase) {
+                markerColor = mapConfig.markerColors.database; // GREEN
+                markerClass = 'database';
+                console.log(`🟢 GREEN marker for: ${business.bname} (Nearby Database)`);
+            } else if (business.markerColor === 'nearby' || business.isGooglePlace || business.isRelevantPlaces) {
+                markerColor = mapConfig.markerColors.nearby; // BLUE
+                markerClass = 'nearby';
+                console.log(`🔵 BLUE marker for: ${business.bname} (Google Places)`);
+            } else if (business.chain_id || business.markerColor === 'chain') {
+                markerColor = mapConfig.markerColors.chain; // ORANGE
+                markerClass = 'chain';
+                console.log(`🟠 ORANGE marker for: ${business.bname} (Chain)`);
+            } else {
+                markerColor = mapConfig.markerColors.primary; // Default to RED
+                markerClass = 'primary';
+                console.log(`⚠️ DEFAULT RED marker for: ${business.bname}`);
             }
 
             // Try to use Advanced Markers if available
             if (window.google.maps.marker?.AdvancedMarkerElement) {
                 const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
 
-                // Create custom pin element
+                // Create custom pin element with the determined color
                 const pinElement = document.createElement('div');
                 pinElement.className = `custom-marker ${markerClass}`;
+                pinElement.style.cssText = `
+                cursor: pointer;
+                width: 32px;
+                height: 40px;
+            `;
+
                 pinElement.innerHTML = `
-                    <div class="marker-pin" style="background-color: ${markerColor};">
-                        <div class="marker-icon">🏢</div>
-                    </div>
-                `;
+                <div class="marker-pin" style="
+                    width: 32px;
+                    height: 40px;
+                    border-radius: 50% 50% 50% 0;
+                    background-color: ${markerColor};
+                    transform: rotate(-45deg);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    border: 3px solid white;
+                ">
+                    <div class="marker-icon" style="
+                        transform: rotate(45deg);
+                        font-size: 18px;
+                        color: white;
+                    ">🏢</div>
+                </div>
+            `;
 
                 const marker = new AdvancedMarkerElement({
                     position: position,
@@ -244,7 +260,7 @@ export default function SearchPage() {
 
                 return marker;
             } else {
-                // Fallback to regular markers
+                // Fallback to regular markers with colored circle
                 const marker = new window.google.maps.Marker({
                     position: position,
                     map: map,
@@ -1011,137 +1027,187 @@ export default function SearchPage() {
 
                                 <div className="map-legend" style={{
                                     background: 'white',
-                                    padding: '15px',
+                                    padding: '20px',
                                     margin: '15px 0',
                                     borderRadius: '8px',
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
                                 }}>
+                                    {/* Header */}
                                     <div style={{
-                                        fontSize: '14px',
+                                        fontSize: '16px',
                                         fontWeight: 'bold',
-                                        marginBottom: '10px',
+                                        marginBottom: '15px',
                                         color: '#333',
-                                        paddingBottom: '8px',
+                                        paddingBottom: '10px',
                                         borderBottom: '2px solid #e0e0e0'
                                     }}>
                                         📍 Patriot Thanks Database Markers (Custom Pins)
                                     </div>
 
-                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                    {/* Red Pin */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        fontSize: '14px'
+                                    }}>
                                         <div style={{
-                                            width: '20px',
-                                            height: '24px',
-                                            marginRight: '10px',
-                                            position: 'relative'
+                                            width: '24px',
+                                            height: '30px',
+                                            marginRight: '12px',
+                                            position: 'relative',
+                                            flexShrink: 0
                                         }}>
                                             <div style={{
-                                                width: '20px',
-                                                height: '24px',
+                                                width: '24px',
+                                                height: '30px',
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#EA4335',
                                                 transform: 'rotate(-45deg)',
                                                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                             }}></div>
                                         </div>
-                                        <span><strong>Red Pin:</strong> Primary Search Results</span>
+                                        <span style={{ lineHeight: '1.4' }}>
+            <strong style={{ color: '#EA4335' }}>Red Pin:</strong> Primary Search Results
+        </span>
                                     </div>
 
-                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                    {/* Green Pin */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        fontSize: '14px'
+                                    }}>
                                         <div style={{
-                                            width: '20px',
-                                            height: '24px',
-                                            marginRight: '10px',
-                                            position: 'relative'
+                                            width: '24px',
+                                            height: '30px',
+                                            marginRight: '12px',
+                                            position: 'relative',
+                                            flexShrink: 0
                                         }}>
                                             <div style={{
-                                                width: '20px',
-                                                height: '24px',
+                                                width: '24px',
+                                                height: '30px',
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#28a745',
                                                 transform: 'rotate(-45deg)',
                                                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                             }}></div>
                                         </div>
-                                        <span><strong>Green Pin:</strong> Nearby Database Businesses</span>
+                                        <span style={{ lineHeight: '1.4' }}>
+            <strong style={{ color: '#28a745' }}>Green Pin:</strong> Nearby Database Businesses
+        </span>
                                     </div>
 
-                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                    {/* Blue Pin */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        fontSize: '14px'
+                                    }}>
                                         <div style={{
-                                            width: '20px',
-                                            height: '24px',
-                                            marginRight: '10px',
-                                            position: 'relative'
+                                            width: '24px',
+                                            height: '30px',
+                                            marginRight: '12px',
+                                            position: 'relative',
+                                            flexShrink: 0
                                         }}>
                                             <div style={{
-                                                width: '20px',
-                                                height: '24px',
+                                                width: '24px',
+                                                height: '30px',
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#4285F4',
                                                 transform: 'rotate(-45deg)',
                                                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                             }}></div>
                                         </div>
-                                        <span><strong>Blue Pin:</strong> Additional Locations Found</span>
+                                        <span style={{ lineHeight: '1.4' }}>
+            <strong style={{ color: '#4285F4' }}>Blue Pin:</strong> Additional Locations Found
+        </span>
                                     </div>
 
-                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                    {/* Orange Pin */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        fontSize: '14px'
+                                    }}>
                                         <div style={{
-                                            width: '20px',
-                                            height: '24px',
-                                            marginRight: '10px',
-                                            position: 'relative'
+                                            width: '24px',
+                                            height: '30px',
+                                            marginRight: '12px',
+                                            position: 'relative',
+                                            flexShrink: 0
                                         }}>
                                             <div style={{
-                                                width: '20px',
-                                                height: '24px',
+                                                width: '24px',
+                                                height: '30px',
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#FF9800',
                                                 transform: 'rotate(-45deg)',
                                                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                             }}></div>
                                         </div>
-                                        <span><strong>Orange Pin:</strong> Chain Businesses</span>
+                                        <span style={{ lineHeight: '1.4' }}>
+            <strong style={{ color: '#FF9800' }}>Orange Pin:</strong> Chain Businesses
+        </span>
                                     </div>
 
+                                    {/* Divider */}
                                     <div style={{
                                         height: '1px',
                                         background: '#e0e0e0',
-                                        margin: '12px 0'
+                                        margin: '15px 0'
                                     }}></div>
 
+                                    {/* Google Maps Header */}
                                     <div style={{
-                                        fontSize: '14px',
+                                        fontSize: '16px',
                                         fontWeight: 'bold',
-                                        marginBottom: '10px',
+                                        marginBottom: '15px',
                                         color: '#333',
-                                        paddingBottom: '8px',
+                                        paddingBottom: '10px',
                                         borderBottom: '2px solid #e0e0e0'
                                     }}>
                                         ⭕ Google Maps Markers (Round Icons)
                                     </div>
 
-                                    <div className="legend-item" style={{display: 'flex', alignItems: 'center', margin: '8px 0'}}>
+                                    {/* Google Round Marker */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        fontSize: '14px'
+                                    }}>
                                         <div style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            marginRight: '10px',
+                                            width: '20px',
+                                            height: '20px',
+                                            marginRight: '12px',
                                             borderRadius: '50%',
                                             background: 'linear-gradient(135deg, #FF6B6B 0%, #FFE66D 50%, #4ECDC4 100%)',
                                             border: '2px solid white',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                            flexShrink: 0
                                         }}></div>
-                                        <span>Businesses from Google Maps (not in our database yet)</span>
+                                        <span style={{ lineHeight: '1.4' }}>
+            Businesses from Google Maps (not in our database yet)
+        </span>
                                     </div>
 
+                                    {/* Note */}
                                     <div style={{
-                                        marginTop: '10px',
-                                        padding: '8px',
+                                        marginTop: '15px',
+                                        padding: '12px',
                                         background: '#f0f8ff',
                                         borderLeft: '3px solid #4285F4',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         color: '#666',
-                                        borderRadius: '4px'
+                                        borderRadius: '4px',
+                                        lineHeight: '1.5'
                                     }}>
                                         💡 <em>Click any Google Maps marker to add that business to our database!</em>
                                     </div>
