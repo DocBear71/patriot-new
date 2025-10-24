@@ -154,6 +154,22 @@ export default function BusinessAddPage() {
                     streetAddress = streetAddress.split(',')[0].trim();
                 }
 
+                // Clean phone number - remove +1 and format for US
+                let cleanPhone = businessData.phone || '';
+                if (cleanPhone) {
+                    // Remove country code +1 and any spaces/special chars except digits and dashes
+                    cleanPhone = cleanPhone.replace(/^\+1\s*/, ''); // Remove +1 at start
+                    cleanPhone = cleanPhone.replace(/[^\d-]/g, ''); // Keep only digits and dashes
+
+                    // If it's just digits, format it as XXX-XXX-XXXX
+                    if (/^\d{10}$/.test(cleanPhone.replace(/-/g, ''))) {
+                        const digits = cleanPhone.replace(/-/g, '');
+                        cleanPhone = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+                    }
+
+                    console.log('📞 Cleaned phone number:', businessData.phone, '→', cleanPhone);
+                }
+
                 // Set form data with Google Places information INCLUDING coordinates
                 setFormData(prev => ({
                     ...prev,
@@ -163,7 +179,7 @@ export default function BusinessAddPage() {
                     city: businessData.city || '',
                     state: businessData.state || '',
                     zip: businessData.zip || '',
-                    phone: businessData.phone || '',
+                    phone: cleanPhone,
                     latitude: businessData.lat || '',
                     longitude: businessData.lng || ''
                 }));
