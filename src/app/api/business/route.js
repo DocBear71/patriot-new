@@ -171,6 +171,13 @@ async function handleBusinessSearch(request) {
             }
         }
 
+        // NEW: Check if searching by Google Place ID
+        const googlePlaceId = searchParams.get('google_place_id');
+        if (googlePlaceId && googlePlaceId.trim() !== '') {
+            console.log('🔍 Searching by Google Place ID:', googlePlaceId);
+            query.google_place_id = googlePlaceId.trim();
+        }
+
         // Build MongoDB query
         if (businessNameValue && businessNameValue.trim() !== '') {
             // Use case-insensitive regex search with more flexible matching
