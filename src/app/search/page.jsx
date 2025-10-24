@@ -153,9 +153,9 @@ export default function SearchPage() {
             setInfoWindow(newInfoWindow);
             setMapInitialized(true);
 
-// ADD THIS: Listen for clicks on Google's built-in Place markers
+            // ADD THIS: Listen for clicks on Google's built-in Place markers
             if (newMap) {
-                newMap.addListener('click', (event) => {
+                newMap.addListener('click', async (event) => {
                     // Check if a Place was clicked
                     const placeId = event.placeId;
 
@@ -163,20 +163,54 @@ export default function SearchPage() {
                         console.log('🗺️ Google Place clicked:', placeId);
                         event.stop(); // Prevent default info window
 
-                        // Get Place details
-                        const service = new window.google.maps.places.PlacesService(newMap);
-                        const request = {
-                            placeId: placeId,
-                            fields: ['name', 'formatted_address', 'geometry', 'place_id', 'formatted_phone_number', 'international_phone_number', 'website', 'address_components']
-                        };
+                        try {
+                            // Use the NEW Places API (not deprecated)
+                            const { Place } = await window.google.maps.importLibrary("places");
 
-                        service.getDetails(request, (place, status) => {
-                            if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-                                handleGooglePlaceClick(place);
-                            } else {
-                                console.error('Place details request failed:', status);
+                            // Create a Place instance
+                            const place = new Place({
+                                id: placeId,
+                                requestedLanguage: 'en'
+                            });
+
+                            // Fetch place details
+                            await place.fetchFields({
+                                fields: [
+                                    'displayName',
+                                    'formattedAddress',
+                                    'location',
+                                    'id',
+                                    'internationalPhoneNumber',
+                                    'nationalPhoneNumber',
+                                    'websiteURI',
+                                    'addressComponents'
+                                ]
+                            });
+
+                            console.log('✅ Place details fetched:', place);
+                            handleGooglePlaceClick(place);
+
+                        } catch (error) {
+                            console.error('Error fetching place details:', error);
+
+                            // Fallback to basic info window
+                            if (newInfoWindow) {
+                                const basicContent = `
+                        <div style="padding: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                            <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
+                                <strong>ℹ️ Not in Database</strong>
+                                <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">
+                                    This business is from Google Maps and not yet in the Patriot Thanks database.
+                                </p>
+                            </div>
+                            <p style="margin: 8px 0; color: #666;">Click the business name for more details.</p>
+                        </div>
+                    `;
+                                newInfoWindow.setContent(basicContent);
+                                newInfoWindow.setPosition(event.latLng);
+                                newInfoWindow.open(newMap);
                             }
-                        });
+                        }
                     }
                 });
             }
@@ -451,6 +485,31 @@ export default function SearchPage() {
 
         console.log('📍 Clicked Google Place:', place);
 
+        // Extract data from the new Place object
+        const businessName = place.displayName || place.name || 'Business';
+        const address = place.formattedAddress || '';
+        const phone = place.internationalPhoneNumber || place.nationalPhoneNumber || '';
+        const website = place.websiteURI || place.website || '';
+
+        // Parse address components for city/state/zip
+        let city = '';
+        let state = '';
+        let zip = '';
+
+        if (place.addressComponents) {
+            place.addressComponents.forEach(component => {
+                if (component.types.includes('locality')) {
+                    city = component.longText || component.long_name || '';
+                }
+                if (component.types.includes('administrative_area_level_1')) {
+                    state = component.shortText || component.short_name || '';
+                }
+                if (component.types.includes('postal_code')) {
+                    zip = component.longText || component.long_name || '';
+                }
+            });
+        }
+
         const content = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px;">
             <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
@@ -461,12 +520,12 @@ export default function SearchPage() {
             </div>
             
             <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #333;">
-                ${place.displayName || place.name || 'Business'}
+                ${businessName}
             </h3>
             
             <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
-                ${place.formattedAddress ? `<p style="margin: 2px 0;">${place.formattedAddress}</p>` : ''}
-                ${place.internationalPhoneNumber ? `<p style="margin: 6px 0 0 0;">📞 ${place.internationalPhoneNumber}</p>` : ''}
+                ${address ? `<p style="margin: 2px 0;">${address}</p>` : ''}
+                ${phone ? `<p style="margin: 6px 0 0 0;">📞 ${phone}</p>` : ''}
             </div>
 
             <div style="margin-top: 12px; padding: 10px; background: #f0f8ff; border-radius: 6px;">
@@ -483,9 +542,9 @@ export default function SearchPage() {
                 </button>
             </div>
 
-            ${place.website ? `
+            ${website ? `
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
-                    <a href="${place.website}" target="_blank" style="color: #2196f3; font-size: 13px; text-decoration: none;">
+                    <a href="${website}" target="_blank" style="color: #2196f3; font-size: 13px; text-decoration: none;">
                         🔗 Visit Website
                     </a>
                 </div>
@@ -514,17 +573,17 @@ export default function SearchPage() {
                     addBtn.addEventListener('click', () => {
                         // Prepare data for business-add page
                         const businessData = {
-                            bname: place.displayName || place.name || '',
-                            address1: place.formattedAddress || '',
+                            bname: businessName,
+                            address1: address,
                             address2: '',
-                            city: place.addressComponents?.find(c => c.types.includes('locality'))?.longText || '',
-                            state: place.addressComponents?.find(c => c.types.includes('administrative_area_level_1'))?.shortText || '',
-                            zip: place.addressComponents?.find(c => c.types.includes('postal_code'))?.longText || '',
-                            phone: place.internationalPhoneNumber || place.nationalPhoneNumber || '',
-                            lat: place.location?.lat() || position?.lat() || '',
-                            lng: place.location?.lng() || position?.lng() || '',
+                            city: city,
+                            state: state,
+                            zip: zip,
+                            phone: phone,
+                            lat: position?.lat() || '',
+                            lng: position?.lng() || '',
                             placeId: place.id || place.place_id || '',
-                            website: place.website || ''
+                            website: website
                         };
 
                         console.log('📝 Preparing to add Google Place:', businessData);
