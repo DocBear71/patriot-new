@@ -25,6 +25,7 @@ const BusinessSchema = new mongoose.Schema({
         required: true
     },
     phone: String,
+    google_place_id: String,
     type: {
         type: String,
         required: true

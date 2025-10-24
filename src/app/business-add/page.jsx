@@ -23,7 +23,8 @@ export default function BusinessAddPage() {
         chainName: '',
         isChainLocation: false,
         latitude: '',
-        longitude: ''
+        longitude: '',
+        placeId: ''
     });
 
     const [loading, setLoading] = useState(false);
@@ -181,7 +182,8 @@ export default function BusinessAddPage() {
                     zip: businessData.zip || '',
                     phone: cleanPhone,
                     latitude: businessData.lat || '',
-                    longitude: businessData.lng || ''
+                    longitude: businessData.lng || '',
+                    placeId: businessData.placeId || ''
                 }));
 
                 // Store the Google Place ID for reference (if needed later)
@@ -391,6 +393,7 @@ export default function BusinessAddPage() {
                 chain_id: formData.chainId || null,
                 lat: formData.latitude || null,
                 lng: formData.longitude || null,
+                google_place_id: formData.placeId || null,
                 created_by: session.user.id || session.user._id
             };
 
@@ -420,7 +423,8 @@ export default function BusinessAddPage() {
                     chainName: '',
                     isChainLocation: false,
                     latitude: '',
-                    longitude: ''
+                    longitude: '',
+                    placeId: ''
                 });
 
                 // Set success message

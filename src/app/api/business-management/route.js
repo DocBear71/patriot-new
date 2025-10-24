@@ -291,6 +291,7 @@ async function handleAddBusiness(request) {
             state: businessData.state || '',
             zip: businessData.zip || '',
             phone: businessData.phone || '',
+            google_place_id: businessData.google_place_id || null,
             type: businessData.type || 'OTHER',
             status: 'active',
 

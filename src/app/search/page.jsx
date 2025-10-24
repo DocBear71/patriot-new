@@ -508,6 +508,59 @@ export default function SearchPage() {
             });
         }
 
+        // ========== CHECK IF BUSINESS ALREADY EXISTS IN DATABASE ==========
+        const normalizedPlaceName = businessName.toLowerCase().trim();
+        const normalizedPlaceAddress = address.toLowerCase().trim();
+        const normalizedPlacePhone = phone.replace(/\D/g, ''); // Remove non-digits
+
+        const existingBusiness = results.find(business => {
+            const dbName = (business.bname || '').toLowerCase().trim();
+            const dbAddress = (business.address1 || '').toLowerCase().trim();
+            const dbPhone = (business.phone || '').replace(/\D/g, '');
+
+            // Check 1: Exact name match with address confirmation
+            if (dbName === normalizedPlaceName && dbAddress.includes(normalizedPlaceAddress.split(',')[0])) {
+                console.log('✅ Duplicate found: Exact name and address match');
+                return true;
+            }
+
+            // Check 2: Name match with phone confirmation
+            if (dbName === normalizedPlaceName && normalizedPlacePhone && dbPhone === normalizedPlacePhone) {
+                console.log('✅ Duplicate found: Name and phone match');
+                return true;
+            }
+
+            // Check 3: Fuzzy name match with street number match
+            const nameWordsMatch = normalizedPlaceName.split(' ').some(word =>
+                    word.length > 3 && dbName.includes(word)
+            );
+            const streetNumber = normalizedPlaceAddress.match(/^\d+/)?.[0];
+            const hasStreetMatch = streetNumber && dbAddress.includes(streetNumber);
+
+            if (nameWordsMatch && hasStreetMatch && city && business.city?.toLowerCase() === city.toLowerCase()) {
+                console.log('✅ Duplicate found: Fuzzy match with street and city');
+                return true;
+            }
+
+            return false;
+        });
+
+        if (existingBusiness) {
+            console.log('🔍 Business already in database:', existingBusiness);
+            // Show the existing business info instead
+            const position = placeData.location ?
+                    new window.google.maps.LatLng(placeData.location.lat, placeData.location.lng) :
+                    (place.Gg ? new window.google.maps.LatLng(place.Gg.lat(), place.Gg.lng()) : null);
+
+            if (position) {
+                showBusinessInfo(existingBusiness, null, position);
+            }
+            return; // Exit early - don't show "add to database" option
+        }
+
+        console.log('ℹ️ Business not in database, showing add option');
+        // ========== END DUPLICATE CHECK ==========
+
         const content = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px; padding: 4px;">
             <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
