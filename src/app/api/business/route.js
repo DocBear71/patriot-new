@@ -266,6 +266,32 @@ async function handleBusinessSearch(request) {
             }
         }
 
+        // CRITICAL: Set marker color flags based on search context
+        results.forEach(business => {
+            // Primary results (businesses that match the search query)
+            if (businessNameValue && business.bname.toLowerCase().includes(businessNameValue.toLowerCase())) {
+                business.markerColor = 'primary';
+                business.isPrimaryResult = true;
+                business.isFromDatabase = true;
+            }
+            // Chain businesses
+            else if (business.chain_id) {
+                business.markerColor = 'chain';
+                business.isFromDatabase = true;
+            }
+            // Other database businesses
+            else {
+                business.markerColor = 'database';
+                business.isNearbyDatabase = true;
+                business.isFromDatabase = true;
+            }
+        });
+
+        console.log('✅ Results with marker colors:', results.map(b => ({
+            name: b.bname,
+            color: b.markerColor
+        })));
+
         console.log(`🎯 Returning ${results.length} total businesses`);
 
         // FIXED: Return structure that matches frontend expectations
