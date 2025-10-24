@@ -186,10 +186,9 @@ export default function SearchPage() {
 
             const position = { lat, lng };
 
-            // Determine marker color based on business type
+            // Determine marker color based on business properties
             let markerColor, markerClass;
 
-            // FIXED: Check business properties to determine correct color
             // Priority order: chain > primary > nearby > database > default
             if (business.markerColor === 'chain' || (business.chain_id && !business.isPrimaryResult)) {
                 markerColor = mapConfig.markerColors.chain; // ORANGE
@@ -207,80 +206,72 @@ export default function SearchPage() {
                 markerColor = mapConfig.markerColors.database; // GREEN
                 markerClass = 'database';
                 console.log(`🟢 GREEN marker for: ${business.bname} (Nearby Database)`);
-            } else if (business.markerColor === 'primary' || business.isPrimaryResult || (business.isFromDatabase && !business.isNearbyDatabase)) {
             } else {
                 markerColor = mapConfig.markerColors.primary; // Default to RED
                 markerClass = 'primary';
                 console.log(`⚠️ DEFAULT RED marker for: ${business.bname}`);
             }
 
-            // Try to use Advanced Markers if available
-            if (window.google.maps.marker?.AdvancedMarkerElement) {
-                const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
+            // ALWAYS try to use AdvancedMarkerElement (preferred by Google)
+            try {
+                // Import the marker library if not already imported
+                if (!window.google.maps.marker) {
+                    await window.google.maps.importLibrary("marker");
+                }
 
-                // Create custom pin element with the determined color
-                const pinElement = document.createElement('div');
-                pinElement.className = `custom-marker ${markerClass}`;
-                pinElement.style.cssText = `
-                cursor: pointer;
-                width: 32px;
-                height: 40px;
-            `;
+                const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
-                pinElement.innerHTML = `
-                <div class="marker-pin" style="
-                    width: 32px;
-                    height: 40px;
-                    border-radius: 50% 50% 50% 0;
-                    background-color: ${markerColor};
-                    transform: rotate(-45deg);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                    border: 3px solid white;
-                ">
-                    <div class="marker-icon" style="
-                        transform: rotate(45deg);
-                        font-size: 18px;
-                        color: white;
-                    ">🏢</div>
-                </div>
-            `;
+                // Create a custom pin with the correct color
+                const pinElement = new PinElement({
+                    background: markerColor,
+                    borderColor: '#ffffff',
+                    glyphColor: '#ffffff',
+                    scale: 1.2
+                });
 
+                // Create the advanced marker
                 const marker = new AdvancedMarkerElement({
                     position: position,
                     map: map,
                     title: business.bname,
-                    content: pinElement
+                    content: pinElement.element
                 });
 
                 // Add click listener
-                pinElement.addEventListener('click', () => {
+                marker.addListener('click', () => {
                     showBusinessInfo(business, marker, position);
                 });
 
+                console.log(`✅ Created AdvancedMarker for ${business.bname}`);
                 return marker;
-            } else {
-                // Fallback to regular markers with colored circle
+
+            } catch (advancedError) {
+                console.warn('AdvancedMarkerElement not available, using fallback:', advancedError);
+
+                // Fallback to standard markers with custom SVG icon
+                const svgMarker = {
+                    path: 'M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8z',
+                    fillColor: markerColor,
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: '#ffffff',
+                    rotation: 0,
+                    scale: 1.5,
+                    anchor: new window.google.maps.Point(12, 24)
+                };
+
                 const marker = new window.google.maps.Marker({
                     position: position,
                     map: map,
                     title: business.bname,
-                    icon: {
-                        path: window.google.maps.SymbolPath.CIRCLE,
-                        fillColor: markerColor,
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 2,
-                        scale: 8
-                    }
+                    icon: svgMarker
                 });
 
                 marker.addListener('click', () => {
                     showBusinessInfo(business, marker, position);
                 });
 
+                console.log(`✅ Created fallback SVG marker for ${business.bname}`);
                 return marker;
             }
         } catch (error) {
