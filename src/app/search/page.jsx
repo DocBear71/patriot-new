@@ -154,7 +154,7 @@ export default function SearchPage() {
             setMapInitialized(true);
 
             // ADD THIS: Listen for clicks on Google's built-in Place markers
-            if (newMap) {
+            if (newMap && newInfoWindow) {
                 newMap.addListener('click', async (event) => {
                     // Check if a Place was clicked
                     const placeId = event.placeId;
@@ -188,7 +188,9 @@ export default function SearchPage() {
                             });
 
                             console.log('✅ Place details fetched:', place);
-                            handleGooglePlaceClick(place);
+
+                            // Call handler with BOTH the place AND the infoWindow
+                            handleGooglePlaceClickWithWindow(place, newInfoWindow, newMap);
 
                         } catch (error) {
                             console.error('Error fetching place details:', error);
@@ -480,13 +482,13 @@ export default function SearchPage() {
     };
 
     // Handle clicks on Google Places POI markers (not in our database)
-    const handleGooglePlaceClick = (place) => {
-        if (!infoWindow || !place) {
-            console.error('❌ No infoWindow or place:', { infoWindow, place });
+    const handleGooglePlaceClickWithWindow = (place, infoWindowRef, mapRef) => {
+        if (!infoWindowRef || !place) {
+            console.error('❌ No infoWindow or place:', { infoWindow: infoWindowRef, place });
             return;
         }
 
-        console.log('📍 Processing Google Place click...');
+        console.log('📍 Processing Google Place click with infoWindow:', infoWindowRef);
 
         // Extract data from the new Place object - it's nested in place.Cg
         const placeData = place.Cg || place;
@@ -578,12 +580,12 @@ export default function SearchPage() {
 
         console.log('📍 Setting info window at position:', position);
 
-        if (position && map) {
-            infoWindow.setContent(content);
-            infoWindow.setPosition(position);
-            infoWindow.open(map);
+        if (position && mapRef) {
+            infoWindowRef.setContent(content);
+            infoWindowRef.setPosition(position);
+            infoWindowRef.open(mapRef);
 
-            console.log('✅ Info window opened');
+            console.log('✅ Info window opened successfully!');
 
             // Add click handler for "Add to Database" button after DOM renders
             setTimeout(() => {
@@ -616,7 +618,7 @@ export default function SearchPage() {
                 }
             }, 100);
         } else {
-            console.error('❌ Could not open info window - missing position or map:', { position, map });
+            console.error('❌ Could not open info window - missing position or map:', { position, map: mapRef });
         }
     };
 
