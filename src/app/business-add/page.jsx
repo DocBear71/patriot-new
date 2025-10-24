@@ -117,11 +117,88 @@ export default function BusinessAddPage() {
         { value: 'WY', label: 'Wyoming' }
     ];
 
+    // Helper to show which fields were auto-filled
+    const [autoFilledFields, setAutoFilledFields] = useState([]);
+
+    useEffect(() => {
+        const prefillData = sessionStorage.getItem('prefillBusinessData');
+        if (prefillData) {
+            setAutoFilledFields(['bname', 'address1', 'city', 'state', 'zip', 'phone', 'website']);
+        }
+    }, []);
+
+    // Helper function to check if field was auto-filled
+    const isAutoFilled = (fieldName) => autoFilledFields.includes(fieldName);
+
     // Check membership access when session changes
     useEffect(() => {
         if (status === 'loading') return; // Still loading session
         checkMembershipAccess();
     }, [session, status]);
+
+    // Auto-populate form from Google Places data (when redirected from map)
+    useEffect(() => {
+        const prefillData = sessionStorage.getItem('prefillBusinessData');
+
+        if (prefillData) {
+            try {
+                const businessData = JSON.parse(prefillData);
+                console.log('📝 Auto-populating form with Google Places data:', businessData);
+
+                // Parse the address to extract street address from full formatted address
+                let streetAddress = businessData.address1;
+
+                // If address1 contains the full formatted address, try to extract just the street
+                if (streetAddress && streetAddress.includes(',')) {
+                    // Split by comma and take the first part (street address)
+                    streetAddress = streetAddress.split(',')[0].trim();
+                }
+
+                // Set form data with Google Places information
+                setFormData(prev => ({
+                    ...prev,
+                    bname: businessData.bname || '',
+                    address1: streetAddress || '',
+                    address2: businessData.address2 || '',
+                    city: businessData.city || '',
+                    state: businessData.state || '',
+                    zip: businessData.zip || '',
+                    phone: businessData.phone || '',
+                    website: businessData.website || ''
+                }));
+
+                // Set coordinates
+                setCoordinates({
+                    lat: businessData.lat || '',
+                    lng: businessData.lng || ''
+                });
+
+                // Store the Google Place ID for reference
+                if (businessData.placeId) {
+                    console.log('📍 Google Place ID:', businessData.placeId);
+                }
+
+                // Clear session storage after loading
+                sessionStorage.removeItem('prefillBusinessData');
+
+                // Show success message to user
+                setMessage({
+                    text: '✅ Business information auto-filled from Google Maps! Please verify the details and add incentive information.',
+                    type: 'success'
+                });
+
+                console.log('✅ Form auto-populated successfully');
+
+            } catch (error) {
+                console.error('❌ Error parsing prefill data:', error);
+                sessionStorage.removeItem('prefillBusinessData');
+                setMessage({
+                    text: 'Error loading business data. Please fill in the form manually.',
+                    type: 'error'
+                });
+            }
+        }
+    }, []);
 
     // FIXED: NextAuth-based membership access check
     const checkMembershipAccess = () => {
@@ -469,6 +546,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="Business name..."
                                             />
+                                            {isAutoFilled('bname') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div className="md:col-span-2">
@@ -485,6 +565,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="Street address..."
                                             />
+                                            {isAutoFilled('address1') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div className="md:col-span-2">
@@ -500,6 +583,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="Apartment, suite, etc..."
                                             />
+                                            {isAutoFilled('address2') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -516,6 +602,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="City..."
                                             />
+                                            {isAutoFilled('city') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -536,6 +625,9 @@ export default function BusinessAddPage() {
                                                         </option>
                                                 ))}
                                             </select>
+                                            {isAutoFilled('state') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -553,6 +645,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="12345 or 12345-6789"
                                             />
+                                            {isAutoFilled('zip') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -570,6 +665,9 @@ export default function BusinessAddPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="123-456-7890"
                                             />
+                                            {isAutoFilled('phone') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
 
                                         <div className="md:col-span-2">
@@ -590,6 +688,9 @@ export default function BusinessAddPage() {
                                                         </option>
                                                 ))}
                                             </select>
+                                            {isAutoFilled('type') && (
+                                                    <p className="text-xs text-blue-600 mt-1">✓ Auto-filled from Google Maps</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

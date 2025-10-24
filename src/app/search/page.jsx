@@ -128,19 +128,8 @@ export default function SearchPage() {
                 scaleControl: true,
                 streetViewControl: false,
                 rotateControl: false,
-                fullscreenControl: true,
-                // CRITICAL: Hide default Google POI markers to avoid duplicates
-                styles: [
-                    {
-                        featureType: "poi",
-                        elementType: "labels",
-                        stylers: [{ visibility: "off" }]
-                    },
-                    {
-                        featureType: "poi.business",
-                        stylers: [{ visibility: "off" }]
-                    }
-                ]
+                fullscreenControl: true
+                // Note: POI visibility is controlled via the Cloud Console for maps with mapId
             });
 
             const newInfoWindow = new window.google.maps.InfoWindow({
