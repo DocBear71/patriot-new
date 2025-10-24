@@ -154,7 +154,7 @@ export default function BusinessAddPage() {
                     streetAddress = streetAddress.split(',')[0].trim();
                 }
 
-                // Set form data with Google Places information
+                // Set form data with Google Places information INCLUDING coordinates
                 setFormData(prev => ({
                     ...prev,
                     bname: businessData.bname || '',
@@ -164,16 +164,11 @@ export default function BusinessAddPage() {
                     state: businessData.state || '',
                     zip: businessData.zip || '',
                     phone: businessData.phone || '',
-                    website: businessData.website || ''
+                    latitude: businessData.lat || '',
+                    longitude: businessData.lng || ''
                 }));
 
-                // Set coordinates
-                setCoordinates({
-                    lat: businessData.lat || '',
-                    lng: businessData.lng || ''
-                });
-
-                // Store the Google Place ID for reference
+                // Store the Google Place ID for reference (if needed later)
                 if (businessData.placeId) {
                     console.log('📍 Google Place ID:', businessData.placeId);
                 }
@@ -187,7 +182,10 @@ export default function BusinessAddPage() {
                     type: 'success'
                 });
 
-                console.log('✅ Form auto-populated successfully');
+                console.log('✅ Form auto-populated successfully with coordinates:', {
+                    lat: businessData.lat,
+                    lng: businessData.lng
+                });
 
             } catch (error) {
                 console.error('❌ Error parsing prefill data:', error);
