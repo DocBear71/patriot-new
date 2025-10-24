@@ -153,6 +153,34 @@ export default function SearchPage() {
             setInfoWindow(newInfoWindow);
             setMapInitialized(true);
 
+// ADD THIS: Listen for clicks on Google's built-in Place markers
+            if (newMap) {
+                newMap.addListener('click', (event) => {
+                    // Check if a Place was clicked
+                    const placeId = event.placeId;
+
+                    if (placeId) {
+                        console.log('🗺️ Google Place clicked:', placeId);
+                        event.stop(); // Prevent default info window
+
+                        // Get Place details
+                        const service = new window.google.maps.places.PlacesService(newMap);
+                        const request = {
+                            placeId: placeId,
+                            fields: ['name', 'formatted_address', 'geometry', 'place_id', 'formatted_phone_number', 'international_phone_number', 'website', 'address_components']
+                        };
+
+                        service.getDetails(request, (place, status) => {
+                            if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+                                handleGooglePlaceClick(place);
+                            } else {
+                                console.error('Place details request failed:', status);
+                            }
+                        });
+                    }
+                });
+            }
+
             console.log('Google Map initialized successfully');
         } catch (error) {
             console.error('Error initializing map:', error);
@@ -245,29 +273,29 @@ export default function SearchPage() {
             `;
 
                 pinElement.innerHTML = `
-                <div style="
-                    position: absolute;
-                    width: 40px;
-                    height: 48px;
-                    background-color: ${markerColor};
-                    border: 3px solid white;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
                     <div style="
-                        transform: rotate(45deg);
-                        font-size: 20px;
-                        color: white;
-                        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-                        margin-top: -6px;
-                        margin-left: -6px;
-                    ">🏢</div>
-                </div>
-            `;
+                        position: absolute;
+                        width: 40px;
+                        height: 48px;
+                        background-color: ${markerColor};
+                        border: 3px solid white;
+                        border-radius: 50% 50% 50% 0;
+                        transform: rotate(-45deg);
+                        box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <div style="
+                            transform: rotate(45deg);
+                            font-size: 18px;
+                            color: white;
+                            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                            margin-top: -4px;
+                            margin-left: -4px;
+                        ">🏢</div>
+                    </div>
+                `;
 
                 // Create the advanced marker
                 const marker = new AdvancedMarkerElement({
@@ -405,6 +433,101 @@ export default function SearchPage() {
                             lng: business.coordinates?.lng || business.lng,
                             placeId: business.placeId || ''
                         };
+
+                        // Store in sessionStorage to pre-fill the form
+                        sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+
+                        // Redirect to add business page
+                        router.push('/business-add');
+                    });
+                }
+            }, 100);
+        }
+    };
+
+    // Handle clicks on Google Places POI markers (not in our database)
+    const handleGooglePlaceClick = (place) => {
+        if (!infoWindow || !place) return;
+
+        console.log('📍 Clicked Google Place:', place);
+
+        const content = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px;">
+            <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
+                <strong>ℹ️ Not in Database</strong>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">
+                    This business is from Google Maps and not yet in the Patriot Thanks database.
+                </p>
+            </div>
+            
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #333;">
+                ${place.displayName || place.name || 'Business'}
+            </h3>
+            
+            <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                ${place.formattedAddress ? `<p style="margin: 2px 0;">${place.formattedAddress}</p>` : ''}
+                ${place.internationalPhoneNumber ? `<p style="margin: 6px 0 0 0;">📞 ${place.internationalPhoneNumber}</p>` : ''}
+            </div>
+
+            <div style="margin-top: 12px; padding: 10px; background: #f0f8ff; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; font-size: 13px; color: #666;">
+                    💡 Want to add this business to Patriot Thanks?
+                </p>
+                <button 
+                    id="add-google-place-btn"
+                    style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;"
+                    onmouseover="this.style.background='#1976d2'"
+                    onmouseout="this.style.background='#2196f3'"
+                >
+                    ➕ Add to Database
+                </button>
+            </div>
+
+            ${place.website ? `
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                    <a href="${place.website}" target="_blank" style="color: #2196f3; font-size: 13px; text-decoration: none;">
+                        🔗 Visit Website
+                    </a>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+        infoWindow.setContent(content);
+
+        // Get location from place
+        let position;
+        if (place.location) {
+            position = place.location;
+        } else if (place.geometry?.location) {
+            position = place.geometry.location;
+        }
+
+        if (position) {
+            infoWindow.setPosition(position);
+            infoWindow.open(map);
+
+            // Add click handler for "Add to Database" button after DOM renders
+            setTimeout(() => {
+                const addBtn = document.getElementById('add-google-place-btn');
+                if (addBtn) {
+                    addBtn.addEventListener('click', () => {
+                        // Prepare data for business-add page
+                        const businessData = {
+                            bname: place.displayName || place.name || '',
+                            address1: place.formattedAddress || '',
+                            address2: '',
+                            city: place.addressComponents?.find(c => c.types.includes('locality'))?.longText || '',
+                            state: place.addressComponents?.find(c => c.types.includes('administrative_area_level_1'))?.shortText || '',
+                            zip: place.addressComponents?.find(c => c.types.includes('postal_code'))?.longText || '',
+                            phone: place.internationalPhoneNumber || place.nationalPhoneNumber || '',
+                            lat: place.location?.lat() || position?.lat() || '',
+                            lng: place.location?.lng() || position?.lng() || '',
+                            placeId: place.id || place.place_id || '',
+                            website: place.website || ''
+                        };
+
+                        console.log('📝 Preparing to add Google Place:', businessData);
 
                         // Store in sessionStorage to pre-fill the form
                         sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
