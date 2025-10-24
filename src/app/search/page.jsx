@@ -39,6 +39,18 @@ export default function SearchPage() {
         { value: 'SP', label: 'Spouses' }
     ];
 
+    // Get service type label
+    const getServiceTypeLabel = (type) => {
+        const labels = {
+            'VT': 'Veterans',
+            'AD': 'Active Duty',
+            'FR': 'First Responders',
+            'SP': 'Spouses'
+        };
+        return labels[type] || type;
+    };
+
+
     // COMMENTED OUT: Google Maps configuration for future implementation
     const mapConfig = {
         center: { lat: 41.9778, lng: -91.6656 }, // Cedar Rapids, IA
@@ -585,14 +597,67 @@ export default function SearchPage() {
                     console.log('✅ DUPLICATE FOUND - Business already in database:', existingBusiness.bname);
                     console.log('   ID:', existingBusiness._id);
 
-                    // Show the existing business info instead
+                    // Get position from place data
                     const position = placeData.location ?
                             new window.google.maps.LatLng(placeData.location.lat, placeData.location.lng) :
                             (place.Gg ? new window.google.maps.LatLng(place.Gg.lat(), place.Gg.lng()) : null);
 
-                    if (position) {
-                        showBusinessInfo(existingBusiness, null, position);
+                    if (!position) {
+                        console.error('❌ No position available for info window');
+                        return;
                     }
+
+                    console.log('📍 Building info window for existing business');
+
+                    // Build info window content for existing business
+                    const incentivesHtml = existingBusiness.incentives && existingBusiness.incentives.length > 0
+                            ? existingBusiness.incentives.map(incentive => `
+                            <div style="padding: 8px; background: #e8f5e9; border-radius: 4px; margin: 4px 0;">
+                                <strong>${getServiceTypeLabel(incentive.type)}: ${incentive.amount}% off</strong>
+                                <br><small>${incentive.information}</small>
+                            </div>
+                        `).join('')
+                            : '<div style="padding: 8px; color: #666; font-style: italic;">No specific incentives listed</div>';
+
+                    const existingBusinessContent = `
+                        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 300px;">
+                            <div style="padding: 10px; background: #d4edda; border-left: 3px solid #28a745; margin-bottom: 12px; border-radius: 4px;">
+                                <strong>✓ In Database</strong>
+                                <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">This business is in the Patriot Thanks database.</p>
+                            </div>
+                            
+                            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #333;">${existingBusiness.bname}</h3>
+                            
+                            <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                                <p style="margin: 2px 0;">${existingBusiness.address1}</p>
+                                ${existingBusiness.address2 ? `<p style="margin: 2px 0;">${existingBusiness.address2}</p>` : ''}
+                                <p style="margin: 2px 0;">${existingBusiness.city}, ${existingBusiness.state} ${existingBusiness.zip}</p>
+                                ${existingBusiness.phone ? `<p style="margin: 6px 0 0 0;">📞 ${existingBusiness.phone}</p>` : ''}
+                            </div>
+                            
+                            <div style="margin-top: 12px;">
+                                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Available Incentives:</h4>
+                                ${incentivesHtml}
+                            </div>
+                            
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                                <a href="/business/${existingBusiness._id}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                                    View Full Details →
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    // Show the info window
+                    if (infoWindowRef && mapRef) {
+                        infoWindowRef.setContent(existingBusinessContent);
+                        infoWindowRef.setPosition(position);
+                        infoWindowRef.open(mapRef);
+                        console.log('✅ Info window opened for existing business');
+                    } else {
+                        console.error('❌ Missing infoWindow or map reference');
+                    }
+
                     return; // Exit early - don't show "add to database" option
                 }
             }
@@ -708,16 +773,6 @@ export default function SearchPage() {
         }
     };
 
-    // Get service type label
-    const getServiceTypeLabel = (type) => {
-        const labels = {
-            'VT': 'Veterans',
-            'AD': 'Active Duty',
-            'FR': 'First Responders',
-            'SP': 'Spouses'
-        };
-        return labels[type] || type;
-    };
 
     // Display businesses on map
     const displayBusinessesOnMap = async (businesses) => {
