@@ -509,44 +509,76 @@ export default function SearchPage() {
         }
 
         // ========== CHECK IF BUSINESS ALREADY EXISTS IN DATABASE ==========
+        console.log('🔍 DUPLICATE CHECK: Starting check for:', businessName);
+        console.log('📊 Current results array length:', results.length);
+
         const normalizedPlaceName = businessName.toLowerCase().trim();
         const normalizedPlaceAddress = address.toLowerCase().trim();
         const normalizedPlacePhone = phone.replace(/\D/g, ''); // Remove non-digits
+        const placeId = placeData.id || place.id || '';
+
+        console.log('🔍 Search criteria:', {
+            name: normalizedPlaceName,
+            address: normalizedPlaceAddress.substring(0, 50) + '...',
+            phone: normalizedPlacePhone,
+            placeId: placeId
+        });
 
         const existingBusiness = results.find(business => {
             const dbName = (business.bname || '').toLowerCase().trim();
             const dbAddress = (business.address1 || '').toLowerCase().trim();
             const dbPhone = (business.phone || '').replace(/\D/g, '');
+            const dbPlaceId = business.google_place_id || '';
 
-            // Check 1: Exact name match with address confirmation
-            if (dbName === normalizedPlaceName && dbAddress.includes(normalizedPlaceAddress.split(',')[0])) {
-                console.log('✅ Duplicate found: Exact name and address match');
+            console.log(`  🔍 Comparing with DB business: ${business.bname}`);
+            console.log(`     - DB Name: "${dbName}"`);
+            console.log(`     - Place Name: "${normalizedPlaceName}"`);
+            console.log(`     - DB Phone: "${dbPhone}"`);
+            console.log(`     - Place Phone: "${normalizedPlacePhone}"`);
+            console.log(`     - DB PlaceId: "${dbPlaceId}"`);
+            console.log(`     - Place PlaceId: "${placeId}"`);
+
+            // Check 1: Google Place ID match (most reliable)
+            if (placeId && dbPlaceId && placeId === dbPlaceId) {
+                console.log('     ✅ MATCH: Place ID exact match!');
                 return true;
             }
 
-            // Check 2: Name match with phone confirmation
+            // Check 2: Exact name match with address confirmation
+            if (dbName === normalizedPlaceName) {
+                console.log('     ✓ Name matches exactly');
+                // Check if first part of address matches (street number + street name)
+                const placeAddressStart = normalizedPlaceAddress.split(',')[0];
+                if (dbAddress.includes(placeAddressStart) || placeAddressStart.includes(dbAddress)) {
+                    console.log('     ✅ MATCH: Exact name and address match!');
+                    return true;
+                }
+            }
+
+            // Check 3: Name match with phone confirmation
             if (dbName === normalizedPlaceName && normalizedPlacePhone && dbPhone === normalizedPlacePhone) {
-                console.log('✅ Duplicate found: Name and phone match');
+                console.log('     ✅ MATCH: Name and phone match!');
                 return true;
             }
 
-            // Check 3: Fuzzy name match with street number match
-            const nameWordsMatch = normalizedPlaceName.split(' ').some(word =>
-                    word.length > 3 && dbName.includes(word)
-            );
+            // Check 4: Fuzzy name match with street number match
+            const nameWordsMatch = normalizedPlaceName.split(' ').filter(word => word.length > 3)
+            .some(word => dbName.includes(word));
             const streetNumber = normalizedPlaceAddress.match(/^\d+/)?.[0];
             const hasStreetMatch = streetNumber && dbAddress.includes(streetNumber);
 
             if (nameWordsMatch && hasStreetMatch && city && business.city?.toLowerCase() === city.toLowerCase()) {
-                console.log('✅ Duplicate found: Fuzzy match with street and city');
+                console.log('     ✅ MATCH: Fuzzy match with street and city!');
                 return true;
             }
 
+            console.log('     ❌ No match');
             return false;
         });
 
         if (existingBusiness) {
-            console.log('🔍 Business already in database:', existingBusiness);
+            console.log('✅ DUPLICATE FOUND - Business already in database:', existingBusiness.bname);
+            console.log('   ID:', existingBusiness._id);
             // Show the existing business info instead
             const position = placeData.location ?
                     new window.google.maps.LatLng(placeData.location.lat, placeData.location.lng) :
@@ -558,7 +590,8 @@ export default function SearchPage() {
             return; // Exit early - don't show "add to database" option
         }
 
-        console.log('ℹ️ Business not in database, showing add option');
+        console.log('❌ NO DUPLICATE FOUND - Business not in database, showing add option');
+        console.log('   Checked against', results.length, 'businesses in results array');
         // ========== END DUPLICATE CHECK ==========
 
         const content = `
