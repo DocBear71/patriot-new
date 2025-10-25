@@ -178,27 +178,65 @@ async function handleBusinessSearch(request) {
             query.google_place_id = googlePlaceId.trim();
         }
 
-        // Build MongoDB query
+        // Build MongoDB query with geocoding support for zip codes
+        let useLocationSearch = false;
+        let searchLat = null;
+        let searchLng = null;
+
         if (businessNameValue && businessNameValue.trim() !== '') {
             // Use case-insensitive regex search with more flexible matching
             query.bname = new RegExp(businessNameValue.trim().replace(/\s+/g, '.*'), 'i');
         } else if (addressValue && addressValue.trim() !== '') {
-            const addressRegex = { $regex: addressValue.trim(), $options: 'i' };
-            query.$or = [
-                { address1: addressRegex },
-                { address2: addressRegex },
-                { city: addressRegex },
-                { state: addressRegex },
-                { zip: addressRegex }
-            ];
+            const addressTerm = addressValue.trim();
+
+            // Check if it's a zip code (5 digits or 5+4 format)
+            const zipPattern = /^\d{5}(-\d{4})?$/;
+
+            if (zipPattern.test(addressTerm)) {
+                // Zip code search - geocode to coordinates for radius search
+                console.log('🔍 Zip code detected, geocoding for radius search:', addressTerm);
+
+                try {
+                    const coords = await geocodeAddress(addressTerm);
+
+                    if (coords) {
+                        searchLat = coords.lat;
+                        searchLng = coords.lng;
+                        useLocationSearch = true;
+                        console.log('✅ Geocoded zip code to:', { lat: searchLat, lng: searchLng });
+                    } else {
+                        // Fallback to exact zip match if geocoding fails
+                        console.warn('⚠️ Could not geocode zip, falling back to exact match');
+                        query.zip = addressTerm.replace('-', '');
+                    }
+                } catch (geocodeError) {
+                    console.error('❌ Geocoding error:', geocodeError);
+                    // Fallback to exact zip match
+                    query.zip = addressTerm.replace('-', '');
+                }
+            } else {
+                // General address search - search all address components
+                const addressRegex = { $regex: addressTerm, $options: 'i' };
+                query.$or = [
+                    { address1: addressRegex },
+                    { address2: addressRegex },
+                    { city: addressRegex },
+                    { state: addressRegex },
+                    { zip: addressRegex }
+                ];
+            }
         }
 
-        // Handle location-based search if coordinates provided
-        const lat = parseFloat(searchParams.get('lat'));
-        const lng = parseFloat(searchParams.get('lng'));
+        // Handle location-based search if coordinates provided OR geocoded from zip
+        const paramLat = parseFloat(searchParams.get('lat'));
+        const paramLng = parseFloat(searchParams.get('lng'));
         const radius = parseInt(searchParams.get('radius')) || 25; // Default 25 miles
 
-        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        // Use geocoded coordinates if available, otherwise use provided coordinates
+        const finalLat = useLocationSearch ? searchLat : (paramLat && !isNaN(paramLat) ? paramLat : null);
+        const finalLng = useLocationSearch ? searchLng : (paramLng && !isNaN(paramLng) ? paramLng : null);
+
+        if (finalLat && finalLng) {
             // Convert miles to meters for MongoDB geospatial query
             const radiusInMeters = radius * 1609.34;
 
@@ -206,13 +244,14 @@ async function handleBusinessSearch(request) {
                 $near: {
                     $geometry: {
                         type: "Point",
-                        coordinates: [lng, lat]  // GeoJSON uses [longitude, latitude]
+                        coordinates: [finalLng, finalLat]  // GeoJSON uses [longitude, latitude]
                     },
                     $maxDistance: radiusInMeters
                 }
             };
 
-            console.log(`🌍 Location-based search at [${lat},${lng}] with radius ${radius} miles`);
+            const source = useLocationSearch ? 'geocoded_zip' : 'coordinates';
+            console.log(`🌍 Location-based search at [${finalLat},${finalLng}] with radius ${radius} miles (source: ${source})`);
         }
 
         console.log("📝 MongoDB Query:", JSON.stringify(query, null, 2));
