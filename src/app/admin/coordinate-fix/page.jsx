@@ -1,6 +1,6 @@
 'use client';
 
-// file: /src/app/admin/coordinate-fix/page.jsx v1 - Admin tool to fix business coordinates
+// file: /src/app/admin/coordinate-fix/page.jsx v2 - Fixed coordinate saving and map issues
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,27 +21,12 @@ export default function CoordinateFixPage() {
         loadBusinesses();
     }, []);
 
-    // Initialize Google Maps when selected business changes
-    useEffect(() => {
-        if (typeof window !== 'undefined' && window.google && selectedBusiness && !map) {
-            const mapElement = document.getElementById('coordinate-map');
-            if (mapElement) {
-                const newMap = new window.google.maps.Map(mapElement, {
-                    center: { lat: 41.9778, lng: -91.6656 },
-                    zoom: 12
-                });
-                setMap(newMap);
-                console.log('✅ Map initialized');
-            }
-        }
-    }, [selectedBusiness, map]);
-
     // Load Google Maps script
     useEffect(() => {
         if (typeof window === 'undefined' || window.google) return;
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,marker&loading=async&v=weekly`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
@@ -60,11 +45,22 @@ export default function CoordinateFixPage() {
             if (data.success && data.results) {
                 // Filter businesses with suspicious coordinates
                 const suspicious = data.results.filter(b => {
-                    const lat = parseFloat(b.lat);
-                    const lng = parseFloat(b.lng);
-                    return isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 ||
-                            Math.abs(lat) > 90 || Math.abs(lng) > 180;
+                    // Check location.coordinates (GeoJSON format)
+                    if (b.location?.coordinates) {
+                        const lng = parseFloat(b.location.coordinates[0]);
+                        const lat = parseFloat(b.location.coordinates[1]);
+                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 ||
+                                Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+                            return true;
+                        }
+                    } else {
+                        // No location object at all
+                        return true;
+                    }
+                    return false;
                 });
+
+                console.log(`Found ${suspicious.length} businesses with coordinate issues`);
                 setBusinesses(suspicious);
             }
         } catch (error) {
@@ -102,63 +98,83 @@ export default function CoordinateFixPage() {
     };
 
     const handleSelectBusiness = async (business) => {
+        console.log('🔍 Selecting business:', business.bname);
+
         setSelectedBusiness(business);
 
-        // Reset marker
+        // Clear existing marker
         if (marker) {
-            marker.setMap(null);
+            marker.map = null;
             setMarker(null);
         }
 
-        // Wait a moment for DOM to update
+        // Wait for DOM to be ready
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Try to geocode
         const coords = await geocodeBusiness(business);
 
         if (coords) {
-            // Initialize map if not already done
-            if (!map) {
-                const mapElement = document.getElementById('coordinate-map');
-                if (mapElement && window.google) {
-                    const newMap = new window.google.maps.Map(mapElement, {
-                        center: { lat: coords.lat, lng: coords.lng },
-                        zoom: 16
-                    });
-                    setMap(newMap);
+            console.log('📍 Got coordinates:', coords);
 
-                    // Add marker to new map
+            // Initialize or update map
+            const mapElement = document.getElementById('coordinate-map');
+
+            if (!mapElement) {
+                console.error('❌ Map element not found');
+                return;
+            }
+
+            let mapInstance = map;
+
+            if (!mapInstance && window.google) {
+                console.log('🗺️ Creating new map');
+                mapInstance = new window.google.maps.Map(mapElement, {
+                    center: { lat: coords.lat, lng: coords.lng },
+                    zoom: 16,
+                    mapId: 'coordinate-fix-map'
+                });
+                setMap(mapInstance);
+            } else if (mapInstance) {
+                console.log('🗺️ Using existing map');
+                mapInstance.setCenter({ lat: coords.lat, lng: coords.lng });
+                mapInstance.setZoom(16);
+            }
+
+            if (mapInstance) {
+                // Use AdvancedMarkerElement (new API)
+                try {
+                    const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
+
+                    const newMarker = new AdvancedMarkerElement({
+                        position: { lat: coords.lat, lng: coords.lng },
+                        map: mapInstance,
+                        title: business.bname,
+                        gmpDraggable: true
+                    });
+
+                    console.log('✅ Created draggable marker');
+                    setMarker(newMarker);
+                } catch (error) {
+                    console.error('Error creating advanced marker:', error);
+                    // Fallback to regular marker if needed
                     const newMarker = new window.google.maps.Marker({
                         position: { lat: coords.lat, lng: coords.lng },
-                        map: newMap,
+                        map: mapInstance,
                         title: business.bname,
                         draggable: true
                     });
                     setMarker(newMarker);
                 }
-            } else {
-                // Use existing map
-                const position = { lat: coords.lat, lng: coords.lng };
-                map.setCenter(position);
-                map.setZoom(16);
 
-                // Add new marker
-                const newMarker = new window.google.maps.Marker({
-                    position: position,
-                    map: map,
-                    title: business.bname,
-                    draggable: true
+                // Update selected business with new coordinates
+                setSelectedBusiness({
+                    ...business,
+                    suggestedLat: coords.lat,
+                    suggestedLng: coords.lng,
+                    formattedAddress: coords.formattedAddress
                 });
-                setMarker(newMarker);
             }
-
-            // Update selected business with new coordinates
-            setSelectedBusiness({
-                ...business,
-                suggestedLat: coords.lat,
-                suggestedLng: coords.lng,
-                formattedAddress: coords.formattedAddress
-            });
         } else {
             alert('Could not find coordinates for this address. Please check the address details.');
         }
@@ -178,40 +194,53 @@ export default function CoordinateFixPage() {
             let finalLng = selectedBusiness.suggestedLng;
 
             if (marker) {
-                const position = marker.getPosition();
-                finalLat = position.lat();
-                finalLng = position.lng();
+                const position = marker.position;
+                finalLat = typeof position.lat === 'function' ? position.lat() : position.lat;
+                finalLng = typeof position.lng === 'function' ? position.lng() : position.lng;
             }
 
-            const response = await fetch(`/api/business?operation=update-business`, {
+            console.log('💾 Saving coordinates:', { finalLat, finalLng });
+
+            // Update via API with proper GeoJSON format
+            const response = await fetch('/api/business?operation=update-business', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({
                     businessId: selectedBusiness._id,
                     lat: finalLat,
-                    lng: finalLng
-                })
+                    lng: finalLng,
+                    location: {
+                        type: 'Point',
+                        coordinates: [finalLng, finalLat]  // GeoJSON: [lng, lat]
+                    }
+                }),
             });
 
             const data = await response.json();
 
-            if (data.success) {
-                alert('Coordinates updated successfully!');
+            if (response.ok) {
+                alert('✅ Coordinates updated successfully!');
 
-                // Remove from list
-                setBusinesses(businesses.filter(b => b._id !== selectedBusiness._id));
+                // Remove from list and reload
+                setBusinesses(prev => prev.filter(b => b._id !== selectedBusiness._id));
+
+                // Reset selection and map
                 setSelectedBusiness(null);
-
                 if (marker) {
-                    marker.setMap(null);
+                    marker.map = null;
                     setMarker(null);
                 }
+
+                // Reload businesses to get fresh data
+                await loadBusinesses();
             } else {
-                alert('Failed to update coordinates: ' + data.message);
+                alert('❌ Failed to update coordinates: ' + (data.message || 'Unknown error'));
             }
         } catch (error) {
-            console.error('Error fixing coordinates:', error);
-            alert('Failed to update coordinates');
+            console.error('Error updating coordinates:', error);
+            alert('❌ Error updating coordinates: ' + error.message);
         } finally {
             setFixing(false);
         }
@@ -287,7 +316,7 @@ export default function CoordinateFixPage() {
                                                             {business.city}, {business.state} {business.zip}
                                                         </div>
                                                         <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-                                                            Current: {business.lat || 'N/A'}, {business.lng || 'N/A'}
+                                                            Current: {business.location?.coordinates?.[1] || 'N/A'}, {business.location?.coordinates?.[0] || 'N/A'}
                                                         </div>
                                                     </div>
                                             ))}
@@ -318,8 +347,8 @@ export default function CoordinateFixPage() {
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                                     <div>
                                                         <strong>Current:</strong><br />
-                                                        Lat: {selectedBusiness.lat || 'N/A'}<br />
-                                                        Lng: {selectedBusiness.lng || 'N/A'}
+                                                        Lat: {selectedBusiness.location?.coordinates?.[1] || 'N/A'}<br />
+                                                        Lng: {selectedBusiness.location?.coordinates?.[0] || 'N/A'}
                                                     </div>
                                                     {selectedBusiness.suggestedLat && (
                                                             <div>
