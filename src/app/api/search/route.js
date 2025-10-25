@@ -48,6 +48,7 @@ export async function GET(request) {
         }
 
         // ENHANCED: Address Search (supports full addresses, zip codes, etc.)
+        let geocodedLocation = null;
         if (address && address.trim()) {
             const addressTerm = address.trim();
 
@@ -55,10 +56,34 @@ export async function GET(request) {
             const zipPattern = /^\d{5}(-\d{4})?$/;
 
             if (zipPattern.test(addressTerm)) {
-                // Zip code search - exact match
-                searchConditions.push({
-                    zip: addressTerm.replace('-', '')
-                });
+                // Zip code search - geocode to coordinates for radius search
+                console.log('🔍 Zip code detected, will geocode for radius search:', addressTerm);
+
+                try {
+                    const { geocodeAddress } = await import('../../../utils/geocoding.js');
+                    const coords = await geocodeAddress(addressTerm);
+
+                    if (coords) {
+                        geocodedLocation = {
+                            lat: coords.lat,
+                            lng: coords.lng,
+                            radius: radius // Use default radius (25 miles)
+                        };
+                        console.log('✅ Geocoded zip code:', geocodedLocation);
+                    } else {
+                        // Fallback to exact zip match if geocoding fails
+                        console.warn('⚠️ Could not geocode zip, falling back to exact match');
+                        searchConditions.push({
+                            zip: addressTerm.replace('-', '')
+                        });
+                    }
+                } catch (geocodeError) {
+                    console.error('❌ Geocoding error:', geocodeError);
+                    // Fallback to exact zip match
+                    searchConditions.push({
+                        zip: addressTerm.replace('-', '')
+                    });
+                }
             } else {
                 // General address search - search all address components
                 const escapedTerm = addressTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -119,16 +144,30 @@ export async function GET(request) {
             }
         }
 
-        // Location-based search
-        if (lat && lng) {
+        // Location-based search (from coordinates OR geocoded zip)
+        const searchLat = lat || geocodedLocation?.lat;
+        const searchLng = lng || geocodedLocation?.lng;
+        const searchRadius = geocodedLocation?.radius || radius;
+
+        if (searchLat && searchLng) {
             const earthRadiusInMiles = 3959;
-            const radiusInRadians = radius / earthRadiusInMiles;
+            const radiusInRadians = searchRadius / earthRadiusInMiles;
+
+            console.log(`📍 Using location-based search: [${searchLat}, ${searchLng}] with ${searchRadius} mile radius`);
 
             businessQuery.location = {
                 $geoWithin: {
-                    $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians]
+                    $centerSphere: [[parseFloat(searchLng), parseFloat(searchLat)], radiusInRadians]
                 }
             };
+
+            // Remove any zip code conditions since we're doing radius search
+            if (searchConditions.length > 0) {
+                searchConditions = searchConditions.filter(condition => {
+                    // Keep all conditions except exact zip match
+                    return !condition.zip;
+                });
+            }
         }
 
         console.log('Enhanced search query:', JSON.stringify(businessQuery, null, 2));
@@ -202,10 +241,11 @@ export async function GET(request) {
                 state,
                 type,
                 serviceType,
-                location: lat && lng ? {
-                    lat: parseFloat(lat),
-                    lng: parseFloat(lng),
-                    radius
+                location: (searchLat && searchLng) ? {
+                    lat: parseFloat(searchLat),
+                    lng: parseFloat(searchLng),
+                    radius: searchRadius,
+                    source: geocodedLocation ? 'geocoded_zip' : 'coordinates'
                 } : null
             },
             // Additional metadata
