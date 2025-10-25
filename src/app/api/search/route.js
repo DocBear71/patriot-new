@@ -133,17 +133,6 @@ export async function GET(request) {
             searchConditions.push({ type: type.trim().toUpperCase() });
         }
 
-        // Combine all search conditions
-        if (searchConditions.length > 0) {
-            if (searchConditions.length === 1) {
-                // Single condition
-                Object.assign(businessQuery, searchConditions[0]);
-            } else {
-                // Multiple conditions - use AND logic
-                businessQuery.$and = searchConditions;
-            }
-        }
-
         // Location-based search (from coordinates OR geocoded zip)
         const searchLat = lat || geocodedLocation?.lat;
         const searchLng = lng || geocodedLocation?.lng;
@@ -155,18 +144,30 @@ export async function GET(request) {
 
             console.log(`📍 Using location-based search: [${searchLat}, ${searchLng}] with ${searchRadius} mile radius`);
 
+            // CRITICAL: Remove zip conditions when doing geocoded radius search
+            if (geocodedLocation) {
+                console.log('🗑️ Removing exact zip match since we are doing radius search from geocoded zip');
+                searchConditions = searchConditions.filter(condition => {
+                    // Remove any condition that has 'zip' property
+                    return !condition.hasOwnProperty('zip');
+                });
+            }
+
             businessQuery.location = {
                 $geoWithin: {
                     $centerSphere: [[parseFloat(searchLng), parseFloat(searchLat)], radiusInRadians]
                 }
             };
+        }
 
-            // Remove any zip code conditions since we're doing radius search
-            if (searchConditions.length > 0) {
-                searchConditions = searchConditions.filter(condition => {
-                    // Keep all conditions except exact zip match
-                    return !condition.zip;
-                });
+        // NOW combine all search conditions AFTER filtering
+        if (searchConditions.length > 0) {
+            if (searchConditions.length === 1) {
+                // Single condition
+                Object.assign(businessQuery, searchConditions[0]);
+            } else {
+                // Multiple conditions - use AND logic
+                businessQuery.$and = searchConditions;
             }
         }
 
