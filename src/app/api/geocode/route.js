@@ -18,7 +18,7 @@ export async function GET(request) {
         }
 
         // Use Google Maps Geocoding API
-        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        const apiKey = process.env.GEOCODING_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
             console.error('Google Maps API key is not configured');
@@ -94,7 +94,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        const apiKey = process.env.GEOCODING_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
             console.error('Google Maps API key is not configured');

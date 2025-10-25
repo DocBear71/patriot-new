@@ -12,7 +12,8 @@ async function geocodeAddress(address) {
         console.log("🗺️ Geocoding address:", address);
 
         // Use Google Maps Geocoding API
-        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        // Use server-side key if available, otherwise fall back to public key
+        const apiKey = process.env.GEOCODING_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
             console.error('❌ Google Maps API key is not configured');
