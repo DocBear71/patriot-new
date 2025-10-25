@@ -21,16 +21,20 @@ export default function CoordinateFixPage() {
         loadBusinesses();
     }, []);
 
-    // Initialize Google Maps
+    // Initialize Google Maps when selected business changes
     useEffect(() => {
-        if (typeof window !== 'undefined' && window.google && !map) {
-            const newMap = new window.google.maps.Map(document.getElementById('coordinate-map'), {
-                center: { lat: 41.9778, lng: -91.6656 },
-                zoom: 12
-            });
-            setMap(newMap);
+        if (typeof window !== 'undefined' && window.google && selectedBusiness && !map) {
+            const mapElement = document.getElementById('coordinate-map');
+            if (mapElement) {
+                const newMap = new window.google.maps.Map(mapElement, {
+                    center: { lat: 41.9778, lng: -91.6656 },
+                    zoom: 12
+                });
+                setMap(newMap);
+                console.log('✅ Map initialized');
+            }
         }
-    }, [map]);
+    }, [selectedBusiness, map]);
 
     // Load Google Maps script
     useEffect(() => {
@@ -100,28 +104,53 @@ export default function CoordinateFixPage() {
     const handleSelectBusiness = async (business) => {
         setSelectedBusiness(business);
 
+        // Reset marker
+        if (marker) {
+            marker.setMap(null);
+            setMarker(null);
+        }
+
+        // Wait a moment for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Try to geocode
         const coords = await geocodeBusiness(business);
 
-        if (coords && map) {
-            const position = { lat: coords.lat, lng: coords.lng };
-            map.setCenter(position);
-            map.setZoom(16);
+        if (coords) {
+            // Initialize map if not already done
+            if (!map) {
+                const mapElement = document.getElementById('coordinate-map');
+                if (mapElement && window.google) {
+                    const newMap = new window.google.maps.Map(mapElement, {
+                        center: { lat: coords.lat, lng: coords.lng },
+                        zoom: 16
+                    });
+                    setMap(newMap);
 
-            // Remove old marker
-            if (marker) {
-                marker.setMap(null);
+                    // Add marker to new map
+                    const newMarker = new window.google.maps.Marker({
+                        position: { lat: coords.lat, lng: coords.lng },
+                        map: newMap,
+                        title: business.bname,
+                        draggable: true
+                    });
+                    setMarker(newMarker);
+                }
+            } else {
+                // Use existing map
+                const position = { lat: coords.lat, lng: coords.lng };
+                map.setCenter(position);
+                map.setZoom(16);
+
+                // Add new marker
+                const newMarker = new window.google.maps.Marker({
+                    position: position,
+                    map: map,
+                    title: business.bname,
+                    draggable: true
+                });
+                setMarker(newMarker);
             }
-
-            // Add new marker
-            const newMarker = new window.google.maps.Marker({
-                position: position,
-                map: map,
-                title: business.bname,
-                draggable: true
-            });
-
-            setMarker(newMarker);
 
             // Update selected business with new coordinates
             setSelectedBusiness({
@@ -130,6 +159,8 @@ export default function CoordinateFixPage() {
                 suggestedLng: coords.lng,
                 formattedAddress: coords.formattedAddress
             });
+        } else {
+            alert('Could not find coordinates for this address. Please check the address details.');
         }
     };
 
@@ -300,7 +331,7 @@ export default function CoordinateFixPage() {
                                                 </div>
                                             </div>
 
-                                            <div id="coordinate-map" style={{ height: '400px', marginBottom: '15px', borderRadius: '4px' }}></div>
+                                            <div id="coordinate-map" style={{ height: '400px', width: '100%', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ddd' }}></div>
 
                                             <div style={{ padding: '12px', background: '#fff3cd', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
                                                 💡 <strong>Tip:</strong> Drag the marker to fine-tune the exact location

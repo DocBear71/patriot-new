@@ -21,12 +21,12 @@ export default function PlaceIdFixPage() {
         loadBusinesses();
     }, []);
 
-    // Load Google Maps script
+    // Load Google Maps script with new Places library
     useEffect(() => {
         if (typeof window === 'undefined' || window.google) return;
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,marker&loading=async&v=weekly`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
@@ -71,42 +71,53 @@ export default function PlaceIdFixPage() {
 
             console.log('🔍 Searching Google Places for:', query);
 
-            // Use Places Service to search
-            const service = new window.google.maps.places.PlacesService(
-                    document.createElement('div')
-            );
+            // NEW API: Use searchByText instead of PlacesService
+            const { Place } = await window.google.maps.importLibrary("places");
 
             const request = {
-                query: query,
-                fields: ['place_id', 'name', 'formatted_address', 'geometry', 'types']
+                textQuery: query,
+                fields: ['id', 'displayName', 'formattedAddress', 'location', 'types'],
+                locationBias: business.location?.coordinates ? {
+                    lat: business.location.coordinates[1],
+                    lng: business.location.coordinates[0]
+                } : undefined
             };
 
-            service.textSearch(request, (results, status) => {
-                console.log('Places API response status:', status);
+            const { places } = await Place.searchByText(request);
 
-                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-                    console.log(`Found ${results.length} potential matches`);
+            console.log('Places API response:', places);
 
-                    // Score each match based on similarity
-                    const scoredMatches = results.map(place => {
-                        const score = calculateMatchScore(business, place);
-                        return { ...place, score };
-                    });
+            if (places && places.length > 0) {
+                console.log(`Found ${places.length} potential matches`);
 
-                    // Sort by score (highest first)
-                    scoredMatches.sort((a, b) => b.score - a.score);
+                // Convert to format matching old API and score
+                const scoredMatches = places.map(place => {
+                    const formattedPlace = {
+                        place_id: place.id,
+                        name: place.displayName,
+                        formatted_address: place.formattedAddress,
+                        geometry: {
+                            location: place.location
+                        }
+                    };
+                    const score = calculateMatchScore(business, formattedPlace);
+                    return { ...formattedPlace, score };
+                });
 
-                    setPlaceMatches(scoredMatches);
-                } else {
-                    console.warn('No places found or error:', status);
-                    setPlaceMatches([]);
-                    alert('No matching places found. Try a different business or search manually.');
-                }
-                setSearchingPlaces(false);
-            });
+                // Sort by score (highest first)
+                scoredMatches.sort((a, b) => b.score - a.score);
+
+                setPlaceMatches(scoredMatches);
+            } else {
+                console.warn('No places found');
+                setPlaceMatches([]);
+                alert('No matching places found. Try a different business or search manually.');
+            }
+
+            setSearchingPlaces(false);
         } catch (error) {
             console.error('Error searching places:', error);
-            alert('Error searching Google Places');
+            alert('Error searching Google Places: ' + error.message);
             setSearchingPlaces(false);
         }
     };
