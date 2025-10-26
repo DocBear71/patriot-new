@@ -915,6 +915,35 @@ export default function SearchPage() {
         }
     };
 
+    // Geocode an address to get coordinates
+    const geocodeAddress = async (addressString) => {
+        try {
+            console.log('🗺️ Geocoding address:', addressString);
+
+            const geocoder = new google.maps.Geocoder();
+
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ address: addressString }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        const location = results[0].geometry.location;
+                        const coords = {
+                            lat: location.lat(),
+                            lng: location.lng()
+                        };
+                        console.log('✅ Geocoded to:', coords);
+                        resolve(coords);
+                    } else {
+                        console.warn('❌ Geocoding failed:', status);
+                        resolve(null);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('Geocoding error:', error);
+            return null;
+        }
+    };
+
     // Handle search
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -930,7 +959,7 @@ export default function SearchPage() {
             // Primary search fields
             if (searchData.businessName) params.append('businessName', searchData.businessName);
 
-            // Parse the address field for City, State combinations OR send as-is
+            // Parse and geocode the address field
             if (searchData.address && searchData.address.trim()) {
                 const addressValue = searchData.address.trim();
 
@@ -946,6 +975,8 @@ export default function SearchPage() {
                 const zipPattern = /^\d{5}(?:-\d{4})?$/;
                 const isZipOnly = zipPattern.test(addressValue);
 
+                let addressForGeocoding = addressValue;
+
                 if (cityStateZipMatch) {
                     // Format: "City, State Zip"
                     const city = cityStateZipMatch[1].trim();
@@ -954,6 +985,7 @@ export default function SearchPage() {
                     params.append('city', city);
                     params.append('state', state);
                     params.append('zip', zip);
+                    addressForGeocoding = `${city}, ${state} ${zip}`;
                     console.log('Parsed as City/State/Zip:', city, state, zip);
                 } else if (cityStateMatch) {
                     // Format: "City, State"
@@ -961,15 +993,33 @@ export default function SearchPage() {
                     const state = cityStateMatch[2].trim().toUpperCase();
                     params.append('city', city);
                     params.append('state', state);
+                    addressForGeocoding = `${city}, ${state}`;
                     console.log('Parsed as City/State:', city, state);
                 } else if (isZipOnly) {
                     // Format: Just zip code
                     params.append('zip', addressValue);
+                    addressForGeocoding = addressValue;
                     console.log('Sent as zip:', addressValue);
                 } else {
                     // Not a recognized format - send as address search
                     params.append('address', addressValue);
+                    addressForGeocoding = addressValue;
                     console.log('Sent as address:', addressValue);
+                }
+
+                // Geocode the address to get coordinates for proximity search
+                if (window.google && window.google.maps) {
+                    setLoadingMessage('Finding location coordinates...');
+                    const coords = await geocodeAddress(addressForGeocoding);
+
+                    if (coords) {
+                        params.append('lat', coords.lat);
+                        params.append('lng', coords.lng);
+                        params.append('radius', '25'); // 25 miles radius
+                        console.log('✅ Added coordinates for proximity search:', coords);
+                    } else {
+                        console.warn('⚠️ Could not geocode address, will search without proximity');
+                    }
                 }
             }
 
@@ -977,12 +1027,6 @@ export default function SearchPage() {
             if (searchData.query) params.append('q', searchData.query);
             if (searchData.serviceType) params.append('serviceType', searchData.serviceType);
             if (searchData.category) params.append('category', searchData.category);
-
-
-            // For zip code searches, also try the legacy 'q' parameter
-            if (searchData.address && /^\d{5}(-\d{4})?$/.test(searchData.address.trim())) {
-                params.append('zip', searchData.address);
-            }
 
             // Step 2: Searching Database
             setLoadingStep(2);
@@ -1054,9 +1098,10 @@ export default function SearchPage() {
     };
 
     // Sort results by relevance: exact category matches first, then others
+    // Sort results by relevance: exact category matches first, then others
     const sortResultsByRelevance = (results, selectedCategory) => {
         if (!selectedCategory || selectedCategory === '') {
-            // No category filter, return as-is (already sorted alphabetically by backend)
+            // No category filter, return as-is (already sorted by proximity from backend)
             return results;
         }
 
@@ -1077,6 +1122,7 @@ export default function SearchPage() {
         nearbyBusinesses.forEach(b => b.isExactMatch = false);
 
         // Return exact matches first, then nearby businesses
+        // Both groups maintain their proximity-based ordering from the backend
         return [...exactMatches, ...nearbyBusinesses];
     };
 
