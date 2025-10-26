@@ -15,7 +15,8 @@ export default function SearchPage() {
         address: '',
         query: '',
         cityState: '',  // Combined city and state
-        serviceType: ''
+        serviceType: '',
+        category: ''
     });
     const [showOnlyWithIncentives, setShowOnlyWithIncentives] = useState(true); // Hide businesses without incentives by default
     const [filteredResults, setFilteredResults] = useState([]);
@@ -37,6 +38,35 @@ export default function SearchPage() {
         { value: 'AD', label: 'Active Duty' },
         { value: 'FR', label: 'First Responders' },
         { value: 'SP', label: 'Spouses' }
+    ];
+
+    const businessTypes = [
+        { value: '', label: 'All Categories' },
+        { value: 'AUTO', label: 'Automotive' },
+        { value: 'BEAU', label: 'Beauty' },
+        { value: 'BOOK', label: 'Bookstore' },
+        { value: 'CLTH', label: 'Clothing' },
+        { value: 'CONV', label: 'Convenience Store/Gas Station' },
+        { value: 'DEPT', label: 'Department Store' },
+        { value: 'ELEC', label: 'Electronics' },
+        { value: 'ENTR', label: 'Entertainment' },
+        { value: 'FURN', label: 'Furniture' },
+        { value: 'FUEL', label: 'Fuel Station/Truck Stop' },
+        { value: 'GIFT', label: 'Gift Shop' },
+        { value: 'GROC', label: 'Grocery' },
+        { value: 'HARDW', label: 'Hardware' },
+        { value: 'HEAL', label: 'Health' },
+        { value: 'HOTEL', label: 'Hotel/Motel' },
+        { value: 'JEWL', label: 'Jewelry' },
+        { value: 'OTHER', label: 'Other' },
+        { value: 'RX', label: 'Pharmacy' },
+        { value: 'REST', label: 'Restaurant' },
+        { value: 'RETAIL', label: 'Retail' },
+        { value: 'SERV', label: 'Service' },
+        { value: 'SPEC', label: 'Specialty' },
+        { value: 'SPRT', label: 'Sporting Goods' },
+        { value: 'TECH', label: 'Technology' },
+        { value: 'TOYS', label: 'Toys' }
     ];
 
     // Get service type label
@@ -926,6 +956,7 @@ export default function SearchPage() {
             // Legacy/additional search fields for backward compatibility
             if (searchData.query) params.append('q', searchData.query);
             if (searchData.serviceType) params.append('serviceType', searchData.serviceType);
+            if (searchData.category) params.append('category', searchData.category);
 
 
             // For zip code searches, also try the legacy 'q' parameter
@@ -1378,7 +1409,7 @@ export default function SearchPage() {
                                     {/* Filter Options */}
                                     <div className="border-t pt-4">
                                         <h3 className="text-sm font-medium text-gray-700 mb-3">Filter Options</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
                                                     Keywords
@@ -1393,6 +1424,26 @@ export default function SearchPage() {
                                                         placeholder="restaurant, auto repair, hotel, etc."
                                                 />
                                                 <p className="text-xs text-gray-500 mt-1">Business type or category keywords</p>
+                                            </div>
+
+                                            <div>
+                                                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Category
+                                                </label>
+                                                <select
+                                                        id="category"
+                                                        name="category"
+                                                        value={searchData.category}
+                                                        onChange={handleInputChange}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    {businessTypes.map(type => (
+                                                            <option key={type.value} value={type.value}>
+                                                                {type.label}
+                                                            </option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-xs text-gray-500 mt-1">Filter by business category</p>
                                             </div>
 
                                             <div>
@@ -1661,6 +1712,11 @@ export default function SearchPage() {
                                                 </h2>
                                                 <span className="text-gray-600">
                                                     {filteredResults.length} of {results.length} businesses shown
+                                                    {showOnlyWithIncentives && filteredResults.length === 0 && results.length > 0 && (
+                                                            <span className="block text-amber-600 font-medium mt-1">
+                                                             No businesses with incentives available
+                                                            </span>
+                                                    )}
                                                 </span>
                                             </div>
 
