@@ -1098,31 +1098,37 @@ export default function SearchPage() {
     };
 
     // Sort results by relevance: exact category matches first, then others
-    // Sort results by relevance: exact category matches first, then others
+    // Also mark businesses by zip code for display separators
     const sortResultsByRelevance = (results, selectedCategory) => {
+        if (!results || results.length === 0) return results;
+
+        // Determine the primary search zip (most common zip in first few results)
+        const searchZip = searchData.address && /^\d{5}/.test(searchData.address.trim())
+                ? searchData.address.trim().match(/^\d{5}/)[0]
+                : null;
+
+        // Mark businesses based on criteria
+        results.forEach((business, index) => {
+            // Mark if it matches the category filter
+            business.isExactMatch = selectedCategory && business.type === selectedCategory;
+
+            // Mark if it matches the search zip
+            business.isInSearchZip = searchZip && business.zip && business.zip.startsWith(searchZip);
+
+            // Mark if it's a name match (backend provides this)
+            business.isNameMatch = business.nameMatches || false;
+        });
+
         if (!selectedCategory || selectedCategory === '') {
-            // No category filter, return as-is (already sorted by proximity from backend)
+            // No category filter - just return with zip markings
             return results;
         }
 
-        // Separate exact matches from nearby businesses
-        const exactMatches = [];
-        const nearbyBusinesses = [];
-
-        results.forEach(business => {
-            if (business.type === selectedCategory) {
-                exactMatches.push(business);
-            } else {
-                nearbyBusinesses.push(business);
-            }
-        });
-
-        // Mark businesses for display purposes
-        exactMatches.forEach(b => b.isExactMatch = true);
-        nearbyBusinesses.forEach(b => b.isExactMatch = false);
+        // Separate exact category matches from nearby businesses
+        const exactMatches = results.filter(b => b.isExactMatch);
+        const nearbyBusinesses = results.filter(b => !b.isExactMatch);
 
         // Return exact matches first, then nearby businesses
-        // Both groups maintain their proximity-based ordering from the backend
         return [...exactMatches, ...nearbyBusinesses];
     };
 
@@ -1854,6 +1860,20 @@ export default function SearchPage() {
                                                 </div>
                                         ) : filteredResults.length > 0 ? (
                                                 <div>
+                                                    {/* Helper function to determine if we need a zip separator */}
+                                                    {(() => {
+                                                        const showZipSeparator = (index) => {
+                                                            if (index === 0) return false;
+                                                            const current = filteredResults[index];
+                                                            const previous = filteredResults[index - 1];
+
+                                                            // Show separator when transitioning from search zip to other zips
+                                                            return previous.isInSearchZip && !current.isInSearchZip;
+                                                        };
+
+                                                        return null; // This is just to define the function
+                                                    })()}
+
                                                     {/* Show exact category matches first */}
                                                     {searchData.category && filteredResults.some(b => b.isExactMatch) && (
                                                             <>
@@ -1947,75 +1967,102 @@ export default function SearchPage() {
                                                     )}
 
                                                     {/* Show all businesses if no category filter, or nearby businesses after exact matches */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                        {filteredResults.filter(b => !searchData.category || !b.isExactMatch).map((business) => (
-                                                                <div
-                                                                        key={business._id}
-                                                                        className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                        onClick={() => router.push(`/business/${business._id}`)}
-                                                                        style={{ cursor: 'pointer' }}
-                                                                >
-                                                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                                        {business.bname}
-                                                                    </h3>
+                                                    <div>
+                                                        {filteredResults.filter(b => !searchData.category || !b.isExactMatch).map((business, index, array) => {
+                                                            // Check if we need a zip separator before this business
+                                                            const needsZipSeparator = index > 0 &&
+                                                                    array[index - 1].isInSearchZip &&
+                                                                    !business.isInSearchZip &&
+                                                                    searchData.address && /^\d{5}/.test(searchData.address.trim());
 
-                                                                    <div className="text-gray-600 mb-4">
-                                                                        <p>{business.address1}</p>
-                                                                        {business.address2 && <p>{business.address2}</p>}
-                                                                        <p>{business.city}, {business.state} {business.zip}</p>
-                                                                        {business.phone && <p className="mt-1">📞 {business.phone}</p>}
-                                                                    </div>
-
-                                                                    {business.incentives && business.incentives.length > 0 && (
-                                                                            <div className="border-t pt-4">
-                                                                                <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
-                                                                                {business.incentives.map((incentive, index) => (
-                                                                                        <div key={index} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-                                                                                            <div className="flex items-center justify-between mb-1">
-                                                                                                <span className="text-sm font-medium text-green-800">
-                                                                                                    {incentive.type === 'VT' && 'Veterans'}
-                                                                                                    {incentive.type === 'AD' && 'Active Duty'}
-                                                                                                    {incentive.type === 'FR' && 'First Responders'}
-                                                                                                    {incentive.type === 'SP' && 'Spouses'}
-                                                                                                </span>
-                                                                                                <span className="text-lg font-bold text-green-700">
-                                                                                                    {incentive.amount}% off
-                                                                                                </span>
-                                                                                            </div>
-                                                                                            <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                            return (
+                                                                    <div key={business._id}>
+                                                                        {needsZipSeparator && (
+                                                                                <div className="my-8">
+                                                                                    <div className="relative">
+                                                                                        <div className="absolute inset-0 flex items-center">
+                                                                                            <div className="w-full border-t-2 border-gray-300"></div>
                                                                                         </div>
-                                                                                ))}
-                                                                            </div>
-                                                                    )}
-
-                                                                    {(!business.incentives || business.incentives.length === 0) && (
-                                                                            <div className="border-t pt-4">
-                                                                                <p className="text-gray-500 text-sm">No specific incentives listed</p>
-                                                                            </div>
-                                                                    )}
-                                                                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                        <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    router.push(`/business/${business._id}`);
-                                                                                }}
-                                                                                style={{
-                                                                                    width: '100%',
-                                                                                    padding: '10px',
-                                                                                    backgroundColor: '#007bff',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '6px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontWeight: 'bold',
-                                                                                    fontSize: '14px'
-                                                                                }}
+                                                                                        <div className="relative flex justify-center">
+                                                                                            <span className="bg-gray-50 px-6 py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                                                                                                Nearby Businesses (Other Zip Codes)
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                        )}
+                                                                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer mb-6"
+                                                                             onClick={() => router.push(`/business/${business._id}`)}
+                                                                             style={{ cursor: 'pointer' }}
                                                                         >
-                                                                            View Details →
-                                                                        </button>
+                                                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                                                {business.bname}
+                                                                            </h3>
+
+                                                                            <div className="text-gray-600 mb-4">
+                                                                                <p>{business.address1}</p>
+                                                                                {business.address2 && <p>{business.address2}</p>}
+                                                                                <p>{business.city}, {business.state} {business.zip}</p>
+                                                                                {business.phone && <p className="mt-1">📞 {business.phone}</p>}
+                                                                                {business.distanceFromSearch && (
+                                                                                        <p className="mt-1 text-sm text-blue-600">
+                                                                                            📍 {business.distanceFromSearch.toFixed(1)} miles away
+                                                                                        </p>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {business.incentives && business.incentives.length > 0 && (
+                                                                                    <div className="border-t pt-4">
+                                                                                        <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
+                                                                                        {business.incentives.map((incentive, idx) => (
+                                                                                                <div key={idx} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+                                                                                                    <div className="flex items-center justify-between mb-1">
+                                                                                                        <span className="text-sm font-medium text-green-800">
+                                                                                                            {incentive.type === 'VT' && 'Veterans'}
+                                                                                                            {incentive.type === 'AD' && 'Active Duty'}
+                                                                                                            {incentive.type === 'FR' && 'First Responders'}
+                                                                                                            {incentive.type === 'SP' && 'Spouses'}
+                                                                                                        </span>
+                                                                                                        <span className="text-lg font-bold text-green-700">
+                                                                                                            {incentive.amount}% off
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                    <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                                                                </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                            )}
+
+                                                                            {(!business.incentives || business.incentives.length === 0) && (
+                                                                                    <div className="border-t pt-4">
+                                                                                        <p className="text-gray-500 text-sm">No specific incentives listed</p>
+                                                                                    </div>
+                                                                            )}
+                                                                            <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
+                                                                                <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            router.push(`/business/${business._id}`);
+                                                                                        }}
+                                                                                        style={{
+                                                                                            width: '100%',
+                                                                                            padding: '10px',
+                                                                                            backgroundColor: '#007bff',
+                                                                                            color: 'white',
+                                                                                            border: 'none',
+                                                                                            borderRadius: '6px',
+                                                                                            cursor: 'pointer',
+                                                                                            fontWeight: 'bold',
+                                                                                            fontSize: '14px'
+                                                                                        }}
+                                                                                >
+                                                                                    View Details →
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                         ) : (

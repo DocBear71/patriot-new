@@ -37,14 +37,22 @@ export async function GET(request) {
         let searchConditions = [];
 
         // ENHANCED: Business Name Search
+        // Store business name for later filtering but DON'T add it to query if we have location
+        // This allows us to get ALL businesses in radius, then prioritize name matches
+        let businessNameFilter = null;
         if (businessName && businessName.trim()) {
-            const namePattern = new RegExp(businessName.trim(), 'i');
-            searchConditions.push({
-                $or: [
-                    { bname: namePattern },
-                    { chain_name: namePattern }
-                ]
-            });
+            businessNameFilter = new RegExp(businessName.trim(), 'i');
+
+            // Only add name filter to query if NO location search
+            // If we have location, we'll filter/sort after getting all nearby businesses
+            if (!lat && !lng && !address) {
+                searchConditions.push({
+                    $or: [
+                        { bname: businessNameFilter },
+                        { chain_name: businessNameFilter }
+                    ]
+                });
+            }
         }
 
         // ENHANCED: Address Search (supports full addresses, zip codes, etc.)
@@ -181,18 +189,53 @@ export async function GET(request) {
 
         // Execute business search
         let businesses;
-        if (serviceType && searchConditions.length === 0 && !lat) {
+        if (serviceType && searchConditions.length === 0 && !searchLat) {
             // Service type only search - get all businesses first
             businesses = await Business.find(businessQuery).lean();
         } else {
-            // Normal business search with sorting and limits
+            // Normal business search
+            // NOTE: When using $geoWithin with $centerSphere, results are NOT automatically sorted by distance
             businesses = await Business.find(businessQuery)
-                .sort({
-                    // Prioritize exact business name matches
-                    bname: 1
-                })
-                .limit(100) // Increased limit for better results
+                .limit(500) // Increased limit for proximity searches
                 .lean();
+
+            // If this is a location-based search, calculate distances and sort
+            if (searchLat && searchLng) {
+                console.log('📍 Calculating distances and sorting results by proximity');
+                businesses = businesses.map(business => {
+                    // Calculate distance for sorting
+                    const distance = calculateDistance(
+                        searchLat, searchLng,
+                        business.location.coordinates[1], business.location.coordinates[0]
+                    );
+
+                    // Check if business name matches (for prioritization)
+                    const nameMatches = businessNameFilter ?
+                        (businessNameFilter.test(business.bname) || businessNameFilter.test(business.chain_name)) :
+                        false;
+
+                    return {
+                        ...business,
+                        distanceFromSearch: distance,
+                        nameMatches: nameMatches
+                    };
+                });
+
+                // Sort: Name matches first (by distance), then other businesses (by distance)
+                businesses.sort((a, b) => {
+                    // Both match name or both don't - sort by distance
+                    if (a.nameMatches === b.nameMatches) {
+                        return a.distanceFromSearch - b.distanceFromSearch;
+                    }
+                    // Name matches come first
+                    return b.nameMatches - a.nameMatches;
+                });
+
+                console.log(`✅ Found ${businesses.filter(b => b.nameMatches).length} name matches and ${businesses.filter(b => !b.nameMatches).length} nearby businesses`);
+            } else {
+                // No location search - sort alphabetically
+                businesses.sort((a, b) => a.bname.localeCompare(b.bname));
+            }
         }
 
         console.log(`Found ${businesses.length} businesses matching search criteria`);
@@ -285,4 +328,20 @@ function getSearchType(businessName, address, query, city, serviceType) {
     if (city) return 'city';
     if (query) return 'keyword';
     return 'unknown';
+}
+
+/**
+ * Calculate distance between two points using Haversine formula
+ * Returns distance in miles
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
