@@ -129,8 +129,10 @@ export async function GET(request) {
             searchConditions.push({ state: new RegExp(`^${state.trim()}$`, 'i') });
         }
 
-        if (type && type.trim()) {
-            searchConditions.push({ type: type.trim().toUpperCase() });
+        // Support both 'type' and 'category' parameters
+        const categoryParam = type || searchParams.get('category');
+        if (categoryParam && categoryParam.trim()) {
+            searchConditions.push({ type: categoryParam.trim().toUpperCase() });
         }
 
         // Location-based search (from coordinates OR geocoded zip)
@@ -144,12 +146,16 @@ export async function GET(request) {
 
             console.log(`📍 Using location-based search: [${searchLat}, ${searchLng}] with ${searchRadius} mile radius`);
 
-            // CRITICAL: Remove zip conditions when doing geocoded radius search
-            if (geocodedLocation) {
-                console.log('🗑️ Removing exact zip match since we are doing radius search from geocoded zip');
+            // CRITICAL: Remove zip conditions when doing ANY location-based radius search
+            // This includes both geocoded zips AND coordinate-based searches
+            if (searchLat && searchLng) {
+                console.log('🗑️ Removing exact zip/city/state match since we are doing radius search from coordinates');
                 searchConditions = searchConditions.filter(condition => {
-                    // Remove any condition that has 'zip' property
-                    return !condition.hasOwnProperty('zip');
+                    // Remove any condition that has 'zip', 'city', or 'state' property
+                    // because we're doing a proximity search instead
+                    return !condition.hasOwnProperty('zip') &&
+                        !condition.hasOwnProperty('city') &&
+                        !condition.hasOwnProperty('state');
                 });
             }
 
@@ -240,7 +246,7 @@ export async function GET(request) {
                 query, // legacy
                 city,
                 state,
-                type,
+                type: categoryParam || type, // category filter
                 serviceType,
                 location: (searchLat && searchLng) ? {
                     lat: parseFloat(searchLat),
