@@ -15,8 +15,7 @@ export default function SearchPage() {
         address: '',
         query: '',
         cityState: '',  // Combined city and state
-        serviceType: '',
-        category: ''
+        category: ''  // Category filter
     });
     const [showOnlyWithIncentives, setShowOnlyWithIncentives] = useState(true); // Hide businesses without incentives by default
     const [filteredResults, setFilteredResults] = useState([]);
@@ -26,19 +25,11 @@ export default function SearchPage() {
     const [loadingStep, setLoadingStep] = useState(1);
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingMessage, setLoadingMessage] = useState('Please wait while we find the best results...');
-// COMMENTED OUT: Map-related state for future implementation
+    // COMMENTED OUT: Map-related state for future implementation
     const [mapInitialized, setMapInitialized] = useState(false);
     const [map, setMap] = useState(null);
     const [markers, setMarkers] = useState([]);
     const [infoWindow, setInfoWindow] = useState(null);
-
-    const serviceTypes = [
-        { value: '', label: 'All Service Types' },
-        { value: 'VT', label: 'Veterans' },
-        { value: 'AD', label: 'Active Duty' },
-        { value: 'FR', label: 'First Responders' },
-        { value: 'SP', label: 'Spouses' }
-    ];
 
     const businessTypes = [
         { value: '', label: 'All Categories' },
@@ -1021,8 +1012,8 @@ export default function SearchPage() {
 
             // Legacy/additional search fields for backward compatibility
             if (searchData.query) params.append('q', searchData.query);
-            if (searchData.serviceType) params.append('serviceType', searchData.serviceType);
             if (searchData.category) params.append('category', searchData.category);
+            // Note: Service type filter removed - all service types shown by default
 
             // Step 2: Searching Database
             setLoadingStep(2);
@@ -1453,13 +1444,13 @@ export default function SearchPage() {
                                             <strong>Business Name:</strong> "Olive Garden", "McDonald's", "Home Depot"
                                         </div>
                                         <div>
-                                            <strong>City & State:</strong> "Cedar Rapids IA", "Portland OR", "Miami FL"
+                                            <strong>Location:</strong> "Cedar Rapids IA", "52402", "Portland OR 97201"
                                         </div>
                                         <div>
-                                            <strong>Zip Code:</strong> "52402", "90210", "10001"
+                                            <strong>Keywords:</strong> "restaurant", "automotive", "grocery store"
                                         </div>
                                         <div>
-                                            <strong>Street Address:</strong> "123 Main St", "Collins Rd NE"
+                                            <strong>Category:</strong> Use the dropdown to filter by specific business types
                                         </div>
                                     </div>
                                 </div>
@@ -1506,7 +1497,7 @@ export default function SearchPage() {
                                     {/* Filter Options */}
                                     <div className="border-t pt-4">
                                         <h3 className="text-sm font-medium text-gray-700 mb-3">Filter Options</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
                                                     Keywords
@@ -1518,9 +1509,9 @@ export default function SearchPage() {
                                                         value={searchData.query}
                                                         onChange={handleInputChange}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="restaurant, auto repair, hotel, etc."
+                                                        placeholder="restaurant, automotive, grocery, etc."
                                                 />
-                                                <p className="text-xs text-gray-500 mt-1">Business type or category keywords</p>
+                                                <p className="text-xs text-gray-500 mt-1">Search by business type (e.g., restaurant, automotive, hotel)</p>
                                             </div>
 
                                             <div>
@@ -1540,28 +1531,13 @@ export default function SearchPage() {
                                                             </option>
                                                     ))}
                                                 </select>
-                                                <p className="text-xs text-gray-500 mt-1">Filter by business category</p>
+                                                <p className="text-xs text-gray-500 mt-1">Select a specific business category</p>
                                             </div>
-
-                                            <div>
-                                                <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Service Type Filter
-                                                </label>
-                                                <select
-                                                        id="serviceType"
-                                                        name="serviceType"
-                                                        value={searchData.serviceType}
-                                                        onChange={handleInputChange}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                >
-                                                    {serviceTypes.map(type => (
-                                                            <option key={type.value} value={type.value}>
-                                                                {type.label}
-                                                            </option>
-                                                    ))}
-                                                </select>
-                                                <p className="text-xs text-gray-500 mt-1">Filter results by who the business serves</p>
-                                            </div>
+                                        </div>
+                                        <div className="mt-3 bg-blue-50 border border-blue-200 rounded-md p-3">
+                                            <p className="text-xs text-blue-800">
+                                                <strong>Note:</strong> All service types (Veterans, Active Duty, First Responders, and Spouses) are shown by default.
+                                            </p>
                                         </div>
                                     </div>
 

@@ -23,6 +23,7 @@ export async function GET(request) {
         const lat = searchParams.get('lat');
         const lng = searchParams.get('lng');
         const radius = parseInt(searchParams.get('radius')) || 25; // miles
+        const category = searchParams.get('category'); // Category filter from dropdown
 
         // Enhanced validation - allow search with new parameters
         if (!businessName && !address && !zip && !query && !city && !lat && !serviceType) {
@@ -135,15 +136,64 @@ export async function GET(request) {
 
         // LEGACY: Original query parameter (keywords/general search)
         if (query && query.trim()) {
-            const queryPattern = new RegExp(query.trim(), 'i');
-            searchConditions.push({
-                $or: [
-                    { bname: queryPattern },
-                    { address1: queryPattern },
-                    { type: queryPattern },
-                    { chain_name: queryPattern }
-                ]
-            });
+            const queryTerm = query.trim();
+            const queryPattern = new RegExp(queryTerm, 'i');
+
+            // Also create a lookup for category codes
+            // If someone searches "restaurant", we want to match type "REST"
+            const categoryMapping = {
+                'auto': 'AUTO',
+                'automotive': 'AUTO',
+                'beauty': 'BEAU',
+                'book': 'BOOK',
+                'bookstore': 'BOOK',
+                'clothing': 'CLTH',
+                'clothes': 'CLTH',
+                'convenience': 'CONV',
+                'gas': 'CONV',
+                'department': 'DEPT',
+                'electronics': 'ELEC',
+                'entertainment': 'ENTR',
+                'furniture': 'FURN',
+                'fuel': 'FUEL',
+                'gift': 'GIFT',
+                'grocery': 'GROC',
+                'hardware': 'HARDW',
+                'health': 'HEAL',
+                'hotel': 'HOTEL',
+                'motel': 'HOTEL',
+                'jewelry': 'JEWL',
+                'pharmacy': 'RX',
+                'restaurant': 'REST',
+                'dining': 'REST',
+                'food': 'REST',
+                'retail': 'RETAIL',
+                'service': 'SERV',
+                'specialty': 'SPEC',
+                'sporting': 'SPRT',
+                'sports': 'SPRT',
+                'technology': 'TECH',
+                'tech': 'TECH',
+                'toys': 'TOYS'
+            };
+
+            // Check if query matches a category keyword
+            const matchedCategory = categoryMapping[queryTerm.toLowerCase()];
+
+            const searchOr = [
+                { bname: queryPattern },
+                { address1: queryPattern },
+                { type: queryPattern },
+                { chain_name: queryPattern }
+            ];
+
+            // If we found a category match, add exact type match
+            if (matchedCategory) {
+                searchOr.push({ type: matchedCategory });
+                console.log(`🏷️ Keyword "${queryTerm}" mapped to category: ${matchedCategory}`);
+            }
+
+            searchConditions.push({ $or: searchOr });
         }
 
         // LEGACY: Specific field searches
@@ -157,10 +207,12 @@ export async function GET(request) {
             searchConditions.push({ state: new RegExp(`^${state.trim()}$`, 'i') });
         }
 
-        // Support both 'type' and 'category' parameters
-        const categoryParam = type || searchParams.get('category');
+        // Support both 'type' and 'category' parameters (use category first, fallback to type)
+        const categoryParam = category || type;
         if (categoryParam && categoryParam.trim()) {
-            searchConditions.push({ type: categoryParam.trim().toUpperCase() });
+            const categoryValue = categoryParam.trim().toUpperCase();
+            searchConditions.push({ type: categoryValue });
+            console.log(`🏷️ Category filter applied: ${categoryValue}`);
         }
 
         // Location-based search (from coordinates OR geocoded zip)
