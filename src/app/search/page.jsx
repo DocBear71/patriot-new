@@ -1815,9 +1815,18 @@ export default function SearchPage() {
                                                     {filteredResults.length} of {results.length} businesses shown
                                                     {showOnlyWithIncentives && filteredResults.length === 0 && results.length > 0 && (
                                                             <span className="block text-amber-600 font-medium mt-1">
-                                                             No businesses with incentives available
+                                                                No businesses with incentives available
                                                             </span>
                                                     )}
+                                                    {/* Show message when name matches exist but are filtered out */}
+                                                    {showOnlyWithIncentives &&
+                                                            searchData.businessName &&
+                                                            results.some(b => b.nameMatches) &&
+                                                            !filteredResults.some(b => b.isNameMatch) && (
+                                                                    <span className="block text-blue-600 font-medium mt-1">
+                                                                        💡 {searchData.businessName} locations found but don't offer incentives. Toggle off "Only show businesses with incentives" to see them.
+                                                                    </span>
+                                                            )}
                                                 </span>
                                             </div>
 
@@ -1974,8 +1983,12 @@ export default function SearchPage() {
                                                         const nameMatches = businessesToShow.filter(b => b.isNameMatch);
                                                         const otherBusinesses = businessesToShow.filter(b => !b.isNameMatch);
 
-                                                        // Check if we should show the separator (only if we have both name matches AND other businesses)
-                                                        const showSeparator = nameMatches.length > 0 && otherBusinesses.length > 0;
+                                                        // Check if we should show the separator
+                                                        // Show it if: (1) we have both name matches AND other businesses, OR
+                                                        //             (2) we searched for a business name and have other businesses (even if name matches are filtered out)
+                                                        const hasNameMatchesInFullResults = searchData.businessName && results.some(b => b.nameMatches);
+                                                        const showSeparator = (nameMatches.length > 0 && otherBusinesses.length > 0) ||
+                                                                (hasNameMatchesInFullResults && otherBusinesses.length > 0 && nameMatches.length === 0);
 
                                                         return (
                                                                 <>
