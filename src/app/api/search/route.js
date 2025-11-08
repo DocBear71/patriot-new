@@ -26,12 +26,26 @@ export async function GET(request) {
         const category = searchParams.get('category'); // Category filter from dropdown
 
         // Enhanced validation - allow search with new parameters
-        if (!businessName && !address && !zip && !query && !city && !lat && !serviceType) {
+        if (!businessName && !address && !zip && !query && !city && !lat && !serviceType && !category) {
             return NextResponse.json(
-                { error: 'At least one search parameter is required (business name, address, city, location, or service type)' },
+                { error: 'At least one search parameter is required (business name, address, city, location, category, or keyword)' },
                 { status: 400 }
             );
         }
+
+// Log the search parameters for debugging
+        console.log('📋 Search parameters:', {
+            businessName,
+            address,
+            zip,
+            query,
+            city,
+            state,
+            category,
+            serviceType,
+            lat,
+            lng
+        });
 
         // Build business search query
         let businessQuery = { status: 'active' };

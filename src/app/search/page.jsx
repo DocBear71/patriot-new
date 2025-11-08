@@ -1799,6 +1799,12 @@ export default function SearchPage() {
                                                                         💡 {searchData.businessName} locations found but don't offer incentives. Toggle off "Only show businesses with incentives" to see them.
                                                                     </span>
                                                             )}
+                                                    {/* Helpful tip for category-only searches */}
+                                                    {searchData.category && !searchData.address && !searchData.businessName && results.length > 0 && (
+                                                            <span className="block text-blue-600 font-medium mt-1">
+                                                                💡 Tip: Add a location (zip code or city) to find {businessTypes.find(t => t.value === searchData.category)?.label.toLowerCase() || 'businesses'} near you
+                                                            </span>
+                                                    )}
                                                 </span>
                                             </div>
 
