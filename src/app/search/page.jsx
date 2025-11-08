@@ -822,42 +822,38 @@ export default function SearchPage() {
             // ENHANCED: Determine business type based on search context
             let businessType = 'primary';
 
-            // If searching by business name, match businesses get primary (RED)
-            if (searchData.businessName && searchData.businessName.trim()) {
-                const searchName = searchData.businessName.toLowerCase().trim();
-                const businessName = (business.bname || '').toLowerCase().trim();
+            // Check if this is a primary search result (name match from backend)
+            const isPrimarySearchResult = business.nameMatches || business.isNameMatch;
 
-                if (businessName.includes(searchName)) {
-                    // This business matches the search name
-                    businessType = 'primary'; // RED
-                    business.isPrimaryResult = true;
-                    business.markerColor = 'primary';
+            if (isPrimarySearchResult) {
+                // This business matches the search criteria - ALWAYS RED (primary)
+                businessType = 'primary'; // RED
+                business.isPrimaryResult = true;
+                business.markerColor = 'primary';
+            } else if (searchData.businessName && searchData.businessName.trim()) {
+                // Searching by name but this doesn't match - nearby database
+                businessType = 'database'; // GREEN
+                business.isNearbyDatabase = true;
+                business.markerColor = 'database';
+            } else {
+                // No business name search - determine by type
+                if (business.chain_id) {
+                    businessType = 'chain'; // ORANGE
+                    business.markerColor = 'chain';
                 } else {
-                    // This business doesn't match but was returned (nearby)
                     businessType = 'database'; // GREEN
                     business.isNearbyDatabase = true;
                     business.markerColor = 'database';
                 }
-            } else {
-                // No business name search - all are nearby database results
-                businessType = 'database'; // GREEN
-                business.isNearbyDatabase = true;
-                business.markerColor = 'database';
             }
 
-            // Override with chain color if it's a chain
-            if (business.chain_id) {
-                businessType = 'chain'; // ORANGE
-                business.markerColor = 'chain';
-            }
-
-            // Override with Google Places color if from Google
+            // Override with Google Places color if from Google (lowest priority)
             if (business.isGooglePlace || business._id?.toString().startsWith('google_')) {
                 businessType = 'nearby'; // BLUE
                 business.markerColor = 'nearby';
             }
 
-            console.log(`Setting ${business.bname} as: ${businessType} (${business.markerColor})`);
+            console.log(`🎨 ${business.bname}: ${businessType.toUpperCase()} marker (${business.markerColor}) - Primary: ${business.isPrimaryResult || false}, Chain: ${!!business.chain_id}, NameMatch: ${business.nameMatches || false}`);
 
             const marker = await createBusinessMarker(business, businessType);
             if (marker) {

@@ -36,12 +36,29 @@ export async function GET(request) {
         let businessQuery = { status: 'active' };
         let searchConditions = [];
 
-        // ENHANCED: Business Name Search
-        // Store business name for later filtering but DON'T add it to query if we have location
-        // This allows us to get ALL businesses in radius, then prioritize name matches
+        // ENHANCED: Business Name Search with fuzzy matching
+// Store business name for later filtering but DON'T add it to query if we have location
+// This allows us to get ALL businesses in radius, then prioritize name matches
         let businessNameFilter = null;
+        let fuzzyBusinessNameFilter = null;
+
         if (businessName && businessName.trim()) {
+            // Create exact pattern (with punctuation)
             businessNameFilter = new RegExp(businessName.trim(), 'i');
+
+            // Create fuzzy pattern (remove punctuation and extra spaces for more flexible matching)
+            const fuzzyName = businessName.trim()
+                .replace(/['''`]/g, '') // Remove apostrophes and quotes
+                .replace(/[^\w\s]/g, '') // Remove other punctuation
+                .replace(/\s+/g, '\\s*') // Allow flexible spacing
+                .trim();
+            fuzzyBusinessNameFilter = new RegExp(fuzzyName, 'i');
+
+            console.log('🔍 Search patterns:', {
+                original: businessName.trim(),
+                exact: businessNameFilter.source,
+                fuzzy: fuzzyBusinessNameFilter.source
+            });
 
             // Only add name filter to query if NO location search
             // If we have location, we'll filter/sort after getting all nearby businesses
@@ -49,7 +66,10 @@ export async function GET(request) {
                 searchConditions.push({
                     $or: [
                         { bname: businessNameFilter },
-                        { chain_name: businessNameFilter }
+                        { chain_name: businessNameFilter },
+                        // Also try fuzzy matching
+                        { bname: fuzzyBusinessNameFilter },
+                        { chain_name: fuzzyBusinessNameFilter }
                     ]
                 });
             }
@@ -209,15 +229,35 @@ export async function GET(request) {
                         business.location.coordinates[1], business.location.coordinates[0]
                     );
 
-                    // Check if business name matches (for prioritization)
-                    const nameMatches = businessNameFilter ?
-                        (businessNameFilter.test(business.bname) || businessNameFilter.test(business.chain_name)) :
-                        false;
+                    // Check if business name matches (exact or fuzzy)
+                    let nameMatches = false;
+                    let isExactMatch = false;
+
+                    if (businessNameFilter || fuzzyBusinessNameFilter) {
+                        // Check exact match first
+                        isExactMatch = businessNameFilter && (
+                            businessNameFilter.test(business.bname) ||
+                            businessNameFilter.test(business.chain_name)
+                        );
+
+                        // If no exact match, try fuzzy match
+                        const isFuzzyMatch = !isExactMatch && fuzzyBusinessNameFilter && (
+                            fuzzyBusinessNameFilter.test(business.bname?.replace(/['''`]/g, '').replace(/[^\w\s]/g, '')) ||
+                            fuzzyBusinessNameFilter.test(business.chain_name?.replace(/['''`]/g, '').replace(/[^\w\s]/g, ''))
+                        );
+
+                        nameMatches = isExactMatch || isFuzzyMatch;
+
+                        if (nameMatches) {
+                            console.log(`✓ Name match: ${business.bname} (exact: ${isExactMatch}, fuzzy: ${isFuzzyMatch})`);
+                        }
+                    }
 
                     return {
                         ...business,
                         distanceFromSearch: distance,
-                        nameMatches: nameMatches
+                        nameMatches: nameMatches,
+                        isExactNameMatch: isExactMatch
                     };
                 });
 
