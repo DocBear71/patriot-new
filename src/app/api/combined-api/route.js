@@ -531,10 +531,18 @@ async function handleCreateIncentive(request) {
     try {
         const incentiveData = await request.json();
 
-        // Validate required fields
-        if (!incentiveData.business_id || !incentiveData.type || !incentiveData.amount) {
+        // Validate required fields - updated for eligible_categories
+        if (!incentiveData.business_id || !incentiveData.eligible_categories || !incentiveData.amount) {
             return Response.json(
-                { success: false, message: 'Business ID, type, and amount are required' },
+                { success: false, message: 'Business ID, eligible categories, and amount are required' },
+                { status: 400 }
+            );
+        }
+
+        // Validate that eligible_categories is an array with at least one item
+        if (!Array.isArray(incentiveData.eligible_categories) || incentiveData.eligible_categories.length === 0) {
+            return Response.json(
+                { success: false, message: 'At least one eligible category is required' },
                 { status: 400 }
             );
         }
@@ -542,7 +550,7 @@ async function handleCreateIncentive(request) {
         // Create new incentive
         const newIncentive = new Incentive({
             business_id: incentiveData.business_id,
-            type: incentiveData.type,
+            eligible_categories: incentiveData.eligible_categories,
             amount: parseFloat(incentiveData.amount),
             discount_type: incentiveData.discount_type || 'percentage',
             information: incentiveData.information || '',
@@ -700,10 +708,18 @@ async function handleAddIncentive(request) {
         const incentiveData = await request.json();
         console.log("Incentive Data received:", incentiveData);
 
-        // Validate required fields
-        if (!incentiveData.business_id || !incentiveData.type || !incentiveData.amount) {
+        // Validate required fields - updated for eligible_categories
+        if (!incentiveData.business_id || !incentiveData.eligible_categories || !incentiveData.amount) {
             return Response.json(
-                { success: false, message: 'Business ID, type, and amount are required' },
+                { success: false, message: 'Business ID, eligible categories, and amount are required' },
+                { status: 400 }
+            );
+        }
+
+        // Validate that eligible_categories is an array with at least one item
+        if (!Array.isArray(incentiveData.eligible_categories) || incentiveData.eligible_categories.length === 0) {
+            return Response.json(
+                { success: false, message: 'At least one eligible category is required' },
                 { status: 400 }
             );
         }

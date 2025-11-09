@@ -14,7 +14,8 @@
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
     "cap:build:android": "npm run build:mobile && npx cap sync android",
-    "cap:build:ios": "npm run build:mobile && npx cap sync ios"
+    "cap:build:ios": "npm run build:mobile && npx cap sync ios",
+    "migrate:incentives": "node scripts/migrate-incentives.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",

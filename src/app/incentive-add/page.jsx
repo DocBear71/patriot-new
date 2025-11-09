@@ -22,7 +22,7 @@ export default function IncentiveAddPage() {
 
     const [incentiveForm, setIncentiveForm] = useState({
         incentiveAvailable: 'true',
-        incentiveType: '',
+        eligibleCategories: [], // Changed from incentiveType
         discountType: 'percentage',
         incentiveAmount: '',
         incentiveInfo: '',
@@ -40,9 +40,9 @@ export default function IncentiveAddPage() {
 
     // Enhanced useEffect to handle "Other" type description field visibility
     useEffect(() => {
-        console.log('Incentive type changed:', incentiveForm.incentiveType);
+        console.log('Eligible categories changed:', incentiveForm.eligibleCategories);
         // React handles this through conditional rendering
-    }, [incentiveForm.incentiveType]);
+    }, [incentiveForm.eligibleCategories]);
 
     // Load business from context if passed from incentive-view page
     useEffect(() => {
@@ -159,8 +159,8 @@ export default function IncentiveAddPage() {
 
         // Validate required fields when incentive is available
         if (incentiveForm.incentiveAvailable === 'true') {
-            if (!incentiveForm.incentiveType) {
-                setMessage({ type: 'error', text: 'Please select an incentive type.' });
+            if (!incentiveForm.eligibleCategories || incentiveForm.eligibleCategories.length === 0) {
+                setMessage({ type: 'error', text: 'Please select at least one eligible category.' });
                 return;
             }
             if (!incentiveForm.incentiveAmount) {
@@ -171,8 +171,8 @@ export default function IncentiveAddPage() {
                 setMessage({ type: 'error', text: 'Please enter incentive information.' });
                 return;
             }
-            if (incentiveForm.incentiveType === 'OT' && !incentiveForm.otherTypeDescription.trim()) {
-                setMessage({ type: 'error', text: 'Please describe the "Other" incentive type.' });
+            if (incentiveForm.eligibleCategories.includes('OT') && !incentiveForm.otherTypeDescription.trim()) {
+                setMessage({ type: 'error', text: 'Please describe the "Other" category.' });
                 return;
             }
         }
@@ -183,11 +183,14 @@ export default function IncentiveAddPage() {
             const incentiveData = {
                 business_id: selectedBusiness._id,
                 is_available: incentiveForm.incentiveAvailable === 'true',
-                type: incentiveForm.incentiveType,
+                // If not available, set categories to ['NA'], otherwise use selected categories
+                eligible_categories: incentiveForm.incentiveAvailable === 'false'
+                        ? ['NA']
+                        : incentiveForm.eligibleCategories,
                 discount_type: incentiveForm.discountType,
                 amount: parseFloat(incentiveForm.incentiveAmount) || 0,
                 information: incentiveForm.incentiveInfo,
-                ...(incentiveForm.incentiveType === 'OT' && { other_description: incentiveForm.otherTypeDescription })
+                ...(incentiveForm.eligibleCategories.includes('OT') && { other_description: incentiveForm.otherTypeDescription })
             };
 
             // Get user info for created_by field
@@ -224,7 +227,7 @@ export default function IncentiveAddPage() {
                     setShowIncentiveForm(false);
                     setIncentiveForm({
                         incentiveAvailable: 'true',
-                        incentiveType: '',
+                        eligibleCategories: [],
                         discountType: 'percentage',
                         incentiveAmount: '',
                         incentiveInfo: '',
@@ -253,7 +256,7 @@ export default function IncentiveAddPage() {
         setSearchForm({ businessName: '', address: '' });
         setIncentiveForm({
             incentiveAvailable: 'true',
-            incentiveType: '',
+            eligibleCategories: [],
             discountType: 'percentage',
             incentiveAmount: '',
             incentiveInfo: '',
@@ -508,32 +511,66 @@ export default function IncentiveAddPage() {
                                         </div>
                                     </div>
 
+                                    {/* Hidden field for NA when incentive is not available */}
+                                    {incentiveForm.incentiveAvailable === 'false' && (
+                                            <div style={{
+                                                marginBottom: '20px',
+                                                padding: '15px',
+                                                backgroundColor: '#f8f9fa',
+                                                border: '1px solid #dee2e6',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <p style={{ margin: 0, color: '#666' }}>
+                                                    ℹ️ This business does not offer incentives. The category will be set to "Not Available (NA)".
+                                                </p>
+                                            </div>
+                                    )}
+
                                     {/* Show form fields only if incentive is available */}
                                     {incentiveForm.incentiveAvailable === 'true' && (
                                             <>
-                                                {/* Incentive Type */}
+                                                {/* Eligible Categories - Checkboxes */}
                                                 <div style={{ marginBottom: '20px' }}>
-                                                    <label htmlFor="incentiveType" style={{ display: 'block', marginBottom: '5px' }}>
-                                                        Incentive Type <span style={{ color: 'red' }}>*</span>
+                                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                                                        Eligible Categories <span style={{ color: 'red' }}>*</span>
                                                     </label>
-                                                    <select
-                                                            id="incentiveType"
-                                                            value={incentiveForm.incentiveType}
-                                                            onChange={(e) => setIncentiveForm(prev => ({ ...prev, incentiveType: e.target.value }))}
-                                                            required={incentiveForm.incentiveAvailable === 'true'}
-                                                            style={{ padding: '8px', width: '200px', border: '1px solid #ccc', borderRadius: '4px' }}
-                                                    >
-                                                        <option value="">Select an Incentive Type</option>
-                                                        <option value="VT">Veteran</option>
-                                                        <option value="AD">Active-Duty</option>
-                                                        <option value="FR">First Responder</option>
-                                                        <option value="SP">Spouse</option>
-                                                        <option value="OT">Other (please describe)</option>
-                                                    </select>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginLeft: '10px' }}>
+                                                        {[
+                                                            { value: 'VT', label: 'Veterans' },
+                                                            { value: 'AD', label: 'Active Duty' },
+                                                            { value: 'FR', label: 'First Responders' },
+                                                            { value: 'SP', label: 'Military Spouses' },
+                                                            { value: 'OT', label: 'Other (please describe)' }
+                                                        ].map(category => (
+                                                                <label key={category.value} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                    <input
+                                                                            type="checkbox"
+                                                                            value={category.value}
+                                                                            checked={incentiveForm.eligibleCategories.includes(category.value)}
+                                                                            onChange={(e) => {
+                                                                                const value = e.target.value;
+                                                                                setIncentiveForm(prev => ({
+                                                                                    ...prev,
+                                                                                    eligibleCategories: e.target.checked
+                                                                                            ? [...prev.eligibleCategories, value]
+                                                                                            : prev.eligibleCategories.filter(cat => cat !== value)
+                                                                                }));
+                                                                            }}
+                                                                            style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                                                                    />
+                                                                    <span>{category.label}</span>
+                                                                </label>
+                                                        ))}
+                                                    </div>
+                                                    {incentiveForm.eligibleCategories.length === 0 && (
+                                                            <small style={{ color: '#dc3545', display: 'block', marginTop: '5px' }}>
+                                                                Please select at least one category
+                                                            </small>
+                                                    )}
                                                 </div>
 
                                                 {/* Other Type Description */}
-                                                {incentiveForm.incentiveType === 'OT' && (
+                                                {incentiveForm.eligibleCategories.includes('OT') && (
                                                         <div style={{ marginBottom: '20px' }}>
                                                             <label htmlFor="otherTypeDescription" style={{ display: 'block', marginBottom: '5px' }}>
                                                                 Please Describe <span style={{ color: 'red' }}>*</span>

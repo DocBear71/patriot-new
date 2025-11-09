@@ -11,10 +11,26 @@ const IncentiveSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    // UPDATED: Changed from single type to array of eligible categories
+    eligible_categories: {
+        type: [String],
+        required: true,
+        validate: {
+            validator: function(categories) {
+                if (!categories || categories.length === 0) {
+                    return false;
+                }
+                const validCategories = ['VT', 'AD', 'FR', 'SP', 'OT', 'NA', 'NC'];
+                return categories.every(cat => validCategories.includes(cat));
+            },
+            message: 'At least one valid category is required (VT, AD, FR, SP, OT, NA, NC)'
+        }
+    },
+    // Keep old 'type' field for backward compatibility during migration
     type: {
         type: String,
-        required: true,
-        enum: ['VT', 'AD', 'FR', 'SP', 'BO', 'SU'] // Based on your data
+        enum: ['VT', 'AD', 'FR', 'SP', 'OT', '', 'NC'],
+        required: false
     },
     amount: {
         type: Number,

@@ -81,16 +81,24 @@ export async function POST(request) {
         const body = await request.json();
         const {
             business_id,
-            type,
+            eligible_categories,
             amount,
             information,
             other_description
         } = body;
 
-        // Validation
-        if (!business_id || !type || amount === undefined || !information) {
+        // Validation - updated for eligible_categories
+        if (!business_id || !eligible_categories || amount === undefined || !information) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
+
+        // Validate that eligible_categories is an array with at least one item
+        if (!Array.isArray(eligible_categories) || eligible_categories.length === 0) {
+            return NextResponse.json(
+                { error: 'At least one eligible category is required' },
                 { status: 400 }
             );
         }
@@ -107,7 +115,7 @@ export async function POST(request) {
         // Create incentive
         const incentive = new Incentive({
             business_id,
-            type: type.toUpperCase(),
+            eligible_categories: eligible_categories.map(cat => cat.toUpperCase()),
             amount: Number(amount),
             information: information.trim(),
             other_description: other_description?.trim() || '',

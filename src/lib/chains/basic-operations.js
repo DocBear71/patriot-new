@@ -18,6 +18,15 @@ export async function handleListChains(request) {
     try {
         await connectDB();
 
+        // First, let's verify the collection name
+        const Business = mongoose.model('Business');
+        const businessCollectionName = Business.collection.name;
+        console.log(`📊 Business collection name: ${businessCollectionName}`);
+
+        // Count total businesses to verify collection access
+        const totalBusinesses = await Business.countDocuments({});
+        console.log(`📊 Total businesses in database: ${totalBusinesses}`);
+
         // Enhanced aggregation to get complete chain stats
         const chains = await Chain.aggregate([
             {
@@ -25,7 +34,7 @@ export async function handleListChains(request) {
             },
             {
                 $lookup: {
-                    from: 'businesses',
+                    from: 'business',
                     localField: '_id',
                     foreignField: 'chain_id',
                     as: 'locations'

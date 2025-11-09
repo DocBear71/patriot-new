@@ -381,6 +381,32 @@ export default function IncentiveViewPage() {
         return types[type] || type;
     };
 
+    const getCategoriesLabel = (incentive) => {
+        const categoryLabels = {
+            'VT': 'Veterans',
+            'AD': 'Active Duty',
+            'FR': 'First Responders',
+            'SP': 'Military Spouses',
+            'MR': 'Military Rate',
+            'NC': 'No Chain Incentives',
+            'WS': 'WeSalute',
+            'OT': 'Other',
+            'NA': 'Not Available'
+        };
+
+        // Handle both new format (eligible_categories) and old format (type)
+        const categories = incentive.eligible_categories || (incentive.type ? [incentive.type] : []);
+
+        if (categories.length === 0) return 'N/A';
+
+        // Special case: if NA is the only category, just show "Not Available"
+        if (categories.length === 1 && categories[0] === 'NA') {
+            return 'Not Available';
+        }
+
+        return categories.map(cat => categoryLabels[cat] || cat).join(', ');
+    };
+
     const formatIncentiveAmount = (amount, discountType) => {
         if (discountType === 'dollar') {
             return `$${amount}`;
@@ -972,15 +998,7 @@ export default function IncentiveViewPage() {
                                                         borderBottom: '2px solid #ddd',
                                                         fontWeight: 'bold',
                                                     }}>
-                                                        Type
-                                                    </th>
-                                                    <th style={{
-                                                        padding: '12px',
-                                                        textAlign: 'left',
-                                                        borderBottom: '2px solid #ddd',
-                                                        fontWeight: 'bold',
-                                                    }}>
-                                                        Amount
+                                                        Eligible For
                                                     </th>
                                                     <th style={{
                                                         padding: '12px',
@@ -1033,8 +1051,8 @@ export default function IncentiveViewPage() {
                                                                 padding: '12px',
                                                                 borderBottom: '1px solid #ddd',
                                                             }}>
-                                                                {getIncentiveTypeLabel(incentive.type)}
-                                                                {incentive.type === 'OT' &&
+                                                                {getCategoriesLabel(incentive)}
+                                                                {(incentive.eligible_categories?.includes('OT') || incentive.type === 'OT') &&
                                                                         incentive.other_description && (
                                                                                 <div style={{
                                                                                     fontSize: '12px',

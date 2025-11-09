@@ -8,6 +8,34 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Footer from '../../components/legal/Footer';
 
+const businessTypes = [
+    { value: 'AUTO', label: 'Automotive' },
+    { value: 'BEAU', label: 'Beauty' },
+    { value: 'BOOK', label: 'Bookstore' },
+    { value: 'CLTH', label: 'Clothing' },
+    { value: 'CONV', label: 'Convenience Store/Gas Station' },
+    { value: 'DEPT', label: 'Department Store' },
+    { value: 'ELEC', label: 'Electronics' },
+    { value: 'ENTR', label: 'Entertainment' },
+    { value: 'FURN', label: 'Furniture' },
+    { value: 'FUEL', label: 'Fuel Station/Truck Stop' },
+    { value: 'GIFT', label: 'Gift Shop' },
+    { value: 'GROC', label: 'Grocery' },
+    { value: 'HARDW', label: 'Hardware' },
+    { value: 'HEAL', label: 'Health' },
+    { value: 'HOTEL', label: 'Hotel/Motel' },
+    { value: 'JEWL', label: 'Jewelry' },
+    { value: 'OTHER', label: 'Other' },
+    { value: 'RX', label: 'Pharmacy' },
+    { value: 'REST', label: 'Restaurant' },
+    { value: 'RETAIL', label: 'Retail' },
+    { value: 'SERV', label: 'Service' },
+    { value: 'SPEC', label: 'Specialty' },
+    { value: 'SPRT', label: 'Sporting Goods' },
+    { value: 'TECH', label: 'Technology' },
+    { value: 'TOYS', label: 'Toys' }
+];
+
 export default function ChainManagementPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
@@ -25,6 +53,41 @@ export default function ChainManagementPage() {
         category: '',
         isActive: true
     });
+
+    const [showIncentivesModal, setShowIncentivesModal] = useState(false);
+    const [chainIncentives, setChainIncentives] = useState([]);
+    const [showEditIncentiveModal, setShowEditIncentiveModal] = useState(false);
+    const [selectedIncentive, setSelectedIncentive] = useState(null);
+    const [newIncentive, setNewIncentive] = useState({
+        eligibleCategories: [],
+        discountType: 'percentage',
+        amount: '',
+        information: '',
+        otherDescription: ''
+    });
+
+    // Auto-fill and lock information field for special categories
+    useEffect(() => {
+        const categories = newIncentive.eligibleCategories;
+
+        // Check if any special category is selected
+        if (categories.includes('NC')) {
+            setNewIncentive(prev => ({
+                ...prev,
+                information: 'No chainwide incentives available, check your local location for available discounts and/or incentives'
+            }));
+        } else if (categories.includes('WS')) {
+            setNewIncentive(prev => ({
+                ...prev,
+                information: 'Discounts only available through the paid service of WeSalute.com. Memberships start at $9.99 a month or $119.88 for a year. Discounts and multi-year options also available. Go to WeSalute.com for more details.'
+            }));
+        } else if (categories.includes('MR')) {
+            setNewIncentive(prev => ({
+                ...prev,
+                information: 'Military Rate discounts available at participating locations. Save a percentage off the Best Flex Rate. Military ID required at check-in. Discount amount varies by location and availability. Terms and conditions apply.'
+            }));
+        }
+    }, [newIncentive.eligibleCategories]);
 
     useEffect(() => {
         if (status === 'loading') return;
@@ -48,23 +111,115 @@ export default function ChainManagementPage() {
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('Raw chain data from API:', data);
+
                 // Map the API fields to match frontend expectations
-                const mappedChains = (data.chains || []).map(chain => ({
-                    _id: chain._id,
-                    name: chain.chain_name,
-                    category: chain.business_type,
-                    description: chain.corporate_info?.description || '',
-                    website: chain.corporate_info?.website || '',
-                    isActive: chain.status === 'active',
-                    locationCount: chain.location_count || 0,
-                    createdAt: chain.created_date
-                }));
+                const mappedChains = (data.chains || []).map(chain => {
+                    // Count active incentives from the incentives array
+                    const incentiveCount = chain.incentives
+                            ? chain.incentives.filter(inc => inc.is_active !== false).length
+                            : 0;
+
+                    console.log(`Chain: ${chain.chain_name}, Incentives: ${incentiveCount}, Locations: ${chain.location_count}`);
+
+                    return {
+                        _id: chain._id,
+                        name: chain.chain_name,
+                        category: chain.business_type,
+                        description: chain.corporate_info?.description || '',
+                        website: chain.corporate_info?.website || '',
+                        isActive: chain.status === 'active',
+                        locationCount: chain.location_count || 0,
+                        incentiveCount: incentiveCount,
+                        createdAt: chain.created_date
+                    };
+                });
+
+                console.log('Mapped chains:', mappedChains);
                 setChains(mappedChains);
             } else {
                 console.error('Failed to load chains:', response.status);
             }
         } catch (error) {
             console.error('Error loading chains:', error);
+        }
+    };
+
+    const loadChainIncentives = async (chainId) => {
+        try {
+            const response = await fetch(`/api/chains?operation=get_incentives&chain_id=${chainId}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                setChainIncentives(data.incentives || []);
+            } else {
+                console.error('Failed to load chain incentives:', response.status);
+                setChainIncentives([]);
+            }
+        } catch (error) {
+            console.error('Error loading chain incentives:', error);
+            setChainIncentives([]);
+        }
+    };
+
+    const getBusinessTypeLabel = (typeCode) => {
+        const type = businessTypes.find(t => t.value === typeCode);
+        return type ? type.label : typeCode;
+    };
+
+    const handleAddChainIncentive = async (e) => {
+        e.preventDefault();
+
+        if (!selectedChain) {
+            alert('Please select a chain first');
+            return;
+        }
+
+        if (newIncentive.eligibleCategories.length === 0) {
+            alert('Please select at least one eligible category');
+            return;
+        }
+
+        try {
+            const incentiveData = {
+                chain_id: selectedChain._id,
+                eligible_categories: newIncentive.eligibleCategories,
+                discount_type: newIncentive.discountType,
+                amount: parseFloat(newIncentive.amount),
+                information: newIncentive.information,
+                ...(newIncentive.eligibleCategories.includes('OT') && {
+                    other_description: newIncentive.otherDescription
+                })
+            };
+
+            const response = await fetch('/api/chains?operation=add_incentive', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(incentiveData)
+            });
+
+            if (response.ok) {
+                // Reset form
+                setNewIncentive({
+                    eligibleCategories: [],
+                    discountType: 'percentage',
+                    amount: '',
+                    information: '',
+                    otherDescription: ''
+                });
+
+                // Reload incentives
+                await loadChainIncentives(selectedChain._id);
+                alert('Incentive added successfully');
+            } else {
+                const data = await response.json();
+                alert(data.message || 'Error adding incentive');
+            }
+        } catch (error) {
+            console.error('Error adding incentive:', error);
+            alert('Error adding incentive');
         }
     };
 
@@ -172,6 +327,32 @@ export default function ChainManagementPage() {
         }
     };
 
+    const getCategoriesLabel = (incentive) => {
+        const categoryLabels = {
+            'VT': 'Veterans',
+            'AD': 'Active Duty',
+            'FR': 'First Responders',
+            'SP': 'Military Spouses',
+            'MR': 'Military Rate',
+            'NC': 'No Chain Incentives',
+            'WS': 'WeSalute',
+            'OT': 'Other',
+            'NA': 'Not Available'
+        };
+
+        // Handle both new format (eligible_categories) and old format (type)
+        const categories = incentive.eligible_categories || (incentive.type ? [incentive.type] : []);
+
+        if (categories.length === 0) return 'N/A';
+
+        // Special case: if NA is the only category
+        if (categories.length === 1 && categories[0] === 'NA') {
+            return 'Not Available';
+        }
+
+        return categories.map(cat => categoryLabels[cat] || cat).join(', ');
+    };
+
     // Filter chains by search term
     const filteredChains = chains.filter(chain =>
             (chain.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,31 +419,29 @@ export default function ChainManagementPage() {
                 {/* Main Content */}
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     {/* Controls */}
-                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex-1 min-w-0">
-                            <div className="max-w-lg">
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                    <input
-                                            type="text"
-                                            placeholder="Search chains..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                    />
+                    <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
                                 </div>
+                                <input
+                                        type="text"
+                                        placeholder="Search chains..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                />
                             </div>
                         </div>
-                        <div className="mt-4 sm:mt-0 sm:ml-4">
+                        <div className="flex-shrink-0">
                             <button
                                     onClick={() => setShowAddModal(true)}
-                                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                             >
-                                <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
                                 Add Chain
@@ -289,7 +468,7 @@ export default function ChainManagementPage() {
                                         </div>
 
                                         <p className="text-sm text-gray-600 mb-2">
-                                            <strong>Category:</strong> {chain.category}
+                                            <strong>Category:</strong> {getBusinessTypeLabel(chain.category)}
                                         </p>
 
                                         {chain.description && (
@@ -300,6 +479,7 @@ export default function ChainManagementPage() {
 
                                         <div className="text-sm text-gray-500 mb-4">
                                             <p><strong>Locations:</strong> {chain.locationCount || 0}</p>
+                                            <p><strong>Incentives:</strong> {chain.incentiveCount || 0}</p>
                                             <p><strong>Created:</strong> {new Date(chain.createdAt).toLocaleDateString()}</p>
                                         </div>
 
@@ -323,6 +503,16 @@ export default function ChainManagementPage() {
                                                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                                         >
                                             Edit
+                                        </button>
+                                        <button
+                                                onClick={async () => {
+                                                    setSelectedChain(chain);
+                                                    await loadChainIncentives(chain._id);
+                                                    setShowIncentivesModal(true);
+                                                }}
+                                                className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                                        >
+                                            Incentives
                                         </button>
                                         <button
                                                 onClick={() => handleUpdateChain(chain._id, { isActive: !chain.isActive })}
@@ -489,13 +679,11 @@ export default function ChainManagementPage() {
                                             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="">Select category</option>
-                                        <option value="Restaurant">Restaurant</option>
-                                        <option value="Retail">Retail</option>
-                                        <option value="Automotive">Automotive</option>
-                                        <option value="Healthcare">Healthcare</option>
-                                        <option value="Fitness">Fitness</option>
-                                        <option value="Entertainment">Entertainment</option>
-                                        <option value="Other">Other</option>
+                                        {businessTypes.map(type => (
+                                                <option key={type.value} value={type.value}>
+                                                    {type.label}
+                                                </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -584,13 +772,11 @@ export default function ChainManagementPage() {
                                             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="">Select category</option>
-                                        <option value="Restaurant">Restaurant</option>
-                                        <option value="Retail">Retail</option>
-                                        <option value="Automotive">Automotive</option>
-                                        <option value="Healthcare">Healthcare</option>
-                                        <option value="Fitness">Fitness</option>
-                                        <option value="Entertainment">Entertainment</option>
-                                        <option value="Other">Other</option>
+                                        {businessTypes.map(type => (
+                                                <option key={type.value} value={type.value}>
+                                                    {type.label}
+                                                </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -646,6 +832,229 @@ export default function ChainManagementPage() {
                         </div>
                     </div>
                 </div>
+                )}
+                {/* Manage Chain Incentives Modal */}
+                {showIncentivesModal && selectedChain && (
+                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                            <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+                                <div className="mt-3">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-lg font-medium text-gray-900">
+                                            Manage Incentives: {selectedChain.name}
+                                        </h3>
+                                        <button
+                                                onClick={() => setShowIncentivesModal(false)}
+                                                className="text-gray-400 hover:text-gray-600"
+                                        >
+                                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {/* Current Incentives */}
+                                    <div className="mb-6">
+                                        <h4 className="text-md font-medium text-gray-700 mb-3">Current Chain Incentives</h4>
+                                        {chainIncentives.length === 0 ? (
+                                                <p className="text-gray-500">No incentives found for this chain.</p>
+                                        ) : (
+                                                <div className="space-y-2">
+                                                    {chainIncentives.map((incentive, index) => (
+                                                            <div key={incentive._id || index} className="flex justify-between items-center p-3 bg-gray-50 rounded border">
+                                                                <div>
+                                                                    <span className="font-medium">{getCategoriesLabel(incentive)}</span>
+                                                                    {(incentive.eligible_categories?.includes('OT') || incentive.type === 'OT') && incentive.other_description && (
+                                                                            <span className="text-sm text-gray-600 ml-2">({incentive.other_description})</span>
+                                                                    )}
+                                                                    <span className="mx-2">-</span>
+                                                                    <span className="text-blue-600">
+                                                        {incentive.discount_type === 'dollar' ? '$' : ''}{incentive.amount}{incentive.discount_type === 'percentage' ? '%' : ''}
+                                                    </span>
+                                                                    {incentive.information && (
+                                                                            <p className="text-sm text-gray-600 mt-1">{incentive.information}</p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex space-x-2">
+                                                                    <button
+                                                                            onClick={() => {
+                                                                                // Edit functionality - we'll add this next
+                                                                                alert('Edit functionality coming soon');
+                                                                            }}
+                                                                            className="text-sm text-blue-600 hover:text-blue-800"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                            onClick={async () => {
+                                                                                if (confirm('Are you sure you want to remove this incentive?')) {
+                                                                                    try {
+                                                                                        const response = await fetch('/api/chains?operation=remove_incentive', {
+                                                                                            method: 'DELETE',
+                                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                                            body: JSON.stringify({
+                                                                                                chain_id: selectedChain._id,
+                                                                                                incentive_id: incentive._id
+                                                                                            })
+                                                                                        });
+                                                                                        if (response.ok) {
+                                                                                            await loadChainIncentives(selectedChain._id);
+                                                                                        }
+                                                                                    } catch (error) {
+                                                                                        console.error('Error removing incentive:', error);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            className="text-sm text-red-600 hover:text-red-800"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                    ))}
+                                                </div>
+                                        )}
+                                    </div>
+
+                                    {/* Add New Incentive Form */}
+                                    <div className="border-t pt-4">
+                                        <h4 className="text-md font-medium text-gray-700 mb-3">Add New Incentive</h4>
+                                        <form onSubmit={handleAddChainIncentive} className="space-y-4">
+                                            {/* Eligible Categories - Checkboxes */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Eligible Categories <span className="text-red-500">*</span>
+                                                </label>
+                                                <div className="space-y-2">
+                                                    {[
+                                                        { value: 'VT', label: 'Veterans' },
+                                                        { value: 'AD', label: 'Active Duty' },
+                                                        { value: 'FR', label: 'First Responders' },
+                                                        { value: 'SP', label: 'Military Spouses' },
+                                                        { value: 'MR', label: 'Military Rate (Variable Discount)' },
+                                                        { value: 'NC', label: 'No Chainwide Incentives' },
+                                                        { value: 'WS', label: 'WeSalute' },
+                                                        { value: 'OT', label: 'Other (please describe)' }
+                                                    ].map(category => (
+                                                            <label key={category.value} className="flex items-center">
+                                                                <input
+                                                                        type="checkbox"
+                                                                        value={category.value}
+                                                                        checked={newIncentive.eligibleCategories.includes(category.value)}
+                                                                        onChange={(e) => {
+                                                                            const value = e.target.value;
+                                                                            setNewIncentive(prev => ({
+                                                                                ...prev,
+                                                                                eligibleCategories: e.target.checked
+                                                                                        ? [...prev.eligibleCategories, value]
+                                                                                        : prev.eligibleCategories.filter(cat => cat !== value)
+                                                                            }));
+                                                                        }}
+                                                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                                />
+                                                                <span className="ml-2 text-sm text-gray-700">{category.label}</span>
+                                                            </label>
+                                                    ))}
+                                                </div>
+                                                {newIncentive.eligibleCategories.length === 0 && (
+                                                        <p className="text-sm text-red-500 mt-1">Please select at least one category</p>
+                                                )}
+                                            </div>
+
+                                            {/* Other Description */}
+                                            {newIncentive.eligibleCategories.includes('OT') && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Other Description *</label>
+                                                        <input
+                                                                type="text"
+                                                                value={newIncentive.otherDescription}
+                                                                onChange={(e) => setNewIncentive({...newIncentive, otherDescription: e.target.value})}
+                                                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                                                placeholder="Describe the other category..."
+                                                                required
+                                                        />
+                                                    </div>
+                                            )}
+
+                                            {/* Discount Type */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Discount Type *</label>
+                                                <select
+                                                        value={newIncentive.discountType}
+                                                        onChange={(e) => setNewIncentive({...newIncentive, discountType: e.target.value})}
+                                                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value="percentage">Percentage (%)</option>
+                                                    <option value="dollar">Dollar Amount ($)</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Amount */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    Amount ({newIncentive.discountType === 'percentage' ? '%' : '$'}) *
+                                                </label>
+                                                <input
+                                                        type="number"
+                                                        value={newIncentive.amount}
+                                                        onChange={(e) => setNewIncentive({...newIncentive, amount: e.target.value})}
+                                                        min="0"
+                                                        max={newIncentive.discountType === 'percentage' ? '100' : '9999'}
+                                                        step="0.01"
+                                                        required
+                                                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                            </div>
+
+                                            {/* Information */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    Additional Information
+                                                    {(newIncentive.eligibleCategories.includes('NC') ||
+                                                            newIncentive.eligibleCategories.includes('WS') ||
+                                                            newIncentive.eligibleCategories.includes('MR')) && (
+                                                            <span className="text-sm text-gray-500 ml-2">(Auto-filled - Standard Text)</span>
+                                                    )}
+                                                </label>
+                                                <textarea
+                                                        value={newIncentive.information}
+                                                        onChange={(e) => setNewIncentive({...newIncentive, information: e.target.value})}
+                                                        rows={3}
+                                                        disabled={
+                                                                newIncentive.eligibleCategories.includes('NC') ||
+                                                                newIncentive.eligibleCategories.includes('WS') ||
+                                                                newIncentive.eligibleCategories.includes('MR')
+                                                        }
+                                                        className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${
+                                                                (newIncentive.eligibleCategories.includes('NC') ||
+                                                                        newIncentive.eligibleCategories.includes('WS') ||
+                                                                        newIncentive.eligibleCategories.includes('MR'))
+                                                                        ? 'bg-gray-100 cursor-not-allowed'
+                                                                        : ''
+                                                        }`}
+                                                        placeholder="Enter any restrictions or additional details..."
+                                                />
+                                            </div>
+
+                                            <div className="flex justify-end space-x-3 pt-4">
+                                                <button
+                                                        type="button"
+                                                        onClick={() => setShowIncentivesModal(false)}
+                                                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                                >
+                                                    Close
+                                                </button>
+                                                <button
+                                                        type="submit"
+                                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                                >
+                                                    Add Incentive
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                 )}
                 <Footer />
             </div>

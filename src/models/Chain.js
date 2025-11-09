@@ -34,10 +34,26 @@ const ChainSchema = new mongoose.Schema({
 
     // Chain-wide incentives stored directly in the chain document
     incentives: [{
+        // NEW: eligible_categories array for multi-category support
+        eligible_categories: {
+            type: [String],
+            required: true,
+            validate: {
+                validator: function(categories) {
+                    if (!categories || categories.length === 0) {
+                        return false;
+                    }
+                    const validCategories = ['VT', 'AD', 'FR', 'SP', 'OT', 'NA', 'NC', 'WS', 'MR'];
+                    return categories.every(cat => validCategories.includes(cat));
+                },
+                message: 'At least one valid category is required (VT, AD, FR, SP, OT, NA, NC, WS, MR)'
+            }
+        },
+        // Keep old 'type' field for backward compatibility during migration
         type: {
             type: String,
-            required: true,
-            enum: ['VT', 'AD', 'FR', 'SP', 'OT']
+            enum: ['VT', 'AD', 'FR', 'SP', 'OT', '', 'NC', 'WS', 'MR'],
+            required: false
         },
         amount: {
             type: Number,

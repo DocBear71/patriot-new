@@ -24,11 +24,11 @@ export async function handleAddChainIncentive(request) {
 
     try {
         const body = await request.json();
-        const { chain_id, type, amount, description, other_description, information, discount_type } = body;
+        const { chain_id, eligible_categories, amount, description, other_description, information, discount_type } = body;
 
-        if (!chain_id || !type || amount === undefined) {
+        if (!chain_id || !eligible_categories || !Array.isArray(eligible_categories) || eligible_categories.length === 0 || amount === undefined) {
             return NextResponse.json(
-                { message: 'Chain ID, type, and amount are required' },
+                { message: 'Chain ID, eligible_categories array, and amount are required' },
                 { status: 400 }
             );
         }
@@ -37,10 +37,10 @@ export async function handleAddChainIncentive(request) {
 
         const newIncentive = {
             _id: new ObjectId(),
-            type,
+            eligible_categories: eligible_categories,
             amount: parseFloat(amount),
             description: description || '',
-            other_description: type === 'OT' ?
+            other_description: eligible_categories.includes('OT') ?
                 (other_description || '') : '',
             information: information || '',
             discount_type: discount_type || 'percentage',
@@ -48,6 +48,8 @@ export async function handleAddChainIncentive(request) {
             created_date: new Date(),
             created_by: adminCheck.userId
         };
+
+        console.log(`✅ Adding incentive with categories: [${eligible_categories.join(', ')}]`);
 
         const result = await Chain.findByIdAndUpdate(
             chain_id,
@@ -101,7 +103,7 @@ export async function handleUpdateChainIncentive(request) {
 
     try {
         const body = await request.json();
-        const { chain_id, incentive_id, type, amount, description, other_description, information, discount_type, is_active } = body;
+        const { chain_id, incentive_id, eligible_categories, amount, description, other_description, information, discount_type, is_active } = body;
 
         if (!chain_id || !incentive_id) {
             return NextResponse.json(
@@ -114,7 +116,10 @@ export async function handleUpdateChainIncentive(request) {
 
         // Build the update object for the specific incentive
         const updateFields = {};
-        if (type !== undefined) updateFields['incentives.$.type'] = type;
+        if (eligible_categories !== undefined && Array.isArray(eligible_categories)) {
+            updateFields['incentives.$.eligible_categories'] = eligible_categories;
+            console.log(`✏️ Updating eligible_categories to: [${eligible_categories.join(', ')}]`);
+        }
         if (amount !== undefined) updateFields['incentives.$.amount'] = parseFloat(amount);
         if (description !== undefined) updateFields['incentives.$.description'] = description;
         if (other_description !== undefined) updateFields['incentives.$.other_description'] = other_description;

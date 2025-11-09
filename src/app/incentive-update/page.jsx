@@ -28,7 +28,7 @@ export default function IncentiveUpdatePage() {
 
     const [editForm, setEditForm] = useState({
         incentiveAvailable: 'true',
-        incentiveType: '',
+        eligibleCategories: [], // Changed from incentiveType
         discountType: 'percentage',
         incentiveAmount: '',
         incentiveInfo: '',
@@ -226,9 +226,12 @@ export default function IncentiveUpdatePage() {
         setSelectedIncentive(incentive);
 
         // Populate edit form with current incentive data - ENHANCED WITH FIXES
+        // Handle both old format (type) and new format (eligible_categories)
+        const categories = incentive.eligible_categories || (incentive.type ? [incentive.type] : []);
+
         const formData = {
             incentiveAvailable: incentive.is_available ? 'true' : 'false',
-            incentiveType: incentive.type || '',
+            eligibleCategories: categories,
             discountType: incentive.discount_type || 'percentage',
             incentiveAmount: incentive.amount || '',
             incentiveInfo: incentive.information || '',
@@ -278,8 +281,8 @@ export default function IncentiveUpdatePage() {
 
         // Validate required fields when incentive is available
         if (editForm.incentiveAvailable === 'true') {
-            if (!editForm.incentiveType) {
-                setMessage({ type: 'error', text: 'Please select an incentive type.' });
+            if (!editForm.eligibleCategories || editForm.eligibleCategories.length === 0) {
+                setMessage({ type: 'error', text: 'Please select at least one eligible category.' });
                 return;
             }
             if (!editForm.incentiveAmount) {
@@ -290,8 +293,8 @@ export default function IncentiveUpdatePage() {
                 setMessage({ type: 'error', text: 'Please enter incentive information.' });
                 return;
             }
-            if (editForm.incentiveType === 'OT' && !editForm.otherTypeDescription.trim()) {
-                setMessage({ type: 'error', text: 'Please describe the "Other" incentive type.' });
+            if (editForm.eligibleCategories.includes('OT') && !editForm.otherTypeDescription.trim()) {
+                setMessage({ type: 'error', text: 'Please describe the "Other" category.' });
                 return;
             }
         }
@@ -303,11 +306,14 @@ export default function IncentiveUpdatePage() {
                 incentiveId: selectedIncentive._id,
                 business_id: selectedBusiness._id,
                 is_available: editForm.incentiveAvailable === 'true',
-                type: editForm.incentiveType,
+                // If not available, set categories to ['NA'], otherwise use selected categories
+                eligible_categories: editForm.incentiveAvailable === 'false'
+                        ? ['NA']
+                        : editForm.eligibleCategories,
                 discount_type: editForm.discountType,
                 amount: parseFloat(editForm.incentiveAmount) || 0,
                 information: editForm.incentiveInfo,
-                ...(editForm.incentiveType === 'OT' && { other_description: editForm.otherTypeDescription })
+                ...(editForm.eligibleCategories.includes('OT') && { other_description: editForm.otherTypeDescription })
             };
 
             // Get user info for updated_by field from NextAuth session
@@ -376,7 +382,7 @@ export default function IncentiveUpdatePage() {
         setSearchForm({ businessName: '', address: '' });
         setEditForm({
             incentiveAvailable: 'true',
-            incentiveType: '',
+            eligibleCategories: [],
             discountType: 'percentage',
             incentiveAmount: '',
             incentiveInfo: '',
@@ -409,6 +415,32 @@ export default function IncentiveUpdatePage() {
             'OT': 'Other'
         };
         return types[type] || type;
+    };
+
+    const getCategoriesLabel = (incentive) => {
+        const categoryLabels = {
+            'VT': 'Veterans',
+            'AD': 'Active Duty',
+            'FR': 'First Responders',
+            'SP': 'Military Spouses',
+            'MR': 'Military Rate',
+            'NC': 'No Chain Incentives',
+            'WS': 'WeSalute',
+            'OT': 'Other',
+            'NA': 'Not Available'
+        };
+
+        // Handle both new format (eligible_categories) and old format (type)
+        const categories = incentive.eligible_categories || (incentive.type ? [incentive.type] : []);
+
+        if (categories.length === 0) return 'N/A';
+
+        // Special case: if NA is the only category, just show "Not Available"
+        if (categories.length === 1 && categories[0] === 'NA') {
+            return 'Not Available';
+        }
+
+        return categories.map(cat => categoryLabels[cat] || cat).join(', ');
     };
 
     const formatIncentiveAmount = (amount, discountType) => {
@@ -745,8 +777,8 @@ export default function IncentiveUpdatePage() {
                                                                 padding: '12px',
                                                                 borderBottom: '1px solid #ddd'
                                                             }}>
-                                                                {getIncentiveTypeLabel(incentive.type)}
-                                                                {incentive.type === 'OT' && incentive.other_description && (
+                                                                {getCategoriesLabel(incentive)}
+                                                                {(incentive.eligible_categories?.includes('OT') || incentive.type === 'OT') && incentive.other_description && (
                                                                         <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                                                                             ({incentive.other_description})
                                                                         </div>
@@ -873,43 +905,68 @@ export default function IncentiveUpdatePage() {
                                         </div>
                                     </div>
 
+                                    {/* Hidden field for NA when incentive is not available */}
+                                    {editForm.incentiveAvailable === 'false' && (
+                                            <div style={{
+                                                marginBottom: '20px',
+                                                padding: '15px',
+                                                backgroundColor: '#f8f9fa',
+                                                border: '1px solid #dee2e6',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <p style={{ margin: 0, color: '#666' }}>
+                                                    ℹ️ This business does not offer incentives. The category will be set to "Not Available (NA)".
+                                                </p>
+                                            </div>
+                                    )}
+
                                     {/* Show form fields only if incentive is available */}
                                     {editForm.incentiveAvailable === 'true' && (
                                             <>
-                                                {/* Incentive Type */}
+                                                {/* Eligible Categories - Checkboxes */}
                                                 <div style={{ marginBottom: '20px' }}>
-                                                    <label htmlFor="incentiveType" style={{ display: 'block', marginBottom: '5px' }}>
-                                                        Incentive Type <span style={{ color: 'red' }}>*</span>
+                                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                                                        Eligible Categories <span style={{ color: 'red' }}>*</span>
                                                     </label>
-                                                    <select
-                                                            id="incentiveType"
-                                                            value={editForm.incentiveType}
-                                                            onChange={(e) => {
-                                                                setEditForm(prev => ({ ...prev, incentiveType: e.target.value }));
-                                                                console.log('Simple fix: Incentive type changed to', e.target.value);
-                                                            }}
-                                                            required={editForm.incentiveAvailable === 'true'}
-                                                            style={{
-                                                                padding: '8px',
-                                                                width: '200px',
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                                backgroundColor: editForm.incentiveAvailable === 'false' ? '#f5f5f5' : 'white',
-                                                                cursor: editForm.incentiveAvailable === 'false' ? 'not-allowed' : 'pointer'
-                                                            }}
-                                                            disabled={editForm.incentiveAvailable === 'false'}
-                                                    >
-                                                        <option value="">Select an Incentive Type</option>
-                                                        <option value="VT">Veteran</option>
-                                                        <option value="AD">Active-Duty</option>
-                                                        <option value="FR">First Responder</option>
-                                                        <option value="SP">Spouse</option>
-                                                        <option value="OT">Other (please describe)</option>
-                                                    </select>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginLeft: '10px' }}>
+                                                        {[
+                                                            { value: 'VT', label: 'Veterans' },
+                                                            { value: 'AD', label: 'Active Duty' },
+                                                            { value: 'FR', label: 'First Responders' },
+                                                            { value: 'SP', label: 'Military Spouses' },
+                                                            { value: 'OT', label: 'Other (please describe)' }
+                                                        ].map(category => (
+                                                                <label key={category.value} style={{ display: 'flex', alignItems: 'center', cursor: editForm.incentiveAvailable === 'false' ? 'not-allowed' : 'pointer', opacity: editForm.incentiveAvailable === 'false' ? 0.5 : 1 }}>
+                                                                    <input
+                                                                            type="checkbox"
+                                                                            value={category.value}
+                                                                            checked={editForm.eligibleCategories.includes(category.value)}
+                                                                            onChange={(e) => {
+                                                                                const value = e.target.value;
+                                                                                setEditForm(prev => ({
+                                                                                    ...prev,
+                                                                                    eligibleCategories: e.target.checked
+                                                                                            ? [...prev.eligibleCategories, value]
+                                                                                            : prev.eligibleCategories.filter(cat => cat !== value)
+                                                                                }));
+                                                                                console.log('Simple fix: Categories changed to', e.target.checked ? [...editForm.eligibleCategories, value] : editForm.eligibleCategories.filter(cat => cat !== value));
+                                                                            }}
+                                                                            disabled={editForm.incentiveAvailable === 'false'}
+                                                                            style={{ marginRight: '8px', width: '18px', height: '18px', cursor: editForm.incentiveAvailable === 'false' ? 'not-allowed' : 'pointer' }}
+                                                                    />
+                                                                    <span>{category.label}</span>
+                                                                </label>
+                                                        ))}
+                                                    </div>
+                                                    {editForm.incentiveAvailable === 'true' && editForm.eligibleCategories.length === 0 && (
+                                                            <small style={{ color: '#dc3545', display: 'block', marginTop: '5px' }}>
+                                                                Please select at least one category
+                                                            </small>
+                                                    )}
                                                 </div>
 
                                                 {/* Other Type Description */}
-                                                {editForm.incentiveType === 'OT' && (
+                                                {editForm.eligibleCategories.includes('OT') && (
                                                         <div style={{ marginBottom: '20px' }}>
                                                             <label htmlFor="otherTypeDescription" style={{ display: 'block', marginBottom: '5px' }}>
                                                                 Please Describe <span style={{ color: 'red' }}>*</span>

@@ -1,7 +1,8 @@
-// file: /src/app/api/search/route.js v2 - Enhanced to handle businessName and address parameters
+// file: /src/app/api/search/route.js v3 - Added Google Places integration for server-side fallback
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb.js';
 import { Business, Incentive } from '../../../models/index.js';
+import { searchGooglePlaces } from '../../../utils/googlePlaces.js';
 
 export async function GET(request) {
     try {
@@ -346,8 +347,132 @@ export async function GET(request) {
 
         console.log(`Found ${businesses.length} businesses matching search criteria`);
 
+        // ========== GOOGLE PLACES INTEGRATION ==========
+        // Always fetch Google Places results to supplement database results
+        let googlePlacesResults = [];
+
+        if (searchLat && searchLng) {
+            // We have coordinates - search Google Places in that area
+            const radiusInMeters = radius * 1609.34; // Convert miles to meters
+
+            // Build Google Places query
+            let placesQuery = '';
+            if (businessName && businessName.trim()) {
+                placesQuery = businessName.trim();
+            } else if (query && query.trim()) {
+                placesQuery = query.trim();
+            } else if (category) {
+                // Map category codes to search terms
+                const categorySearchTerms = {
+                    'AUTO': 'automotive',
+                    'BEAU': 'beauty salon',
+                    'BOOK': 'bookstore',
+                    'CLTH': 'clothing store',
+                    'CONV': 'convenience store',
+                    'DEPT': 'department store',
+                    'ELEC': 'electronics store',
+                    'ENTR': 'entertainment',
+                    'FURN': 'furniture store',
+                    'FUEL': 'gas station',
+                    'GIFT': 'gift shop',
+                    'GROC': 'grocery store',
+                    'HARDW': 'hardware store',
+                    'HEAL': 'health',
+                    'HOTEL': 'hotel',
+                    'JEWL': 'jewelry store',
+                    'RX': 'pharmacy',
+                    'REST': 'restaurant',
+                    'RETAIL': 'retail store',
+                    'SERV': 'service',
+                    'SPEC': 'specialty store',
+                    'SPRT': 'sporting goods',
+                    'TECH': 'technology store',
+                    'TOYS': 'toy store'
+                };
+                placesQuery = categorySearchTerms[category] || 'business';
+            } else {
+                placesQuery = 'business'; // Generic search
+            }
+
+            console.log(`🌍 Fetching Google Places for "${placesQuery}" near [${searchLat}, ${searchLng}]`);
+
+            try {
+                googlePlacesResults = await searchGooglePlaces(
+                    placesQuery,
+                    searchLat,
+                    searchLng,
+                    radiusInMeters
+                );
+
+                console.log(`✅ Google Places returned ${googlePlacesResults.length} results`);
+
+                // Filter out Google Places that are already in our database
+                // Compare by coordinates (within ~100 meters) or Google Place ID
+                googlePlacesResults = googlePlacesResults.filter(googlePlace => {
+                    // Check if we already have this place in our database
+                    const isDuplicate = businesses.some(dbBusiness => {
+                        // Check 1: Google Place ID match
+                        if (dbBusiness.google_place_id && googlePlace.placeId) {
+                            return dbBusiness.google_place_id === googlePlace.placeId;
+                        }
+
+                        // Check 2: Coordinate proximity (within ~100 meters)
+                        if (dbBusiness.location?.coordinates && googlePlace.location?.coordinates) {
+                            const distance = calculateDistance(
+                                dbBusiness.location.coordinates[1], // lat
+                                dbBusiness.location.coordinates[0], // lng
+                                googlePlace.location.coordinates[1], // lat
+                                googlePlace.location.coordinates[0]  // lng
+                            );
+                            // If within 0.06 miles (~100 meters), consider it a duplicate
+                            return distance < 0.06;
+                        }
+
+                        return false;
+                    });
+
+                    if (isDuplicate) {
+                        console.log(`🔄 Filtered duplicate: ${googlePlace.bname}`);
+                    }
+
+                    return !isDuplicate;
+                });
+
+                console.log(`✅ After deduplication: ${googlePlacesResults.length} unique Google Places results`);
+
+                // Calculate distance from search point for Google Places results
+                googlePlacesResults = googlePlacesResults.map(place => ({
+                    ...place,
+                    distanceFromSearch: calculateDistance(
+                        searchLat,
+                        searchLng,
+                        place.lat,
+                        place.lng
+                    )
+                }));
+
+            } catch (placesError) {
+                console.error('⚠️ Google Places search failed:', placesError);
+                // Don't fail the entire search if Google Places fails
+            }
+        } else {
+            console.log('ℹ️ No coordinates available for Google Places search');
+        }
+
+        // Combine database results with Google Places results
+        // Database results come first, then Google Places sorted by distance
+        businesses = [
+            ...businesses,
+            ...googlePlacesResults.sort((a, b) =>
+                (a.distanceFromSearch || 0) - (b.distanceFromSearch || 0)
+            )
+        ];
+
+        console.log(`📊 Total results: ${businesses.length} (${businesses.filter(b => !b.isGooglePlace).length} from database, ${businesses.filter(b => b.isGooglePlace).length} from Google Places)`);
+        // ========== END GOOGLE PLACES INTEGRATION ==========
+
         // Get incentives for found businesses
-        const businessIds = businesses.map(b => b._id.toString());
+        const businessIds = businesses.map(b => b._id.toString()).filter(id => !id.startsWith('google_'));
         let incentiveQuery = {
             business_id: { $in: businessIds },
             is_available: true
