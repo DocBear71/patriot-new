@@ -351,6 +351,16 @@ export async function GET(request) {
         // Always fetch Google Places results to supplement database results
         let googlePlacesResults = [];
 
+        console.log('🔍 GOOGLE PLACES CHECK:', {
+            hasCoordinates: !!(searchLat && searchLng),
+            searchLat,
+            searchLng,
+            radius,
+            businessName,
+            query,
+            category
+        });
+
         if (searchLat && searchLng) {
             // We have coordinates - search Google Places in that area
             const radiusInMeters = radius * 1609.34; // Convert miles to meters
@@ -391,10 +401,10 @@ export async function GET(request) {
                 };
                 placesQuery = categorySearchTerms[category] || 'business';
             } else {
-                placesQuery = 'business'; // Generic search
+                placesQuery = 'businesses'; // Generic search for the area
             }
 
-            console.log(`🌍 Fetching Google Places for "${placesQuery}" near [${searchLat}, ${searchLng}]`);
+            console.log(`🌍 Fetching Google Places for "${placesQuery}" near [${searchLat}, ${searchLng}], radius: ${radius} miles (${radiusInMeters}m)`);
 
             try {
                 googlePlacesResults = await searchGooglePlaces(
@@ -406,8 +416,21 @@ export async function GET(request) {
 
                 console.log(`✅ Google Places returned ${googlePlacesResults.length} results`);
 
+                if (googlePlacesResults.length === 0) {
+                    console.log('⚠️ Google Places returned ZERO results - this might indicate an API issue');
+                } else {
+                    console.log('📋 First few Google Places results:',
+                        googlePlacesResults.slice(0, 3).map(p => ({
+                            name: p.bname,
+                            address: p.address1,
+                            lat: p.lat,
+                            lng: p.lng
+                        }))
+                    );
+                }
+
                 // Filter out Google Places that are already in our database
-                // Compare by coordinates (within ~100 meters) or Google Place ID
+                const originalGoogleCount = googlePlacesResults.length;
                 googlePlacesResults = googlePlacesResults.filter(googlePlace => {
                     // Check if we already have this place in our database
                     const isDuplicate = businesses.some(dbBusiness => {
@@ -438,7 +461,7 @@ export async function GET(request) {
                     return !isDuplicate;
                 });
 
-                console.log(`✅ After deduplication: ${googlePlacesResults.length} unique Google Places results`);
+                console.log(`✅ After deduplication: ${googlePlacesResults.length} unique Google Places results (removed ${originalGoogleCount - googlePlacesResults.length} duplicates)`);
 
                 // Calculate distance from search point for Google Places results
                 googlePlacesResults = googlePlacesResults.map(place => ({
@@ -452,15 +475,20 @@ export async function GET(request) {
                 }));
 
             } catch (placesError) {
-                console.error('⚠️ Google Places search failed:', placesError);
+                console.error('❌ Google Places search FAILED:', placesError);
+                console.error('Error details:', placesError.message);
+                console.error('Stack trace:', placesError.stack);
                 // Don't fail the entire search if Google Places fails
             }
         } else {
-            console.log('ℹ️ No coordinates available for Google Places search');
+            console.log('ℹ️ No coordinates available for Google Places search - skipping Google Places');
         }
 
         // Combine database results with Google Places results
         // Database results come first, then Google Places sorted by distance
+        const dbCount = businesses.length;
+        const googleCount = googlePlacesResults.length;
+
         businesses = [
             ...businesses,
             ...googlePlacesResults.sort((a, b) =>
@@ -468,7 +496,7 @@ export async function GET(request) {
             )
         ];
 
-        console.log(`📊 Total results: ${businesses.length} (${businesses.filter(b => !b.isGooglePlace).length} from database, ${businesses.filter(b => b.isGooglePlace).length} from Google Places)`);
+        console.log(`📊 FINAL RESULTS: ${businesses.length} total (${dbCount} from database, ${googleCount} from Google Places)`);
         // ========== END GOOGLE PLACES INTEGRATION ==========
 
         // Get incentives for found businesses
