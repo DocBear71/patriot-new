@@ -25,11 +25,13 @@ export default function SearchPage() {
     const [loadingStep, setLoadingStep] = useState(1);
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingMessage, setLoadingMessage] = useState('Please wait while we find the best results...');
+    const [gettingLocation, setGettingLocation] = useState(false);
     // COMMENTED OUT: Map-related state for future implementation
     const [mapInitialized, setMapInitialized] = useState(false);
     const [map, setMap] = useState(null);
     const [markers, setMarkers] = useState([]);
     const [infoWindow, setInfoWindow] = useState(null);
+
 
     const businessTypes = [
         { value: '', label: 'All Categories' },
@@ -931,6 +933,118 @@ export default function SearchPage() {
         }
     };
 
+    // Handle "Use My Location" button
+    const handleUseMyLocation = async () => {
+        setGettingLocation(true);
+
+        try {
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser. Please enter your location manually.');
+                setGettingLocation(false);
+                return;
+            }
+
+            // Request user's location
+            navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        console.log('📍 Got user location:', { latitude, longitude });
+
+                        // Reverse geocode to get address
+                        try {
+                            if (window.google && window.google.maps) {
+                                const geocoder = new window.google.maps.Geocoder();
+                                const latlng = { lat: latitude, lng: longitude };
+
+                                geocoder.geocode({ location: latlng }, async (results, status) => {
+                                    if (status === 'OK' && results[0]) {
+                                        // Extract city, state, and zip from the result
+                                        let city = '';
+                                        let state = '';
+                                        let zip = '';
+
+                                        results[0].address_components.forEach(component => {
+                                            if (component.types.includes('locality')) {
+                                                city = component.long_name;
+                                            }
+                                            if (component.types.includes('administrative_area_level_1')) {
+                                                state = component.short_name;
+                                            }
+                                            if (component.types.includes('postal_code')) {
+                                                zip = component.long_name;
+                                            }
+                                        });
+
+                                        // Format as "City, State Zip" or just use formatted_address
+                                        const formattedLocation = city && state
+                                                ? `${city}, ${state}${zip ? ' ' + zip : ''}`
+                                                : results[0].formatted_address;
+
+                                        console.log('✅ Reverse geocoded to:', formattedLocation);
+
+                                        // Update the address field
+                                        setSearchData(prev => ({
+                                            ...prev,
+                                            address: formattedLocation
+                                        }));
+
+                                        setGettingLocation(false);
+
+                                        // Optionally auto-trigger search
+                                        // Uncomment the next line if you want to automatically search after getting location
+                                        // document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                                    } else {
+                                        console.error('Reverse geocoding failed:', status);
+                                        alert('Could not determine your address. Please enter it manually.');
+                                        setGettingLocation(false);
+                                    }
+                                });
+                            } else {
+                                console.error('Google Maps not loaded');
+                                alert('Maps service not ready. Please try again or enter your location manually.');
+                                setGettingLocation(false);
+                            }
+                        } catch (error) {
+                            console.error('Reverse geocoding error:', error);
+                            alert('Error determining your address. Please enter it manually.');
+                            setGettingLocation(false);
+                        }
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        let errorMessage = 'Could not get your location. ';
+
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += 'Please enable location permissions in your browser settings.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += 'Location information is unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += 'Location request timed out.';
+                                break;
+                            default:
+                                errorMessage += 'Please enter your location manually.';
+                        }
+
+                        alert(errorMessage);
+                        setGettingLocation(false);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+            );
+        } catch (error) {
+            console.error('Error getting location:', error);
+            alert('Error accessing location services. Please enter your location manually.');
+            setGettingLocation(false);
+        }
+    };
+
     // Handle search
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -1481,15 +1595,30 @@ export default function SearchPage() {
                                             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
                                                 Address, City & State, or Zip Code
                                             </label>
-                                            <input
-                                                    type="text"
-                                                    id="address"
-                                                    name="address"
-                                                    value={searchData.address}
-                                                    onChange={handleInputChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="e.g. 52402, Cedar Rapids IA, Portland OR, 1234 Main St"
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                        type="text"
+                                                        id="address"
+                                                        name="address"
+                                                        value={searchData.address}
+                                                        onChange={handleInputChange}
+                                                        className="w-full px-3 py-2 pr-32 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="e.g. 52402, Cedar Rapids IA, Portland OR, 1234 Main St"
+                                                />
+                                                <button
+                                                        type="button"
+                                                        onClick={handleUseMyLocation}
+                                                        disabled={loading}
+                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                                        title="Use my current location"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Near Me
+                                                </button>
+                                            </div>
                                             <p className="text-xs text-gray-500 mt-1">Street address, city with state (Portland OR), or zip code</p>
                                         </div>
                                     </div>
