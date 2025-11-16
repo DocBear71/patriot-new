@@ -521,79 +521,121 @@ export default function SearchPage() {
         try {
             console.log('🔍 Searching for chain match:', businessName);
 
-            // Clean up the business name for better matching
-            // Step 1: Remove common cuisine/food type descriptors
-            let cleanName = businessName
+            // Generate multiple search variations to try
+            const searchVariations = [];
+
+            // Variation 1: Original name as-is
+            searchVariations.push(businessName);
+
+            // Variation 2: Remove cuisine + restaurant type combinations
+            let cleaned = businessName
             .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi, '')
             .trim();
+            if (cleaned !== businessName) searchVariations.push(cleaned);
 
-            // Step 2: Remove common business type suffixes (do this after cuisine types)
-            cleanName = cleanName
-            .replace(/\s+(Grocery Store|Supermarket|Market|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine)$/i, '')
+            // Variation 3: Remove all business type suffixes
+            cleaned = businessName
+            .replace(/\s+(Grocery Store|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine)$/i, '')
             .trim();
+            if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
+                searchVariations.push(cleaned);
+            }
 
-            // Step 3: Remove standalone cuisine descriptors that might remain
-            cleanName = cleanName
+            // Variation 4: Remove cuisine descriptors
+            cleaned = cleaned
             .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)$/i, '')
             .trim();
+            if (!searchVariations.includes(cleaned)) {
+                searchVariations.push(cleaned);
+            }
 
-            // Step 4: Remove trailing numbers (like "Store #123" or "Location 5")
-            cleanName = cleanName.replace(/\s+#?\d+$/, '').trim();
+            // Variation 5: Remove symbols like + and &
+            cleaned = businessName
+            .replace(/\s*[\+\&]\s*/g, ' ')
+            .replace(/\s+(Grill|Bar|Restaurant|Kitchen)$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+            if (!searchVariations.includes(cleaned)) {
+                searchVariations.push(cleaned);
+            }
 
-            // Step 5: Remove anything in parentheses at the end (like "McDonald's (Main St)")
-            cleanName = cleanName.replace(/\s*\([^)]*\)$/, '').trim();
+            // Variation 6: Just the first word(s) before common separators
+            const firstPart = businessName.split(/\s+(?:Italian|Chinese|Mexican|Japanese|Grill|Bar|Restaurant|Kitchen|Store|Market|Home)/i)[0].trim();
+            if (firstPart && firstPart !== businessName && !searchVariations.includes(firstPart)) {
+                searchVariations.push(firstPart);
+            }
 
-            // Step 6: If the name still contains a dash, only remove the part after the dash if it looks like a location
-            // (e.g., "Subway - Downtown" -> "Subway", but "Hy-Vee" stays as "Hy-Vee")
-            if (cleanName.includes(' - ')) {
-                const parts = cleanName.split(' - ');
-                // Only use the first part if the second part looks like a location descriptor
-                if (parts[1] && /^(Downtown|Uptown|Main|North|South|East|West|Central|Store|Location|\d+)/i.test(parts[1])) {
-                    cleanName = parts[0].trim();
+            // Variation 7: Remove anything in parentheses
+            cleaned = businessName.replace(/\s*\([^)]*\)$/g, '').trim();
+            if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
+                searchVariations.push(cleaned);
+            }
+
+            // Variation 8: Remove location descriptors after dash
+            if (businessName.includes(' - ')) {
+                const parts = businessName.split(' - ');
+                if (parts[0] && !searchVariations.includes(parts[0].trim())) {
+                    searchVariations.push(parts[0].trim());
                 }
             }
 
-            console.log('🧹 Cleaned name for search:', cleanName);
+            // Remove duplicates and filter out very short names (< 3 chars)
+            const uniqueVariations = [...new Set(searchVariations)].filter(v => v.length >= 3);
 
-            // Use the find_match operation which is specifically designed for this
-            const response = await fetch(`/api/chains?operation=find_match&business_name=${encodeURIComponent(cleanName)}`);
+            console.log('🔍 Will try these search variations:', uniqueVariations);
 
-            if (!response.ok) {
-                console.log('⚠️ Chain search API returned non-OK status:', response.status);
-                const errorText = await response.text();
-                console.log('❌ Error response:', errorText);
-                return null;
-            }
+            // Try each variation until we find a match
+            for (const variation of uniqueVariations) {
+                console.log(`🔍 Trying: "${variation}"`);
 
-            const data = await response.json();
-            console.log('📊 Chain search response:', data);
+                try {
+                    const response = await fetch(`/api/chains?operation=find_match&business_name=${encodeURIComponent(variation)}`);
 
-            // handleFindChainMatch returns { success, match_found, chain }
-            if (data.success && data.match_found && data.chain) {
-                const matchedChain = data.chain;
-                console.log('✅ Found chain match:', matchedChain.chain_name);
-
-                // Get chain incentives
-                const incentivesResponse = await fetch(`/api/combined-api?operation=get_chain_incentives&chain_id=${matchedChain._id}`);
-
-                if (incentivesResponse.ok) {
-                    const incentivesData = await incentivesResponse.json();
-                    console.log('📋 Chain incentives:', incentivesData);
-
-                    if (incentivesData.success && incentivesData.incentives && incentivesData.incentives.length > 0) {
-                        return {
-                            chain: matchedChain,
-                            incentives: incentivesData.incentives
-                        };
+                    if (!response.ok) {
+                        console.log(`   ⚠️ Search failed for "${variation}"`);
+                        continue; // Try next variation
                     }
+
+                    const data = await response.json();
+
+                    // handleFindChainMatch returns { success, match_found, chain }
+                    if (data.success && data.match_found && data.chain) {
+                        const matchedChain = data.chain;
+                        console.log(`   ✅ MATCH FOUND with "${variation}":`, matchedChain.chain_name);
+
+                        // Get chain incentives
+                        const incentivesResponse = await fetch(`/api/combined-api?operation=get_chain_incentives&chain_id=${matchedChain._id}`);
+
+                        if (incentivesResponse.ok) {
+                            const incentivesData = await incentivesResponse.json();
+                            console.log('   📋 Chain incentives:', incentivesData);
+
+                            if (incentivesData.success && incentivesData.incentives && incentivesData.incentives.length > 0) {
+                                return {
+                                    chain: matchedChain,
+                                    incentives: incentivesData.incentives,
+                                    matchedWith: variation // Store which variation matched
+                                };
+                            }
+                        }
+
+                        // Found chain but no incentives - still return it
+                        console.log('   ℹ️ Chain found but no active incentives');
+                        return null;
+                    } else {
+                        console.log(`   ❌ No match for "${variation}"`);
+                    }
+                } catch (searchError) {
+                    console.error(`   ❌ Error searching "${variation}":`, searchError);
+                    continue; // Try next variation
                 }
             }
 
-            console.log('❌ No chain match found');
+            console.log('❌ No chain match found with any variation');
             return null;
 
         } catch (error) {
-            console.error('❌ Error searching for chain match:', error);
+            console.error('❌ Error in searchForChainMatch:', error);
             return null;
         }
     };
