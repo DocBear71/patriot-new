@@ -182,9 +182,15 @@ export default function SearchPage() {
             setInfoWindow(newInfoWindow);
             setMapInitialized(true);
 
-            // ADD THIS: Listen for clicks on Google's built-in Place markers
+            // Listen for clicks on Google's built-in Place markers
             if (newMap && newInfoWindow) {
                 newMap.addListener('click', async (event) => {
+                    // Store the click location for fallback positioning
+                    if (event.latLng) {
+                        window.lastClickLatLng = event.latLng;
+                        console.log('💾 Stored click position:', event.latLng.toString());
+                    }
+
                     // Check if a Place was clicked
                     const placeId = event.placeId;
 
@@ -874,26 +880,47 @@ export default function SearchPage() {
         </div>
     `;
 
-        // Get location from place - it's nested in place.Cg.location or place.Gg
-        let position;
+        // Get location from place - try multiple sources
+        let position = null;
 
+        // Try placeData.location first (new Places API format)
         if (placeData.location) {
-            // The location has lat/lng properties
-            position = new window.google.maps.LatLng(
-                    placeData.location.lat,
-                    placeData.location.lng
-            );
-        } else if (place.Gg) {
-            // Fallback to Gg object which has lat() and lng() functions
+            const lat = typeof placeData.location.lat === 'function'
+                    ? placeData.location.lat()
+                    : placeData.location.lat;
+            const lng = typeof placeData.location.lng === 'function'
+                    ? placeData.location.lng()
+                    : placeData.location.lng;
+
+            if (lat && lng) {
+                position = new window.google.maps.LatLng(lat, lng);
+                console.log('📍 Got position from placeData.location:', { lat, lng });
+            }
+        }
+
+        // Fallback to place.Gg (older format)
+        if (!position && place.Gg) {
             position = new window.google.maps.LatLng(
                     place.Gg.lat(),
                     place.Gg.lng()
             );
+            console.log('📍 Got position from place.Gg:', position.toString());
         }
 
-        console.log('📍 Setting info window at position:', position);
+        // Last resort: use the click event location if available
+        if (!position && window.lastClickLatLng) {
+            position = window.lastClickLatLng;
+            console.log('📍 Using last click position:', position.toString());
+        }
 
-        if (position && mapRef) {
+        if (!position) {
+            console.error('❌ Could not determine position for info window');
+            return;
+        }
+
+        console.log('📍 Final position for info window:', position.toString());
+
+        if (mapRef) {
             infoWindowRef.setContent(content);
             infoWindowRef.setPosition(position);
             infoWindowRef.open(mapRef);
