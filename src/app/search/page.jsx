@@ -517,29 +517,38 @@ export default function SearchPage() {
     };
 
     // Search for matching chain and get incentives
-    // Search for matching chain and get incentives
     const searchForChainMatch = async (businessName) => {
         try {
             console.log('🔍 Searching for chain match:', businessName);
 
             // Clean up the business name for better matching
-            // Step 1: Remove common business type suffixes
+            // Step 1: Remove common cuisine/food type descriptors
             let cleanName = businessName
-            .replace(/\s+(Grocery Store|Store|Shop|Location|Market|Supermarket|Gas Station|Restaurant|Cafe|Coffee|Pizza|Pharmacy|Hotel|Motel)$/i, '')
+            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi, '')
             .trim();
 
-            // Step 2: Remove trailing numbers (like "Store #123" or "Location 5")
+            // Step 2: Remove common business type suffixes (do this after cuisine types)
+            cleanName = cleanName
+            .replace(/\s+(Grocery Store|Supermarket|Market|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine)$/i, '')
+            .trim();
+
+            // Step 3: Remove standalone cuisine descriptors that might remain
+            cleanName = cleanName
+            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)$/i, '')
+            .trim();
+
+            // Step 4: Remove trailing numbers (like "Store #123" or "Location 5")
             cleanName = cleanName.replace(/\s+#?\d+$/, '').trim();
 
-            // Step 3: Remove anything in parentheses at the end (like "McDonald's (Main St)")
+            // Step 5: Remove anything in parentheses at the end (like "McDonald's (Main St)")
             cleanName = cleanName.replace(/\s*\([^)]*\)$/, '').trim();
 
-            // Step 4: If the name still contains a dash, only remove the part after the dash if it looks like a location
+            // Step 6: If the name still contains a dash, only remove the part after the dash if it looks like a location
             // (e.g., "Subway - Downtown" -> "Subway", but "Hy-Vee" stays as "Hy-Vee")
             if (cleanName.includes(' - ')) {
                 const parts = cleanName.split(' - ');
                 // Only use the first part if the second part looks like a location descriptor
-                if (parts[1] && /^(Downtown|Uptown|Main|North|South|East|West|Store|Location|\d+)/.test(parts[1])) {
+                if (parts[1] && /^(Downtown|Uptown|Main|North|South|East|West|Central|Store|Location|\d+)/i.test(parts[1])) {
                     cleanName = parts[0].trim();
                 }
             }
