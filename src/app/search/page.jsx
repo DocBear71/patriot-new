@@ -527,55 +527,70 @@ export default function SearchPage() {
             // Variation 1: Original name as-is
             searchVariations.push(businessName);
 
-            // Variation 2: Remove cuisine + restaurant type combinations
+            // Variation 2: Remove business type suffixes (most comprehensive)
             let cleaned = businessName
-            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi, '')
-            .trim();
-            if (cleaned !== businessName) searchVariations.push(cleaned);
-
-            // Variation 3: Remove all business type suffixes
-            cleaned = businessName
-            .replace(/\s+(Grocery Store|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine)$/i, '')
+            .replace(/\s+(Grocery Store|Grocery|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine|Food Co\.|Co\.|Inc\.|LLC)$/i, '')
             .trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
-            // Variation 4: Remove cuisine descriptors
-            cleaned = cleaned
-            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)$/i, '')
+            // Variation 3: Remove cuisine + food type combinations
+            cleaned = businessName
+            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi, '')
             .trim();
-            if (!searchVariations.includes(cleaned)) {
+            if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
-            // Variation 5: Remove symbols like + and &
+            // Variation 4: Remove standalone cuisine/food descriptors at the end
+            cleaned = businessName
+            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese|Food|Restaurant|Cuisine|Kitchen)$/i, '')
+            .trim();
+            if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
+                searchVariations.push(cleaned);
+            }
+
+            // Variation 5: Remove symbols like +, &, and company suffixes
             cleaned = businessName
             .replace(/\s*[\+\&]\s*/g, ' ')
-            .replace(/\s+(Grill|Bar|Restaurant|Kitchen)$/i, '')
+            .replace(/\s+(Grill|Bar|Restaurant|Kitchen|Food Co\.|Co\.|Inc\.|LLC)$/i, '')
             .replace(/\s+/g, ' ')
             .trim();
-            if (!searchVariations.includes(cleaned)) {
+            if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
-            // Variation 6: Just the first word(s) before common separators
-            const firstPart = businessName.split(/\s+(?:Italian|Chinese|Mexican|Japanese|Grill|Bar|Restaurant|Kitchen|Store|Market|Home)/i)[0].trim();
-            if (firstPart && firstPart !== businessName && !searchVariations.includes(firstPart)) {
-                searchVariations.push(firstPart);
+            // Variation 6: Just the first meaningful part (before common separators)
+            const firstPartMatch = businessName.match(/^([A-Za-z0-9\-']+(?:\s+[A-Za-z0-9\-']+)?)/);
+            if (firstPartMatch && firstPartMatch[1]) {
+                const firstPart = firstPartMatch[1].trim();
+                // Only add if it's a reasonable length (not just one short word)
+                if (firstPart.length >= 4 && !searchVariations.includes(firstPart)) {
+                    searchVariations.push(firstPart);
+                }
             }
 
             // Variation 7: Remove anything in parentheses
-            cleaned = businessName.replace(/\s*\([^)]*\)$/g, '').trim();
+            cleaned = businessName.replace(/\s*\([^)]*\)/g, '').trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
-            // Variation 8: Remove location descriptors after dash
+            // Variation 8: Remove location descriptors after dash (but keep brand names like Hy-Vee)
             if (businessName.includes(' - ')) {
                 const parts = businessName.split(' - ');
                 if (parts[0] && !searchVariations.includes(parts[0].trim())) {
                     searchVariations.push(parts[0].trim());
+                }
+            }
+
+            // Variation 9: For hyphenated names that might have suffixes (like "Hy-Vee Grocery Store")
+            if (businessName.includes('-')) {
+                // Try removing everything after the hyphenated part
+                const hyphenatedMatch = businessName.match(/^([A-Za-z0-9]+-[A-Za-z0-9]+)/);
+                if (hyphenatedMatch && hyphenatedMatch[1] && !searchVariations.includes(hyphenatedMatch[1])) {
+                    searchVariations.push(hyphenatedMatch[1]);
                 }
             }
 
