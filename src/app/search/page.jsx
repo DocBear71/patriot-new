@@ -68,7 +68,12 @@ export default function SearchPage() {
             'VT': 'Veterans',
             'AD': 'Active Duty',
             'FR': 'First Responders',
-            'SP': 'Spouses'
+            'SP': 'Military Spouses',
+            'MR': 'Military Rate',
+            'NC': 'No Chain Incentives',
+            'WS': 'WeSalute',
+            'OT': 'Other',
+            'NA': 'Not Available'
         };
         return labels[type] || type;
     };
@@ -505,6 +510,61 @@ export default function SearchPage() {
         }
     };
 
+    // Search for matching chain and get incentives
+    const searchForChainMatch = async (businessName) => {
+        try {
+            console.log('🔍 Searching for chain match:', businessName);
+
+            // Clean up the business name for better matching
+            const cleanName = businessName
+            .replace(/\s*-\s*.*$/, '') // Remove everything after dash
+                    .replace(/\s+\d+$/, '')     // Remove trailing numbers
+                    .replace(/\s+(Store|Shop|Location|#\d+)$/i, '') // Remove common suffixes
+                    .trim();
+
+            console.log('🧹 Cleaned name for search:', cleanName);
+
+            // Search chains API
+            const response = await fetch(`/api/chains?operation=search&name=${encodeURIComponent(cleanName)}`);
+
+            if (!response.ok) {
+                console.log('⚠️ Chain search API returned non-OK status');
+                return null;
+            }
+
+            const data = await response.json();
+            console.log('📊 Chain search response:', data);
+
+            if (data.results && data.results.length > 0) {
+                const matchedChain = data.results[0];
+                console.log('✅ Found chain match:', matchedChain.chain_name);
+
+                // Get chain incentives
+                const incentivesResponse = await fetch(`/api/combined-api?operation=get_chain_incentives&chain_id=${matchedChain._id}`);
+
+                if (incentivesResponse.ok) {
+                    const incentivesData = await incentivesResponse.json();
+                    console.log('📋 Chain incentives:', incentivesData);
+
+                    if (incentivesData.success && incentivesData.incentives && incentivesData.incentives.length > 0) {
+                        return {
+                            chain: matchedChain,
+                            incentives: incentivesData.incentives
+                        };
+                    }
+                }
+            }
+
+            console.log('❌ No chain match found');
+            return null;
+
+        } catch (error) {
+            console.error('❌ Error searching for chain match:', error);
+            return null;
+        }
+    };
+
+
     // Handle clicks on Google Places POI markers (not in our database)
     const handleGooglePlaceClickWithWindow = async (place, infoWindowRef, mapRef) => {
         if (!infoWindowRef || !place) {
@@ -693,6 +753,64 @@ export default function SearchPage() {
         }
         // ========== END DUPLICATE CHECK ==========
 
+        // ========== CHAIN INCENTIVE CHECK ==========
+        console.log('🔗 Checking for chain match...');
+        let chainMatchInfo = null;
+
+        try {
+            chainMatchInfo = await searchForChainMatch(businessName);
+
+            if (chainMatchInfo) {
+                console.log('✅ Chain match found with incentives!');
+            } else {
+                console.log('ℹ️ No chain match or no chain incentives available');
+            }
+        } catch (chainError) {
+            console.error('⚠️ Error checking for chain match:', chainError);
+            // Continue without chain info if there's an error
+        }
+        // ========== END CHAIN INCENTIVE CHECK ==========
+
+        // Build chain incentives HTML if available
+        let chainIncentivesHtml = '';
+        if (chainMatchInfo && chainMatchInfo.incentives && chainMatchInfo.incentives.length > 0) {
+            const incentivesListHtml = chainMatchInfo.incentives.map(incentive => {
+                // Handle both eligible_categories (new) and type (old) for backward compatibility
+                const categories = incentive.eligible_categories || [incentive.type];
+                const categoryLabels = categories.map(cat => getServiceTypeLabel(cat)).join(', ');
+
+                return `
+                <div style="background: #e8f5e9; border-left: 3px solid #28a745; border-radius: 4px; padding: 8px; margin: 4px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 12px; font-weight: 600; color: #155724;">
+                            ${categoryLabels}
+                        </span>
+                        <span style="font-size: 14px; font-weight: bold; color: #28a745;">
+                            ${incentive.amount}% off
+                        </span>
+                    </div>
+                    ${incentive.information ? `<p style="margin: 0; font-size: 11px; color: #666;">${incentive.information}</p>` : ''}
+                </div>
+            `;
+            }).join('');
+
+            chainIncentivesHtml = `
+            <div style="margin-top: 12px; padding: 12px; background: #f0f8ff; border: 2px solid #4CAF50; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                    <span style="font-size: 18px;">🎯</span>
+                    <strong style="color: #1976d2; font-size: 14px;">Possible Chain Match!</strong>
+                </div>
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">
+                    This may be part of <strong>"${chainMatchInfo.chain.chain_name}"</strong> which offers:
+                </p>
+                ${incentivesListHtml}
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #1976d2; font-weight: 500;">
+                    💡 Add to database to confirm and access these incentives
+                </p>
+            </div>
+        `;
+        }
+
         const content = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 320px; padding: 4px;">
             <div style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 12px; border-radius: 4px;">
@@ -711,9 +829,11 @@ export default function SearchPage() {
                 ${phone ? `<p style="margin: 6px 0 0 0;">📞 ${phone}</p>` : ''}
             </div>
 
+            ${chainIncentivesHtml}
+
             <div style="margin-top: 12px; padding: 10px; background: #f0f8ff; border-radius: 6px;">
                 <p style="margin: 0 0 8px 0; font-size: 13px; color: #666;">
-                    💡 Want to add this business to Patriot Thanks?
+                    ${chainMatchInfo ? '✨ Add this business to access chain incentives!' : '💡 Want to add this business to Patriot Thanks?'}
                 </p>
                 <button 
                     id="add-google-place-btn"
@@ -778,7 +898,10 @@ export default function SearchPage() {
                             lat: placeData.location?.lat || '',
                             lng: placeData.location?.lng || '',
                             placeId: placeData.id || place.id || '',
-                            website: website
+                            website: website,
+                            // Add chain info if found
+                            chainId: chainMatchInfo?.chain?._id || '',
+                            chainName: chainMatchInfo?.chain?.chain_name || ''
                         };
 
                         console.log('📝 Preparing to add Google Place:', businessData);
