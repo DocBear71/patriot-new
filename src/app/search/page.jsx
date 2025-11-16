@@ -511,16 +511,32 @@ export default function SearchPage() {
     };
 
     // Search for matching chain and get incentives
+    // Search for matching chain and get incentives
     const searchForChainMatch = async (businessName) => {
         try {
             console.log('🔍 Searching for chain match:', businessName);
 
             // Clean up the business name for better matching
-            const cleanName = businessName
-            .replace(/\s*-\s*.*$/, '') // Remove everything after dash
-                    .replace(/\s+\d+$/, '')     // Remove trailing numbers
-                    .replace(/\s+(Store|Shop|Location|#\d+)$/i, '') // Remove common suffixes
-                    .trim();
+            // Step 1: Remove common business type suffixes
+            let cleanName = businessName
+            .replace(/\s+(Grocery Store|Store|Shop|Location|Market|Supermarket|Gas Station|Restaurant|Cafe|Coffee|Pizza|Pharmacy|Hotel|Motel)$/i, '')
+            .trim();
+
+            // Step 2: Remove trailing numbers (like "Store #123" or "Location 5")
+            cleanName = cleanName.replace(/\s+#?\d+$/, '').trim();
+
+            // Step 3: Remove anything in parentheses at the end (like "McDonald's (Main St)")
+            cleanName = cleanName.replace(/\s*\([^)]*\)$/, '').trim();
+
+            // Step 4: If the name still contains a dash, only remove the part after the dash if it looks like a location
+            // (e.g., "Subway - Downtown" -> "Subway", but "Hy-Vee" stays as "Hy-Vee")
+            if (cleanName.includes(' - ')) {
+                const parts = cleanName.split(' - ');
+                // Only use the first part if the second part looks like a location descriptor
+                if (parts[1] && /^(Downtown|Uptown|Main|North|South|East|West|Store|Location|\d+)/.test(parts[1])) {
+                    cleanName = parts[0].trim();
+                }
+            }
 
             console.log('🧹 Cleaned name for search:', cleanName);
 
