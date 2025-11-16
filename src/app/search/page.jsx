@@ -540,19 +540,22 @@ export default function SearchPage() {
 
             console.log('🧹 Cleaned name for search:', cleanName);
 
-            // Search chains API
-            const response = await fetch(`/api/chains?operation=search&name=${encodeURIComponent(cleanName)}`);
+            // Use the find_match operation which is specifically designed for this
+            const response = await fetch(`/api/chains?operation=find_match&business_name=${encodeURIComponent(cleanName)}`);
 
             if (!response.ok) {
-                console.log('⚠️ Chain search API returned non-OK status');
+                console.log('⚠️ Chain search API returned non-OK status:', response.status);
+                const errorText = await response.text();
+                console.log('❌ Error response:', errorText);
                 return null;
             }
 
             const data = await response.json();
             console.log('📊 Chain search response:', data);
 
-            if (data.results && data.results.length > 0) {
-                const matchedChain = data.results[0];
+            // handleFindChainMatch returns { success, match_found, chain }
+            if (data.success && data.match_found && data.chain) {
+                const matchedChain = data.chain;
                 console.log('✅ Found chain match:', matchedChain.chain_name);
 
                 // Get chain incentives
