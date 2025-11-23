@@ -254,10 +254,6 @@ export default function AdminBusinessPage() {
         }
 
         try {
-            // ❌ REMOVE THESE LINES:
-            // const sessionData = localStorage.getItem('patriotThanksSession');
-            // const session = JSON.parse(sessionData);
-
             const businessData = {
                 ...businessForm,
                 ...(editingBusiness && { _id: editingBusiness._id })
@@ -267,12 +263,17 @@ export default function AdminBusinessPage() {
             const operation = editingBusiness ? 'admin-update-business' : 'admin-create-business';
             const url = `/api/business-admin?operation=${operation}`;
 
+            // Prepare the request body - include businessId for updates
+            const requestBody = editingBusiness
+                    ? { ...businessData, businessId: editingBusiness._id }
+                    : businessData;
+
             const response = await fetch(url, {
                 method: editingBusiness ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(businessData)
+                body: JSON.stringify(requestBody)
             });
 
             if (response.ok) {
