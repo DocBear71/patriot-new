@@ -37,7 +37,15 @@ export default function AdminBusinessPage() {
         zip: '',
         phone: '',
         type: '',
-        status: 'active'
+        status: 'active',
+        veteranOwned: {
+            isVeteranOwned: false,
+            verificationStatus: 'unverified',
+            priority: {
+                isFeatured: false,
+                searchBoost: 0
+            }
+        }
     });
 
     // Business types/categories
@@ -167,7 +175,15 @@ export default function AdminBusinessPage() {
                 zip: business.zip || '',
                 phone: business.phone || '',
                 type: business.type || '',
-                status: business.status || 'active'
+                status: business.status || 'active',
+                veteranOwned: {
+                    isVeteranOwned: business.veteranOwned?.isVeteranOwned || false,
+                    verificationStatus: business.veteranOwned?.verificationStatus || 'unverified',
+                    priority: {
+                        isFeatured: business.veteranOwned?.priority?.isFeatured || false,
+                        searchBoost: business.veteranOwned?.priority?.searchBoost || 0
+                    }
+                }
             });
         } else {
             setEditingBusiness(null);
@@ -247,16 +263,16 @@ export default function AdminBusinessPage() {
                 ...(editingBusiness && { _id: editingBusiness._id })
             };
 
-            // ✅ UPDATED FETCH CALL (removed Authorization header):
-            const response = await fetch('/api/business-admin', {
+            // Build URL with operation parameter
+            const operation = editingBusiness ? 'admin-update-business' : 'admin-create-business';
+            const url = `/api/business-admin?operation=${operation}`;
+
+            const response = await fetch(url, {
                 method: editingBusiness ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    operation: editingBusiness ? 'update-business' : 'create-business',
-                    businessData
-                })
+                body: JSON.stringify(businessData)
             });
 
             if (response.ok) {
@@ -949,13 +965,19 @@ export default function AdminBusinessPage() {
                                                 <option value="inactive">Inactive</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div style={{ marginBottom: '15px' }}>
                                             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                                Veteran-Owned
+                                                Veteran-Owned Business
                                             </label>
                                             <select
-                                                    value={filters.veteranOwned || ''}
-                                                    onChange={(e) => handleFilterChange('veteranOwned', e.target.value)}
+                                                    value={businessForm.veteranOwned?.isVeteranOwned ? 'true' : 'false'}
+                                                    onChange={(e) => setBusinessForm(prev => ({
+                                                        ...prev,
+                                                        veteranOwned: {
+                                                            ...prev.veteranOwned,
+                                                            isVeteranOwned: e.target.value === 'true'
+                                                        }
+                                                    }))}
                                                     style={{
                                                         width: '100%',
                                                         padding: '8px',
@@ -963,11 +985,67 @@ export default function AdminBusinessPage() {
                                                         borderRadius: '4px'
                                                     }}
                                             >
-                                                <option value="">All Businesses</option>
-                                                <option value="true">Veteran-Owned Only</option>
-                                                <option value="false">Non Veteran-Owned</option>
+                                                <option value="false">No</option>
+                                                <option value="true">Yes - Veteran-Owned</option>
                                             </select>
                                         </div>
+
+                                        {businessForm.veteranOwned?.isVeteranOwned && (
+                                                <>
+                                                    <div style={{ marginBottom: '15px' }}>
+                                                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                            Verification Status
+                                                        </label>
+                                                        <select
+                                                                value={businessForm.veteranOwned?.verificationStatus || 'unverified'}
+                                                                onChange={(e) => setBusinessForm(prev => ({
+                                                                    ...prev,
+                                                                    veteranOwned: {
+                                                                        ...prev.veteranOwned,
+                                                                        verificationStatus: e.target.value
+                                                                    }
+                                                                }))}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '8px',
+                                                                    border: '1px solid #ddd',
+                                                                    borderRadius: '4px'
+                                                                }}
+                                                        >
+                                                            <option value="unverified">Unverified</option>
+                                                            <option value="pending">Pending Verification</option>
+                                                            <option value="verified">Verified</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '15px' }}>
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <input
+                                                                    type="checkbox"
+                                                                    checked={businessForm.veteranOwned?.priority?.isFeatured || false}
+                                                                    onChange={(e) => setBusinessForm(prev => ({
+                                                                        ...prev,
+                                                                        veteranOwned: {
+                                                                            ...prev.veteranOwned,
+                                                                            priority: {
+                                                                                ...prev.veteranOwned.priority,
+                                                                                isFeatured: e.target.checked
+                                                                            }
+                                                                        }
+                                                                    }))}
+                                                                    style={{
+                                                                        width: '18px',
+                                                                        height: '18px'
+                                                                    }}
+                                                            />
+                                                            <span style={{ fontWeight: 'bold' }}>⭐ Feature this business</span>
+                                                        </label>
+                                                        <small style={{ color: '#666', marginLeft: '26px', display: 'block' }}>
+                                                            Featured businesses appear first in search results
+                                                        </small>
+                                                    </div>
+                                                </>
+                                        )}
                                     </div>
 
                                     <div style={{ marginBottom: '20px' }}>
