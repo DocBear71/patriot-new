@@ -1,14 +1,15 @@
 // file: /src/utils/googlePlaces.js v1 - Google Places API integration for server-side searches
 
 /**
- * Search for businesses using Google Places API (Text Search)
- * @param {string} query - Search query (business name, type, etc.)
+ * Search for businesses using Google Places API (Text Search or Nearby Search)
+ * @param {string|Array} query - Search query (business name, type, etc.) or array of types for nearby search
  * @param {number} lat - Latitude for location bias
  * @param {number} lng - Longitude for location bias
  * @param {number} radius - Search radius in meters (default 40234 = 25 miles)
+ * @param {string} searchType - 'textSearch' or 'nearbySearch' (default: 'textSearch')
  * @returns {Promise<Array>} Array of place results
  */
-export async function searchGooglePlaces(query, lat = null, lng = null, radius = 40234) {
+export async function searchGooglePlaces(query, lat = null, lng = null, radius = 40234, searchType = 'textSearch') {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY; // Server-side API key
 
     if (!apiKey) {
@@ -17,12 +18,68 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
     }
 
     try {
-        // Build the API URL
+        // NEARBY SEARCH: Use when we have an array of types (for generic location searches)
+        if (searchType === 'nearbySearch' && Array.isArray(query)) {
+            console.log('🎯 Using Google Places NEARBY SEARCH with types:', query);
+
+            if (!lat || !lng) {
+                console.error('❌ Nearby search requires coordinates');
+                return [];
+            }
+
+            // Make multiple requests for different business types and combine results
+            const allResults = [];
+            const seenPlaceIds = new Set();
+
+            // Limit to first 5 types to avoid too many API calls
+            const typesToSearch = query.slice(0, 5);
+
+            for (const type of typesToSearch) {
+                try {
+                    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${apiKey}`;
+
+                    console.log(`🔍 Nearby search for type: ${type}`);
+
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    if (data.status === 'OK' && data.results) {
+                        // Filter out duplicates
+                        const uniqueResults = data.results.filter(place => {
+                            if (seenPlaceIds.has(place.place_id)) {
+                                return false;
+                            }
+                            seenPlaceIds.add(place.place_id);
+                            return true;
+                        });
+
+                        console.log(`  ✅ Found ${uniqueResults.length} unique results for ${type}`);
+                        allResults.push(...uniqueResults);
+                    }
+
+                    // Add small delay to respect rate limits
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                } catch (typeError) {
+                    console.error(`❌ Error searching type ${type}:`, typeError);
+                }
+            }
+
+            console.log(`✅ Total nearby search results: ${allResults.length} unique places`);
+
+            // Transform and return results
+            return allResults.map(place => transformPlaceResult(place));
+        }
+
+        // TEXT SEARCH: Use when we have a specific query string
         let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?key=${apiKey}`;
 
         // Add query
-        if (query && query.trim()) {
+        if (query && typeof query === 'string' && query.trim()) {
             url += `&query=${encodeURIComponent(query.trim())}`;
+        } else if (!query || (typeof query === 'string' && !query.trim())) {
+            console.warn('⚠️ No search query provided for text search');
+            return [];
         }
 
         // Add location bias if coordinates provided
@@ -31,62 +88,16 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
             url += `&radius=${radius}`;
         }
 
-        console.log('🔍 Google Places API Request:', { query, lat, lng, radius });
+        console.log('🔍 Google Places API Text Search:', { query, lat, lng, radius });
 
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.status === 'OK' && data.results) {
-            console.log(`✅ Google Places returned ${data.results.length} results`);
-
-            // Transform Google Places results to match your business schema
-            const transformedResults = data.results.map(place => ({
-                // Use a temporary ID that can be identified as Google Place
-                _id: `google_${place.place_id}`,
-                placeId: place.place_id,
-
-                // Business info
-                bname: place.name,
-                address1: place.formatted_address || '',
-                address2: '',
-                city: extractCity(place),
-                state: extractState(place),
-                zip: extractZip(place),
-                phone: place.formatted_phone_number || '',
-
-                // Location data
-                lat: place.geometry?.location?.lat || 0,
-                lng: place.geometry?.location?.lng || 0,
-                location: place.geometry?.location ? {
-                    type: 'Point',
-                    coordinates: [
-                        place.geometry.location.lng,
-                        place.geometry.location.lat
-                    ]
-                } : null,
-
-                // Additional Google Places data
-                rating: place.rating || null,
-                user_ratings_total: place.user_ratings_total || 0,
-                types: place.types || [],
-
-                // Flags for frontend
-                isGooglePlace: true,
-                isFromDatabase: false,
-                markerColor: 'nearby', // Blue marker
-                google_place_id: place.place_id,
-
-                // No incentives from Google Places
-                incentives: [],
-                hasIncentives: false,
-
-                // Status
-                status: 'google_place' // Special status to identify Google Places
-            }));
-
-            return transformedResults;
+            console.log(`✅ Google Places text search returned ${data.results.length} results`);
+            return data.results.map(place => transformPlaceResult(place));
         } else if (data.status === 'ZERO_RESULTS') {
-            console.log('ℹ️ Google Places returned zero results');
+            console.log('ℹ️ Google Places text search returned zero results');
             return [];
         } else {
             console.warn('⚠️ Google Places API error:', data.status, data.error_message);
@@ -96,6 +107,58 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
         console.error('❌ Error fetching from Google Places:', error);
         return [];
     }
+}
+
+/**
+ * Transform a Google Place result to match your business schema
+ * @param {Object} place - Raw Google Place result
+ * @returns {Object} Transformed business object
+ */
+function transformPlaceResult(place) {
+    return {
+        // Use a temporary ID that can be identified as Google Place
+        _id: `google_${place.place_id}`,
+        placeId: place.place_id,
+
+        // Business info
+        bname: place.name,
+        address1: place.formatted_address || place.vicinity || '',
+        address2: '',
+        city: extractCity(place),
+        state: extractState(place),
+        zip: extractZip(place),
+        phone: place.formatted_phone_number || '',
+
+        // Location data
+        lat: place.geometry?.location?.lat || 0,
+        lng: place.geometry?.location?.lng || 0,
+        location: place.geometry?.location ? {
+            type: 'Point',
+            coordinates: [
+                place.geometry.location.lng,
+                place.geometry.location.lat
+            ]
+        } : null,
+
+        // Additional Google Places data
+        rating: place.rating || null,
+        user_ratings_total: place.user_ratings_total || 0,
+        types: place.types || [],
+        business_status: place.business_status || 'OPERATIONAL',
+
+        // Flags for frontend
+        isGooglePlace: true,
+        isFromDatabase: false,
+        markerColor: 'nearby', // Blue marker
+        google_place_id: place.place_id,
+
+        // No incentives from Google Places
+        incentives: [],
+        hasIncentives: false,
+
+        // Status
+        status: 'google_place' // Special status to identify Google Places
+    };
 }
 
 /**

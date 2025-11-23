@@ -384,12 +384,16 @@ export async function GET(request) {
             // We have coordinates - search Google Places in that area
             const radiusInMeters = radius * 1609.34; // Convert miles to meters
 
-            // Build Google Places query
+            // ENHANCED: Build Google Places query with better defaults
             let placesQuery = '';
+            let searchType = 'textSearch'; // Can be 'textSearch' or 'nearbySearch'
+
             if (businessName && businessName.trim()) {
                 placesQuery = businessName.trim();
+                searchType = 'textSearch';
             } else if (query && query.trim()) {
                 placesQuery = query.trim();
+                searchType = 'textSearch';
             } else if (category) {
                 // Map category codes to search terms
                 const categorySearchTerms = {
@@ -418,20 +422,60 @@ export async function GET(request) {
                     'TECH': 'technology store',
                     'TOYS': 'toy store'
                 };
-                placesQuery = categorySearchTerms[category] || 'business';
+                placesQuery = categorySearchTerms[category] || 'restaurant';
+                searchType = 'textSearch';
             } else {
-                placesQuery = 'businesses'; // Generic search for the area
+                // CRITICAL FIX: For generic "Near Me" searches, use a curated list
+                // of business types that typically offer military discounts
+                // This prevents random law offices and consultants from appearing
+
+                console.log('🎯 Generic location search - using curated business types');
+
+                // OPTION 1: Skip Google Places for generic searches (most conservative)
+                // placesQuery = null; // This will skip Google Places below
+
+                // OPTION 2: Search for specific relevant types (recommended)
+                // We'll search for common businesses that offer military discounts
+                const relevantTypes = [
+                    'restaurant',
+                    'grocery_or_supermarket',
+                    'department_store',
+                    'clothing_store',
+                    'home_goods_store',
+                    'electronics_store',
+                    'gas_station',
+                    'pharmacy',
+                    'hardware_store',
+                    'furniture_store',
+                    'sporting_goods_store',
+                    'car_repair',
+                    'beauty_salon',
+                    'hair_care',
+                    'gym'
+                ];
+
+                // Use nearby search with multiple types instead of text search
+                placesQuery = relevantTypes; // Pass array for nearby search
+                searchType = 'nearbySearch';
             }
 
-            console.log(`🌍 Fetching Google Places for "${placesQuery}" near [${searchLat}, ${searchLng}], radius: ${radius} miles (${radiusInMeters}m)`);
+            console.log(`🌍 Google Places search type: ${searchType}`);
+            console.log(`🌍 Fetching Google Places for "${Array.isArray(placesQuery) ? 'multiple types' : placesQuery}" near [${searchLat}, ${searchLng}], radius: ${radius} miles (${radiusInMeters}m)`);
 
             try {
-                googlePlacesResults = await searchGooglePlaces(
-                    placesQuery,
-                    searchLat,
-                    searchLng,
-                    radiusInMeters
-                );
+                // Only call Google Places if we have a query
+                if (placesQuery && (typeof placesQuery === 'string' || Array.isArray(placesQuery))) {
+                    googlePlacesResults = await searchGooglePlaces(
+                        placesQuery,
+                        searchLat,
+                        searchLng,
+                        radiusInMeters,
+                        searchType // NEW: Pass search type to the utility function
+                    );
+                } else {
+                    console.log('ℹ️ Skipping Google Places search (no query specified)');
+                    googlePlacesResults = [];
+                }
 
                 console.log(`✅ Google Places returned ${googlePlacesResults.length} results`);
 
