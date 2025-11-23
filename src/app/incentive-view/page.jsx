@@ -1006,6 +1006,14 @@ export default function IncentiveViewPage() {
                                                         borderBottom: '2px solid #ddd',
                                                         fontWeight: 'bold',
                                                     }}>
+                                                        Amount
+                                                    </th>
+                                                    <th style={{
+                                                        padding: '12px',
+                                                        textAlign: 'left',
+                                                        borderBottom: '2px solid #ddd',
+                                                        fontWeight: 'bold',
+                                                    }}>
                                                         Information
                                                     </th>
                                                     <th style={{
