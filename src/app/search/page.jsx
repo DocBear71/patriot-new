@@ -277,22 +277,49 @@ export default function SearchPage() {
     const getBusinessIcon = (business) => {
         const type = (business.type || '').toUpperCase();
 
-        // Map business types to icons
+        // CRITICAL: For database businesses, default to office building if no type
+        const isFromDatabase = business.isFromDatabase || (!business.isGooglePlace && business._id);
+
+        // Map business types to icons - expanded for your database categories
         const iconMap = {
+            // Your database categories (from businessTypes dropdown)
+            'AUTO': '🚗',
+            'BEAU': '💇',
+            'BOOK': '📚',
+            'CLTH': '👔',
+            'CONV': '🏪',
+            'DEPT': '🏬',
+            'ELEC': '📱',
+            'ENTR': '🎭',
+            'FURN': '🛋️',
+            'FUEL': '⛽',
+            'GIFT': '🎁',
+            'GROC': '🛒',
+            'HARDW': '🔨',
+            'HEAL': '❤️',
+            'HOTEL': '🏨',
+            'JEWL': '💎',
+            'RX': '💊',
+            'REST': '🍽️',
+            'RETAIL': '🛒',
+            'SERV': '🔧',
+            'SPEC': '⭐',
+            'SPRT': '🏆',
+            'TECH': '💻',
+            'TOYS': '🧸',
+            'OTHER': '🏢',
+
+            // Generic categories (for Google Places)
             'RESTAURANT': '🍽️',
             'FOOD': '🍴',
             'CAFE': '☕',
             'COFFEE': '☕',
             'BAR': '🍺',
-            'HOTEL': '🏨',
             'LODGING': '🛏️',
             'GAS': '⛽',
-            'FUEL': '⛽',
-            'AUTO': '🚗',
             'CAR': '🚗',
             'REPAIR': '🔧',
             'MECHANIC': '🔧',
-            'RETAIL': '🛒',
             'STORE': '🏪',
             'SHOP': '🏪',
             'GROCERY': '🛒',
@@ -334,7 +361,6 @@ export default function SearchPage() {
             'JEWELRY': '💎',
             'ELECTRONICS': '📱',
             'COMPUTER': '💻',
-            'TECH': '💻',
             'OFFICE': '🏢',
             'PRINTING': '🖨️',
             'SHIPPING': '📦',
@@ -370,14 +396,16 @@ export default function SearchPage() {
             'BREWERY': '🍺',
             'FAST_FOOD': '🍔',
             'BUFFET': '🍽️',
-            'DINER': '🍳',
-            'OTHER': '🏢'
+            'DINER': '🍳'
         };
 
-        // Try to match the business type
-        for (const [key, icon] of Object.entries(iconMap)) {
-            if (type.includes(key)) {
-                return icon;
+        // Try to match the business type first
+        if (type) {
+            for (const [key, icon] of Object.entries(iconMap)) {
+                if (type.includes(key)) {
+                    console.log(`✅ Icon match for ${business.bname}: ${icon} (type: ${type})`);
+                    return icon;
+                }
             }
         }
 
@@ -389,15 +417,18 @@ export default function SearchPage() {
         if (name.includes('TACO') || name.includes('MEXICAN')) return '🌮';
         if (name.includes('COFFEE') || name.includes('STARBUCKS')) return '☕';
         if (name.includes('HOTEL') || name.includes('INN')) return '🏨';
-        if (name.includes('GAS') || name.includes('SHELL') || name.includes('EXXON')) return '⛽';
+        if (name.includes('GAS') || name.includes('SHELL') || name.includes('EXXON') || name.includes('BP')) return '⛽';
         if (name.includes('BANK') || name.includes('CREDIT UNION')) return '🏦';
         if (name.includes('WALMART') || name.includes('TARGET') || name.includes('STORE')) return '🏪';
         if (name.includes('GYM') || name.includes('FITNESS')) return '🏋️';
         if (name.includes('SALON') || name.includes('BARBER')) return '💇';
         if (name.includes('AUTO') || name.includes('CAR')) return '🚗';
+        if (name.includes('HY-VEE') || name.includes('HYVEE')) return '🛒';
 
-        // Default icon for businesses
-        return '🏢';
+        // Default icon - use different defaults for database vs Google
+        const defaultIcon = isFromDatabase ? '🏢' : '📍';
+        console.log(`ℹ️ Using default icon for ${business.bname}: ${defaultIcon} (database: ${isFromDatabase})`);
+        return defaultIcon;
     };
 
     // Create marker for a business
@@ -1553,6 +1584,7 @@ export default function SearchPage() {
             ...prev,
             address: 'Getting your location...'
         }));
+        setGettingLocation(true);
 
         navigator.geolocation.getCurrentPosition(
                 async (position) => {
@@ -1567,24 +1599,55 @@ export default function SearchPage() {
                         if (response.ok) {
                             const data = await response.json();
                             if (data.success && data.formatted_address) {
-                                // Extract city and state from formatted address
-                                const addressParts = data.formatted_address.split(',');
-                                let cityState = '';
-
-                                if (addressParts.length >= 3) {
-                                    // Format: "City, State Zip, Country"
-                                    const city = addressParts[0].trim();
-                                    const stateZip = addressParts[1].trim();
-                                    const state = stateZip.split(' ')[0]; // Get state abbreviation
-                                    cityState = `${city}, ${state}`;
-                                } else {
-                                    cityState = data.formatted_address;
+                                // Extract zip code from address components for better search
+                                let zipCode = '';
+                                if (data.address_components) {
+                                    const zipComponent = data.address_components.find(
+                                            component => component.types.includes('postal_code')
+                                    );
+                                    zipCode = zipComponent?.long_name || zipComponent?.short_name || '';
                                 }
 
-                                setSearchData(prev => ({
-                                    ...prev,
-                                    address: cityState
-                                }));
+                                console.log('📍 Near Me - Got location:', {
+                                    lat: latitude,
+                                    lng: longitude,
+                                    address: data.formatted_address,
+                                    zip: zipCode
+                                });
+
+                                // CRITICAL FIX: Use zip code for better database matching
+                                // This ensures we search our database properly
+                                if (zipCode) {
+                                    setSearchData(prev => ({
+                                        ...prev,
+                                        address: zipCode  // Use zip for reliable database search
+                                    }));
+                                    console.log('✅ Using zip code for Near Me search:', zipCode);
+                                } else {
+                                    // Fallback: extract city and state
+                                    const addressParts = data.formatted_address.split(',');
+                                    let cityState = '';
+
+                                    if (addressParts.length >= 3) {
+                                        const city = addressParts[addressParts.length - 3].trim();
+                                        const stateZip = addressParts[addressParts.length - 2].trim();
+                                        const state = stateZip.split(' ')[0];
+                                        cityState = `${city}, ${state}`;
+                                    } else if (addressParts.length >= 2) {
+                                        const city = addressParts[0].trim();
+                                        const stateZip = addressParts[1].trim();
+                                        const state = stateZip.split(' ')[0];
+                                        cityState = `${city}, ${state}`;
+                                    } else {
+                                        cityState = data.formatted_address;
+                                    }
+
+                                    setSearchData(prev => ({
+                                        ...prev,
+                                        address: cityState
+                                    }));
+                                    console.log('✅ Using city/state for Near Me search:', cityState);
+                                }
                             } else {
                                 // Fallback to coordinates
                                 setSearchData(prev => ({
@@ -1606,6 +1669,8 @@ export default function SearchPage() {
                             ...prev,
                             address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
                         }));
+                    } finally {
+                        setGettingLocation(false);
                     }
                 },
                 (error) => {
