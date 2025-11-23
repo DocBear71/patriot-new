@@ -275,7 +275,16 @@ export default function SearchPage() {
 
     // Get appropriate icon based on business type
     const getBusinessIcon = (business) => {
-        const type = (business.type || '').toUpperCase();
+        // Handle both string type (database) and array types (Google Places)
+        let businessTypes = [];
+
+        if (business.type) {
+            // Database business - single type as string
+            businessTypes = [business.type.toUpperCase()];
+        } else if (business.types && Array.isArray(business.types)) {
+            // Google Places - array of types
+            businessTypes = business.types.map(t => t.toUpperCase());
+        }
 
         // CRITICAL: For database businesses, default to office building if no type
         const isFromDatabase = business.isFromDatabase || (!business.isGooglePlace && business._id);
@@ -309,103 +318,92 @@ export default function SearchPage() {
             'TOYS': '🧸',
             'OTHER': '🏢',
 
-            // Generic categories (for Google Places)
+            // Google Places types (these come from Google's type system)
             'RESTAURANT': '🍽️',
             'FOOD': '🍴',
             'CAFE': '☕',
             'COFFEE': '☕',
             'BAR': '🍺',
             'LODGING': '🛏️',
-            'GAS': '⛽',
-            'CAR': '🚗',
-            'REPAIR': '🔧',
-            'MECHANIC': '🔧',
+            'GAS_STATION': '⛽',
+            'CAR_REPAIR': '🚗',
+            'CAR_DEALER': '🚗',
             'STORE': '🏪',
-            'SHOP': '🏪',
-            'GROCERY': '🛒',
+            'SHOPPING_MALL': '🏬',
+            'GROCERY_OR_SUPERMARKET': '🛒',
             'SUPERMARKET': '🛒',
+            'CONVENIENCE_STORE': '🏪',
             'PHARMACY': '💊',
-            'MEDICAL': '🏥',
             'HOSPITAL': '🏥',
             'DOCTOR': '👨‍⚕️',
             'DENTIST': '🦷',
             'HEALTH': '❤️',
-            'FITNESS': '💪',
             'GYM': '🏋️',
             'BANK': '🏦',
-            'FINANCE': '💰',
-            'INSURANCE': '🛡️',
-            'SALON': '💇',
-            'BARBER': '💈',
+            'ATM': '💰',
+            'BEAUTY_SALON': '💇',
+            'HAIR_CARE': '💈',
             'SPA': '💆',
-            'BEAUTY': '💄',
-            'EDUCATION': '🎓',
-            'SCHOOL': '🏫',
+            'SCHOOL': '🎓',
             'LIBRARY': '📚',
-            'ENTERTAINMENT': '🎭',
-            'MOVIE': '🎬',
-            'THEATER': '🎭',
+            'MOVIE_THEATER': '🎬',
             'PARK': '🌳',
-            'RECREATION': '⚽',
-            'SPORTS': '🏆',
-            'PET': '🐾',
-            'VETERINARY': '🐕',
-            'VET': '🐕',
-            'HOME': '🏠',
-            'HARDWARE': '🔨',
-            'CONSTRUCTION': '🏗️',
-            'FURNITURE': '🛋️',
-            'CLOTHING': '👔',
-            'APPAREL': '👕',
-            'SHOES': '👞',
-            'JEWELRY': '💎',
-            'ELECTRONICS': '📱',
-            'COMPUTER': '💻',
-            'OFFICE': '🏢',
-            'PRINTING': '🖨️',
-            'SHIPPING': '📦',
-            'STORAGE': '📦',
-            'MOVING': '🚚',
-            'TRANSPORTATION': '🚌',
-            'TAXI': '🚕',
-            'TRAVEL': '✈️',
-            'TOURISM': '🗺️',
-            'REAL_ESTATE': '🏘️',
-            'LEGAL': '⚖️',
-            'LAW': '⚖️',
-            'ACCOUNTING': '📊',
-            'CLEANING': '🧹',
-            'LAUNDRY': '👕',
-            'DRY_CLEANING': '👔',
+            'STADIUM': '🏟️',
+            'PET_STORE': '🐾',
+            'VETERINARY_CARE': '🐕',
+            'HOME_GOODS_STORE': '🏠',
+            'HARDWARE_STORE': '🔨',
+            'FURNITURE_STORE': '🛋️',
+            'CLOTHING_STORE': '👔',
+            'SHOE_STORE': '👞',
+            'JEWELRY_STORE': '💎',
+            'ELECTRONICS_STORE': '📱',
+            'DEPARTMENT_STORE': '🏬',
             'FLORIST': '💐',
-            'FLOWERS': '🌸',
             'BAKERY': '🥖',
-            'PIZZA': '🍕',
-            'BURGER': '🍔',
-            'MEXICAN': '🌮',
-            'CHINESE': '🥡',
-            'JAPANESE': '🍱',
-            'ITALIAN': '🍝',
-            'BBQ': '🍖',
-            'SEAFOOD': '🦞',
-            'ICE_CREAM': '🍦',
-            'DESSERT': '🍰',
-            'CONVENIENCE': '🏪',
-            'LIQUOR': '🍷',
-            'WINE': '🍷',
-            'BREWERY': '🍺',
-            'FAST_FOOD': '🍔',
-            'BUFFET': '🍽️',
-            'DINER': '🍳'
+            'MEAL_TAKEAWAY': '🍔',
+            'MEAL_DELIVERY': '🍕',
+            'NIGHT_CLUB': '🎵',
+            'CASINO': '🎰',
+            'BOWLING_ALLEY': '🎳',
+            'AMUSEMENT_PARK': '🎢',
+            'AQUARIUM': '🐠',
+            'ART_GALLERY': '🖼️',
+            'MUSEUM': '🏛️',
+            'LAUNDRY': '🧺',
+            'LAWYER': '⚖️',
+            'ACCOUNTING': '📊',
+            'INSURANCE_AGENCY': '🛡️',
+            'REAL_ESTATE_AGENCY': '🏘️',
+            'TRAVEL_AGENCY': '✈️',
+            'CAR_RENTAL': '🚙',
+            'TAXI_STAND': '🚕',
+            'TRANSIT_STATION': '🚉',
+            'AIRPORT': '✈️',
+            'CAMPGROUND': '⛺',
+            'RV_PARK': '🚐',
+            'MOVING_COMPANY': '🚚',
+            'STORAGE': '📦',
+            'LOCKSMITH': '🔑',
+            'ELECTRICIAN': '⚡',
+            'PLUMBER': '🔧',
+            'ROOFING_CONTRACTOR': '🏠',
+            'PAINTER': '🎨'
         };
 
-        // Try to match the business type first
-        if (type) {
-            for (const [key, icon] of Object.entries(iconMap)) {
-                if (type.includes(key)) {
-                    console.log(`✅ Icon match for ${business.bname}: ${icon} (type: ${type})`);
-                    return icon;
-                }
+        // Try to match any of the business types
+        for (const type of businessTypes) {
+            // Remove underscores and try both with and without them
+            const cleanType = type.replace(/_/g, '');
+
+            if (iconMap[type]) {
+                console.log(`✅ Icon match for ${business.bname}: ${iconMap[type]} (type: ${type})`);
+                return iconMap[type];
+            }
+
+            if (iconMap[cleanType]) {
+                console.log(`✅ Icon match for ${business.bname}: ${iconMap[cleanType]} (cleaned type: ${cleanType})`);
+                return iconMap[cleanType];
             }
         }
 
@@ -427,7 +425,7 @@ export default function SearchPage() {
 
         // Default icon - use different defaults for database vs Google
         const defaultIcon = isFromDatabase ? '🏢' : '📍';
-        console.log(`ℹ️ Using default icon for ${business.bname}: ${defaultIcon} (database: ${isFromDatabase})`);
+        console.log(`ℹ️ Using default icon for ${business.bname}: ${defaultIcon} (database: ${isFromDatabase}, types: ${businessTypes.join(', ')})`);
         return defaultIcon;
     };
 
@@ -2480,6 +2478,39 @@ export default function SearchPage() {
                                                                                     onClick={() => router.push(`/business/${business._id}`)}
                                                                                     style={{ cursor: 'pointer' }}
                                                                             >
+                                                                                {/* Status Badge - Database vs Google Places */}
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                                                                                    {business.isGooglePlace ? (
+                                                                                            <span style={{
+                                                                                                padding: '4px 10px',
+                                                                                                backgroundColor: '#dbeafe',
+                                                                                                color: '#1e40af',
+                                                                                                borderRadius: '12px',
+                                                                                                fontSize: '0.75rem',
+                                                                                                fontWeight: '600',
+                                                                                                display: 'inline-flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
+                                                                                            }}>
+                                                                                                📍 From Google Maps
+                                                                                            </span>
+                                                                                    ) : (
+                                                                                            <span style={{
+                                                                                                padding: '4px 10px',
+                                                                                                backgroundColor: '#d1fae5',
+                                                                                                color: '#065f46',
+                                                                                                borderRadius: '12px',
+                                                                                                fontSize: '0.75rem',
+                                                                                                fontWeight: '600',
+                                                                                                display: 'inline-flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
+                                                                                            }}>
+                                                                                                ✓ In Database
+                                                                                            </span>
+                                                                                    )}
+                                                                                </div>
+
                                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                                                                     <h3 className="text-xl font-bold text-gray-900" style={{ margin: 0 }}>
                                                                                         {business.bname}
@@ -2496,8 +2527,8 @@ export default function SearchPage() {
                                                                                                 alignItems: 'center',
                                                                                                 gap: '4px'
                                                                                             }}>
-                                                                🇺🇸 VBO
-                                                            </span>
+                                                                                                🇺🇸 VBO
+                                                                                            </span>
                                                                                     )}
                                                                                     {business.veteranOwned?.priority?.isFeatured && (
                                                                                             <span style={{
@@ -2511,8 +2542,8 @@ export default function SearchPage() {
                                                                                                 alignItems: 'center',
                                                                                                 gap: '4px'
                                                                                             }}>
-                                                                ⭐ Featured
-                                                            </span>
+                                                                                                ⭐ Featured
+                                                                                            </span>
                                                                                     )}
                                                                                 </div>
                                                                                 {/* Veteran-Owned Badge */}
@@ -2521,12 +2552,12 @@ export default function SearchPage() {
                                                                                             <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
                                                                                                 <span className="text-red-600 font-bold">🇺🇸</span>
                                                                                                 <span className="text-sm font-semibold text-red-700">
-                                                                Veteran-Owned
-                                                            </span>
+                                                                                                    Veteran-Owned
+                                                                                                </span>
                                                                                                 {business.veteranOwned.verificationStatus === 'certified' && (
                                                                                                         <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                                                                    Certified
-                                                                </span>
+                                                                                                            Certified
+                                                                                                        </span>
                                                                                                 )}
                                                                                             </div>
                                                                                         </div>
@@ -2567,25 +2598,61 @@ export default function SearchPage() {
                                                                                         </div>
                                                                                 )}
                                                                                 <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                                    <button
-                                                                                            onClick={(e) => {
-                                                                                                e.stopPropagation();
-                                                                                                router.push(`/business/${business._id}`);
-                                                                                            }}
-                                                                                            style={{
-                                                                                                width: '100%',
-                                                                                                padding: '10px',
-                                                                                                backgroundColor: '#007bff',
-                                                                                                color: 'white',
-                                                                                                border: 'none',
-                                                                                                borderRadius: '6px',
-                                                                                                cursor: 'pointer',
-                                                                                                fontWeight: 'bold',
-                                                                                                fontSize: '14px'
-                                                                                            }}
-                                                                                    >
-                                                                                        View Details →
-                                                                                    </button>
+                                                                                    {business.isGooglePlace ? (
+                                                                                            <button
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        // Prepare data for business-add page
+                                                                                                        const businessData = {
+                                                                                                            bname: business.bname,
+                                                                                                            address1: business.address1,
+                                                                                                            address2: business.address2 || '',
+                                                                                                            city: business.city,
+                                                                                                            state: business.state,
+                                                                                                            zip: business.zip,
+                                                                                                            phone: business.phone || '',
+                                                                                                            lat: business.lat,
+                                                                                                            lng: business.lng,
+                                                                                                            placeId: business.placeId || ''
+                                                                                                        };
+                                                                                                        sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+                                                                                                        router.push('/business-add');
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        width: '100%',
+                                                                                                        padding: '10px',
+                                                                                                        backgroundColor: '#2563eb',
+                                                                                                        color: 'white',
+                                                                                                        border: 'none',
+                                                                                                        borderRadius: '6px',
+                                                                                                        cursor: 'pointer',
+                                                                                                        fontWeight: 'bold',
+                                                                                                        fontSize: '14px'
+                                                                                                    }}
+                                                                                            >
+                                                                                                ➕ Add to Database
+                                                                                            </button>
+                                                                                    ) : (
+                                                                                            <button
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        router.push(`/business/${business._id}`);
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        width: '100%',
+                                                                                                        padding: '10px',
+                                                                                                        backgroundColor: '#059669',
+                                                                                                        color: 'white',
+                                                                                                        border: 'none',
+                                                                                                        borderRadius: '6px',
+                                                                                                        cursor: 'pointer',
+                                                                                                        fontWeight: 'bold',
+                                                                                                        fontSize: '14px'
+                                                                                                    }}
+                                                                                            >
+                                                                                                View Details →
+                                                                                            </button>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                     ))}
