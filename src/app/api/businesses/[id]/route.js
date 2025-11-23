@@ -56,6 +56,24 @@ export async function PUT(request, { params }) {
             }
         });
 
+        // Handle VBO nested object updates
+        if (updateData.veteranOwned) {
+            // Ensure proper structure for veteranOwned object
+            if (updateData.veteranOwned.isVeteranOwned === undefined) {
+                updateData.veteranOwned.isVeteranOwned = false;
+            }
+
+            // Handle priority nested object
+            if (updateData.veteranOwned.priority) {
+                if (updateData.veteranOwned.priority.isFeatured === undefined) {
+                    updateData.veteranOwned.priority.isFeatured = false;
+                }
+                if (updateData.veteranOwned.priority.isPremium === undefined) {
+                    updateData.veteranOwned.priority.isPremium = false;
+                }
+            }
+        }
+
         const business = await Business.findByIdAndUpdate(
             params.id,
             updateData,

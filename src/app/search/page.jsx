@@ -20,6 +20,7 @@ export default function SearchPage() {
     const [showOnlyWithIncentives, setShowOnlyWithIncentives] = useState(true); // Hide businesses without incentives by default
     const [filteredResults, setFilteredResults] = useState([]);
     const [results, setResults] = useState([]);
+    const [showOnlyVeteranOwned, setShowOnlyVeteranOwned] = useState(false); // VBO filter state
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [loadingStep, setLoadingStep] = useState(1);
@@ -31,6 +32,7 @@ export default function SearchPage() {
     const [map, setMap] = useState(null);
     const [markers, setMarkers] = useState([]);
     const [infoWindow, setInfoWindow] = useState(null);
+
 
 
     const businessTypes = [
@@ -461,9 +463,24 @@ export default function SearchPage() {
            </div>`
                 : '';
 
+        // VBO Badge for info window
+        const vboBadge = business.veteranOwned?.isVeteranOwned ? `
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <span style="padding: 4px 8px; background: #fecaca; color: #991b1b; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    🇺🇸 VBO
+                </span>
+                ${business.veteranOwned?.priority?.isFeatured ? `
+                    <span style="padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                        ⭐ Featured
+                    </span>
+                ` : ''}
+            </div>
+        ` : '';
+
         const content = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 300px;">
             ${statusBadge}
+            ${vboBadge}
             <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #333;">${business.bname}</h3>
             <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
                 <p style="margin: 2px 0;">${business.address1}</p>
@@ -1391,8 +1408,8 @@ export default function SearchPage() {
 
                 // Sort results: exact category matches first, then nearby businesses
                 const sortedResults = sortResultsByRelevance(allResults, searchData.category);
-                // Apply filter based on toggle
-                filterResults(sortedResults, showOnlyWithIncentives);
+                // Apply filters based on toggles
+                filterResults(sortedResults, showOnlyWithIncentives, showOnlyVeteranOwned);
 
                 // COMMENTED OUT: Display results on map
                 if (mapInitialized) {
@@ -1468,24 +1485,33 @@ export default function SearchPage() {
         return [...exactMatches, ...nearbyBusinesses];
     };
 
-    // Filter results based on incentives toggle
-    const filterResults = (resultsToFilter, onlyWithIncentives) => {
+    // Filter results based on incentives and VBO toggles
+    const filterResults = (resultsToFilter, onlyWithIncentives, onlyVeteranOwned) => {
+        let filtered = resultsToFilter;
+
+        // Apply incentives filter
         if (onlyWithIncentives) {
-            const filtered = resultsToFilter.filter(business =>
+            filtered = filtered.filter(business =>
                     business.incentives && business.incentives.length > 0
             );
-            setFilteredResults(filtered);
-        } else {
-            setFilteredResults(resultsToFilter);
         }
+
+        // Apply VBO filter
+        if (onlyVeteranOwned) {
+            filtered = filtered.filter(business =>
+                    business.veteranOwned?.isVeteranOwned === true
+            );
+        }
+
+        setFilteredResults(filtered);
     };
 
-    // Update filtered results when toggle changes
+    // Update filtered results when toggles change
     useEffect(() => {
         if (results.length > 0) {
-            filterResults(results, showOnlyWithIncentives);
+            filterResults(results, showOnlyWithIncentives, showOnlyVeteranOwned);
         }
-    }, [showOnlyWithIncentives, results]);
+    }, [showOnlyWithIncentives, showOnlyVeteranOwned, results]);
 
     const handleInputChange = (e) => {
         setSearchData(prev => ({
@@ -2147,6 +2173,14 @@ export default function SearchPage() {
                                                 <h2 className="text-2xl font-bold text-gray-900">
                                                     Search Results
                                                 </h2>
+                                                <div className="text-gray-600">
+                                                    <span>{filteredResults.length} of {results.length} businesses shown</span>
+                                                    {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length > 0 && (
+                                                            <span className="ml-2" style={{ color: '#dc2626', fontWeight: '500' }}>
+                                                            • {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length} Veteran-Owned
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-gray-600">
                                                     {filteredResults.length} of {results.length} businesses shown
                                                     {showOnlyWithIncentives && filteredResults.length === 0 && results.length > 0 && (
@@ -2201,6 +2235,36 @@ export default function SearchPage() {
                                                     />
                                                 </button>
                                             </div>
+
+                                            {/* VBO Filter Toggle - NEW */}
+                                            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    Only show Veteran-Owned businesses
+                                                </span>
+                                                <button
+                                                        type="button"
+                                                        role="switch"
+                                                        aria-checked={showOnlyVeteranOwned}
+                                                        onClick={() => setShowOnlyVeteranOwned(!showOnlyVeteranOwned)}
+                                                        className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                                        style={{
+                                                            width: '44px',
+                                                            height: '24px',
+                                                            backgroundColor: showOnlyVeteranOwned ? '#dc2626' : '#d1d5db',
+                                                            transition: 'background-color 200ms'
+                                                        }}
+                                                >
+                                                    <span
+                                                            className="inline-block rounded-full bg-white shadow-lg"
+                                                            style={{
+                                                                width: '16px',
+                                                                height: '16px',
+                                                                transform: showOnlyVeteranOwned ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 200ms'
+                                                            }}
+                                                    />
+                                                </button>
+                                            </div>
                                         </div>
 
 
@@ -2236,9 +2300,41 @@ export default function SearchPage() {
                                                                                     onClick={() => router.push(`/business/${business._id}`)}
                                                                                     style={{ cursor: 'pointer' }}
                                                                             >
-                                                                                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                                                    {business.bname}
-                                                                                </h3>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                                                    <h3 className="text-xl font-bold text-gray-900" style={{ margin: 0 }}>
+                                                                                        {business.bname}
+                                                                                    </h3>
+                                                                                    {business.veteranOwned?.isVeteranOwned && (
+                                                                                            <span style={{
+                                                                                                padding: '4px 8px',
+                                                                                                backgroundColor: '#fecaca',
+                                                                                                color: '#991b1b',
+                                                                                                borderRadius: '12px',
+                                                                                                fontSize: '0.75rem',
+                                                                                                fontWeight: '600',
+                                                                                                display: 'inline-flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
+                                                                                            }}>
+                                                                🇺🇸 VBO
+                                                            </span>
+                                                                                    )}
+                                                                                    {business.veteranOwned?.priority?.isFeatured && (
+                                                                                            <span style={{
+                                                                                                padding: '4px 8px',
+                                                                                                backgroundColor: '#fef3c7',
+                                                                                                color: '#92400e',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.75rem',
+                                                                                                fontWeight: '600',
+                                                                                                display: 'inline-flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
+                                                                                            }}>
+                                                                ⭐ Featured
+                                                            </span>
+                                                                                    )}
+                                                                                </div>
                                                                                 {/* Veteran-Owned Badge */}
                                                                                 {business.veteranOwned?.isVeteranOwned && (
                                                                                         <div className="mb-3">

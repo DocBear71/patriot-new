@@ -713,6 +713,133 @@ export default function BusinessAddPage() {
                                     </div>
                                 </div>
 
+                                {/* Veteran-Owned Business Section - NEW */}
+                                <div className="border-t pt-6">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <span>🇺🇸</span>
+                                        Is This a Veteran-Owned Business?
+                                    </h3>
+
+                                    <div className="space-y-4">
+                                        {/* Check if current user is VBO */}
+                                        {session?.user?.serviceType === 'VBO' && session?.user?.veteranBusinessOwner?.verificationStatus === 'verified' ? (
+                                                <>
+                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                        <label className="flex items-start gap-3">
+                                                            <input
+                                                                    type="checkbox"
+                                                                    checked={formData.veteranOwned?.isVeteranOwned || false}
+                                                                    onChange={(e) => setFormData({
+                                                                        ...formData,
+                                                                        veteranOwned: {
+                                                                            isVeteranOwned: e.target.checked,
+                                                                            verificationStatus: e.target.checked ? 'verified' : 'self_attested',
+                                                                            primaryOwnerId: e.target.checked ? session.user.id : null,
+                                                                            displayBadge: e.target.checked,
+                                                                            priority: {
+                                                                                isPriority: e.target.checked,
+                                                                                priorityScore: e.target.checked ? 10 : 0
+                                                                            }
+                                                                        }
+                                                                    })}
+                                                                    className="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                                                            />
+                                                            <div>
+                                                    <span className="font-medium text-gray-900">
+                                                        I am adding my own veteran-owned business
+                                                    </span>
+                                                                <p className="text-sm text-gray-600 mt-1">
+                                                                    Your verified status will automatically apply the Veteran-Owned badge and priority placement.
+                                                                </p>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+
+                                                    {formData.veteranOwned?.isVeteranOwned && (
+                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                                <div className="flex items-start gap-3">
+                                                                    <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                    <div>
+                                                                        <h4 className="font-medium text-green-900">✓ Veteran-Owned Benefits Active</h4>
+                                                                        <ul className="mt-2 text-sm text-green-800 space-y-1">
+                                                                            <li>• Display verified Veteran-Owned badge</li>
+                                                                            <li>• Priority placement in search results</li>
+                                                                            <li>• Featured in Veteran Business Directory</li>
+                                                                            <li>• Increased visibility to customers</li>
+                                                                        </ul>
+                                                                        <div className="mt-3 inline-flex items-center gap-2 bg-white border border-green-300 rounded-full px-3 py-1.5">
+                                                                            <span className="text-red-600 font-bold">🇺🇸</span>
+                                                                            <span className="text-xs font-semibold text-red-700">Verified Veteran-Owned</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                    )}
+                                                </>
+                                        ) : session?.user?.serviceType === 'VBO' && session?.user?.veteranBusinessOwner?.verificationStatus === 'pending' ? (
+                                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <div>
+                                                            <h4 className="font-medium text-yellow-900">Verification Pending</h4>
+                                                            <p className="text-sm text-yellow-800 mt-1">
+                                                                Your veteran status is under review. Once verified, you can add veteran-owned businesses with the verified badge.
+                                                            </p>
+                                                            <Link
+                                                                    href="/veteran-verification"
+                                                                    className="text-sm text-yellow-900 underline hover:text-yellow-700 mt-2 inline-block"
+                                                            >
+                                                                Check status →
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                        ) : session?.user?.serviceType === 'VBO' ? (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <div>
+                                                            <h4 className="font-medium text-blue-900">Complete Verification First</h4>
+                                                            <p className="text-sm text-blue-800 mt-1">
+                                                                Verify your veteran status to add businesses with the official Veteran-Owned badge.
+                                                            </p>
+                                                            <Link
+                                                                    href="/veteran-verification"
+                                                                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium mt-3"
+                                                            >
+                                                                Start Verification
+                                                                <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                </svg>
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                        ) : session ? (
+                                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                                    <p className="text-sm text-gray-700">
+                                                        <strong>Are you a veteran business owner?</strong>
+                                                    </p>
+                                                    <p className="text-sm text-gray-600 mt-2">
+                                                        Register as a Veteran Business Owner to display the verified badge and get priority placement.
+                                                    </p>
+                                                    <Link
+                                                            href="/profile"
+                                                            className="text-sm text-blue-600 hover:text-blue-800 underline mt-2 inline-block"
+                                                    >
+                                                        Update your profile to VBO →
+                                                    </Link>
+                                                </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+
                                 {/* Submit Button */}
                                 <div className="flex justify-center pt-6">
                                     <button

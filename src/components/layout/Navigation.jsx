@@ -1,12 +1,13 @@
 'use client';
 
-// file: src/components/layout/Navigation.jsx v4 - Added Incentive management links for authenticated users
+// file: src/components/layout/Navigation.jsx v5 - Added email verification banner for unverified users
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import EmailVerificationBanner from '../auth/EmailVerificationBanner';
 
 export default function Navigation() {
     const { data: session, status } = useSession();
@@ -19,8 +20,9 @@ export default function Navigation() {
     };
 
     return (
-            <nav className="bg-white shadow-lg fixed w-full top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <>
+                <nav className="bg-white shadow-lg fixed w-full top-0 z-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-12">
                         {/* Logo */}
                         <div className="flex items-center">
@@ -292,7 +294,17 @@ export default function Navigation() {
                                 </div>
                             </div>
                     )}
-                </div>
-            </nav>
+                    </div>
+                </nav>
+
+                {/* Email Verification Banner - Shows below navigation for unverified users */}
+                {session && !session.user.isVerified && (
+                        <div className="fixed top-12 left-0 right-0 z-40">
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                <EmailVerificationBanner user={session.user} />
+                            </div>
+                        </div>
+                )}
+            </>
     );
 }

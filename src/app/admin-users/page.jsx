@@ -47,6 +47,7 @@ export default function AdminUsersPage() {
         { value: 'FR', label: 'First Responder' },
         { value: 'SP', label: 'Spouse' },
         { value: 'BO', label: 'Business Owner' },
+        { value: 'VBO', label: 'Veteran Business Owner' },
         { value: 'SU', label: 'Supporter' }
     ];
 

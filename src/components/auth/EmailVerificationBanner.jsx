@@ -74,12 +74,19 @@ const EmailVerificationBanner = ({ user, onDismiss }) => {
                                     </div>
                             )}
                         </div>
-                        <div className="mt-3 flex items-center space-x-3">
-                            <button
-                                    onClick={handleResendVerification}
-                                    disabled={isResending}
-                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        <div className="mt-3 flex items-center space-x-3 flex-wrap gap-2">
+                            <a
+                            href="/auth/update-email"
+                            className="inline-flex items-center px-3 py-1.5 border border-yellow-600 text-xs font-medium rounded text-yellow-700 bg-white hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
                             >
+                            Wrong Email? Update It
+                        </a>
+                        <button
+                                onClick={handleResendVerification}
+                                disabled={isResending}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+
                                 {isResending ? (
                                         <>
                                             <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

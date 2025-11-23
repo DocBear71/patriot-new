@@ -225,6 +225,16 @@ async function handleAdminListBusinesses(request) {
 
         console.log("🔍 Business query:", JSON.stringify(businessQuery, null, 2));
 
+        // VBO Filter - NEW
+        const veteranOwnedFilter = searchParams.get('veteranOwned');
+        if (veteranOwnedFilter === 'true') {
+            businessQuery['veteranOwned.isVeteranOwned'] = true;
+        } else if (veteranOwnedFilter === 'false') {
+            businessQuery['veteranOwned.isVeteranOwned'] = { $ne: true };
+        }
+
+        console.log("🔍 Business query:", JSON.stringify(businessQuery, null, 2));
+
         // Get businesses with population
         const businessTotal = await Business.countDocuments(businessQuery);
         const businessLimit = includeChains ? Math.floor(limit * 0.7) : limit;

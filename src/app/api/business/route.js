@@ -186,6 +186,15 @@ async function handleBusinessSearch(request) {
         if (businessNameValue && businessNameValue.trim() !== '') {
             // Use case-insensitive regex search with more flexible matching
             query.bname = new RegExp(businessNameValue.trim().replace(/\s+/g, '.*'), 'i');
+
+            // VBO Filter - Check if searching for veteran-owned businesses
+            const veteranOwnedFilter = searchParams.get('veteranOwned');
+            if (veteranOwnedFilter === 'true') {
+                query['veteranOwned.isVeteranOwned'] = true;
+                console.log('🇺🇸 Filtering for Veteran-Owned Businesses only');
+            } else if (veteranOwnedFilter === 'false') {
+                query['veteranOwned.isVeteranOwned'] = { $ne: true };
+            }
         } else if (addressValue && addressValue.trim() !== '') {
             const addressTerm = addressValue.trim();
 

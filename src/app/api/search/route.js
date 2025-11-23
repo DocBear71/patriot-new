@@ -328,15 +328,34 @@ export async function GET(request) {
                     };
                 });
 
-                // Sort: Name matches first (by distance), then other businesses (by distance)
+                // Sort: Featured VBOs first, then regular VBOs, then name matches, then distance
                 businesses.sort((a, b) => {
-                    // Both match name or both don't - sort by distance
-                    if (a.nameMatches === b.nameMatches) {
-                        return a.distanceFromSearch - b.distanceFromSearch;
+                    // Check VBO status and featured status
+                    const aIsFeaturedVBO = a.veteranOwned?.isVeteranOwned && a.veteranOwned?.priority?.isFeatured;
+                    const bIsFeaturedVBO = b.veteranOwned?.isVeteranOwned && b.veteranOwned?.priority?.isFeatured;
+                    const aIsVBO = a.veteranOwned?.isVeteranOwned;
+                    const bIsVBO = b.veteranOwned?.isVeteranOwned;
+
+                    // Priority 1: Featured VBOs come first
+                    if (aIsFeaturedVBO !== bIsFeaturedVBO) {
+                        return bIsFeaturedVBO - aIsFeaturedVBO;
                     }
-                    // Name matches come first
-                    return b.nameMatches - a.nameMatches;
+
+                    // Priority 2: Regular VBOs come next
+                    if (aIsVBO !== bIsVBO) {
+                        return bIsVBO - aIsVBO;
+                    }
+
+                    // Priority 3: Name matches
+                    if (a.nameMatches !== b.nameMatches) {
+                        return b.nameMatches - a.nameMatches;
+                    }
+
+                    // Priority 4: Distance
+                    return a.distanceFromSearch - b.distanceFromSearch;
                 });
+
+                console.log(`✅ Found ${businesses.filter(b => b.veteranOwned?.isVeteranOwned).length} VBOs (${businesses.filter(b => b.veteranOwned?.priority?.isFeatured).length} featured)`);
 
                 console.log(`✅ Found ${businesses.filter(b => b.nameMatches).length} name matches and ${businesses.filter(b => !b.nameMatches).length} nearby businesses`);
             } else {
@@ -556,6 +575,12 @@ export async function GET(request) {
                     radius: searchRadius,
                     source: geocodedLocation ? 'geocoded_zip' : 'coordinates'
                 } : null
+            },
+            // VBO Statistics - NEW
+            vboStats: {
+                total: results.filter(r => r.veteranOwned?.isVeteranOwned).length,
+                featured: results.filter(r => r.veteranOwned?.priority?.isFeatured).length,
+                premium: results.filter(r => r.veteranOwned?.priority?.isPremium).length
             },
             // Additional metadata
             hasLocationSearch: !!(lat && lng),

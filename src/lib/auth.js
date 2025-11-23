@@ -43,10 +43,9 @@ export const authOptions = {
                         return null;
                     }
 
-                    // Check email verification if required
+                    // Log verification status but allow login
                     if (user.isVerified === false) {
-                        console.log('❌ Email not verified:', credentials.email);
-                        throw new Error('EMAIL_NOT_VERIFIED');
+                        console.log('⚠️ Email not verified (allowing login with limited access):', credentials.email);
                     }
 
                     // Verify password

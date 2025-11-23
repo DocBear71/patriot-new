@@ -93,13 +93,7 @@ function SignInContent() {
             if (result?.error) {
                 console.log('❌ Sign in error:', result.error);
 
-                if (result.error === 'email-not-verified' ||
-                    result.error === 'EMAIL_NOT_VERIFIED' ||
-                    result.error.includes('verify')) {
-                    setError('Please verify your email before signing in.');
-                    setShowResendVerification(true);
-                    setUnverifiedEmail(formData.email);
-                } else if (result.error === 'CredentialsSignin') {
+                if (result.error === 'CredentialsSignin') {
                     setError('Invalid email or password. Please try again.');
                 } else {
                     setError('Sign in failed. Please try again.');
@@ -208,24 +202,6 @@ function SignInContent() {
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                             {error}
-                            {showResendVerification && (
-                                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                                    <div className="flex items-center mb-2">
-                                        <span className="text-orange-600 mr-2">⚠️</span>
-                                        <span className="text-sm font-medium text-orange-800">Email Not Verified</span>
-                                    </div>
-                                    <p className="text-sm text-orange-700 mb-3">
-                                        Please check your email for a verification link.
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={handleResendVerification}
-                                        className="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition-colors"
-                                    >
-                                        Resend Verification Email
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     )}
 

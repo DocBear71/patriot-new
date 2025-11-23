@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import Navigation from '../../components/layout/Navigation';
 
 export default function ProfilePage() {
@@ -230,6 +231,7 @@ export default function ProfilePage() {
         { value: 'FR', label: 'First Responder' },
         { value: 'SP', label: 'Spouse' },
         { value: 'BO', label: 'Business Owner' },
+        { value: 'VBO', label: 'Veteran Business Owner' },
         { value: 'SU', label: 'Supporter' }
     ];
 
@@ -516,6 +518,68 @@ export default function ProfilePage() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* VBO Verification Status - NEW SECTION */}
+                                {user?.serviceType === 'VBO' && (
+                                        <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                                <span>🇺🇸</span>
+                                                Veteran Business Owner Status
+                                            </h3>
+
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-gray-700">Verification Status:</span>
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                            user?.veteranBusinessOwner?.verificationStatus === 'verified'
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : user?.veteranBusinessOwner?.verificationStatus === 'pending'
+                                                                            ? 'bg-yellow-100 text-yellow-800'
+                                                                            : user?.veteranBusinessOwner?.verificationStatus === 'denied'
+                                                                                    ? 'bg-red-100 text-red-800'
+                                                                                    : 'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                            {user?.veteranBusinessOwner?.verificationStatus === 'verified' && '✓ Verified'}
+                                                        {user?.veteranBusinessOwner?.verificationStatus === 'pending' && '⏳ Pending Review'}
+                                                        {user?.veteranBusinessOwner?.verificationStatus === 'denied' && '✗ Denied'}
+                                                        {(!user?.veteranBusinessOwner?.verificationStatus || user?.veteranBusinessOwner?.verificationStatus === 'not_applicable') && '📝 Not Started'}
+                                        </span>
+                                                </div>
+
+                                                {user?.veteranBusinessOwner?.verificationStatus === 'verified' && (
+                                                        <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                                                            <p className="text-sm text-green-800">
+                                                                ✓ Your veteran status has been verified! You can now claim businesses and display the Veteran-Owned badge.
+                                                            </p>
+                                                        </div>
+                                                )}
+
+                                                {(!user?.veteranBusinessOwner?.verificationStatus || user?.veteranBusinessOwner?.verificationStatus === 'not_applicable' || user?.veteranBusinessOwner?.verificationStatus === 'pending') && (
+                                                        <div className="mt-4">
+                                                            <Link
+                                                                    href="/veteran-verification"
+                                                                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                                                            >
+                                                                {user?.veteranBusinessOwner?.verificationStatus === 'pending'
+                                                                        ? 'View Verification Status'
+                                                                        : 'Start Verification Process'
+                                                                }
+                                                                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                </svg>
+                                                            </Link>
+                                                        </div>
+                                                )}
+
+                                                {user?.veteranBusinessOwner?.businessIds && user?.veteranBusinessOwner?.businessIds.length > 0 && (
+                                                        <div className="mt-4">
+                                                            <h4 className="font-medium text-gray-900 mb-2">Claimed Businesses:</h4>
+                                                            <p className="text-sm text-gray-600">{user?.veteranBusinessOwner?.businessIds.length} business(es) claimed</p>
+                                                        </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                )}
 
                                 <div style={{ marginBottom: '30px' }}>
                                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>

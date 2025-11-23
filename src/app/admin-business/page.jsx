@@ -17,7 +17,8 @@ export default function AdminBusinessPage() {
     const [filters, setFilters] = useState({
         search: '',
         category: '',
-        status: ''
+        status: '',
+        veteranOwned: ''
     });
     const [showBusinessModal, setShowBusinessModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -148,7 +149,8 @@ export default function AdminBusinessPage() {
         setFilters({
             search: '',
             category: '',
-            status: ''
+            status: '',
+            veteranOwned: ''
         });
         setCurrentPage(1);
     };
@@ -557,8 +559,40 @@ export default function AdminBusinessPage() {
                                         businesses.map((business, index) => (
                                                 <tr key={business._id} style={{ borderBottom: '1px solid #dee2e6' }}>
                                                     <td style={{ padding: '15px' }}>
-                                                        <div style={{ fontWeight: 'bold' }}>
-                                                            {business.bname}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                            <div style={{ fontWeight: 'bold' }}>
+                                                                {business.bname}
+                                                            </div>
+                                                            {business.veteranOwned?.isVeteranOwned && (
+                                                                    <span style={{
+                                                                        padding: '2px 8px',
+                                                                        backgroundColor: '#fecaca',
+                                                                        color: '#991b1b',
+                                                                        borderRadius: '12px',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: '500',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
+                                                                    }}>
+                                                                    🇺🇸 VBO
+                                                                </span>
+                                                            )}
+                                                            {business.veteranOwned?.priority?.isFeatured && (
+                                                                    <span style={{
+                                                                        padding: '2px 8px',
+                                                                        backgroundColor: '#fef3c7',
+                                                                        color: '#92400e',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: '500',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
+                                                                    }}>
+                                                                    ⭐ Featured
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         {business.is_chain && (
                                                                 <span style={{
@@ -570,8 +604,8 @@ export default function AdminBusinessPage() {
                                                                     marginTop: '4px',
                                                                     display: 'inline-block'
                                                                 }}>
-                                                        Chain
-                                                    </span>
+                                                                Chain
+                                                            </span>
                                                         )}
                                                     </td>
                                                     <td style={{ padding: '15px' }}>
@@ -913,6 +947,25 @@ export default function AdminBusinessPage() {
                                             >
                                                 <option value="active">Active</option>
                                                 <option value="inactive">Inactive</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                                Veteran-Owned
+                                            </label>
+                                            <select
+                                                    value={filters.veteranOwned || ''}
+                                                    onChange={(e) => handleFilterChange('veteranOwned', e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '8px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '4px'
+                                                    }}
+                                            >
+                                                <option value="">All Businesses</option>
+                                                <option value="true">Veteran-Owned Only</option>
+                                                <option value="false">Non Veteran-Owned</option>
                                             </select>
                                         </div>
                                     </div>
