@@ -5,6 +5,7 @@ import connectDB from '../../../lib/mongodb.js';
 import mongoose from 'mongoose';
 import Business from '../../../models/Business.js';
 import Chain from '../../../models/Chain.js';
+import Incentive from '../../../models/Incentive.js';
 import { geocodeAddress } from '../../../utils/geocoding.js';
 
 /**
@@ -347,14 +348,48 @@ async function handleBusinessSearch(request) {
             color: b.markerColor
         })));
 
-        console.log(`🎯 Returning ${results.length} total businesses`);
+        // CRITICAL FIX: Fetch incentives for all database businesses before returning
+        console.log('📋 Fetching incentives for all businesses...');
+
+        const resultsWithIncentives = await Promise.all(
+            results.map(async (business) => {
+                try {
+                    // Skip incentive fetch for Google Places results
+                    if (business.isGooglePlace || business._id?.toString().startsWith('google_')) {
+                        return business;
+                    }
+
+                    // Fetch incentives for this business
+                    const incentives = await Incentive.find({
+                        business_id: business._id,
+                        is_available: true
+                    }).lean().maxTimeMS(3000);
+
+                    console.log(`   - ${business.bname}: ${incentives.length} incentives`);
+
+                    return {
+                        ...business,
+                        incentives: incentives || []
+                    };
+                } catch (error) {
+                    console.error(`❌ Error fetching incentives for ${business.bname}:`, error);
+                    return {
+                        ...business,
+                        incentives: []
+                    };
+                }
+            })
+        );
+
+        console.log(`✅ Added incentives to ${resultsWithIncentives.length} businesses`);
+        console.log(`🎯 Returning ${resultsWithIncentives.length} total businesses with incentives`);
 
         // FIXED: Return structure that matches frontend expectations
         return Response.json({
             success: true,
             message: 'Search successful',
-            results: results,
-            count: results.length
+            results: resultsWithIncentives,
+            count: resultsWithIncentives.length
         });
 
     } catch (error) {
