@@ -110,8 +110,10 @@ export async function POST(request) {
         const baseURL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
         const verificationLink = `${baseURL}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
-        // Use the correct from email based on your DNS setup
-        const fromEmail = process.env.FROM_EMAIL || 'send@patriotthanks.com';
+        // Use Resend's verified domain for development, custom for production
+        const fromEmail = process.env.NODE_ENV === 'production'
+            ? 'Patriot Thanks <noreply@patriotthanks.com>'
+            : 'Patriot Thanks <onboarding@resend.dev>';
 
         console.log('📨 Sending email with details:', {
             from: fromEmail,

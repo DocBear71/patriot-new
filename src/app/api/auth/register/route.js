@@ -39,7 +39,7 @@ export async function POST(request) {
         }
 
         // DEFINE requiresBranch BEFORE using it
-        const requiresBranch = ['VT', 'AD', 'FR', 'SP'].includes(serviceType);
+        const requiresBranch = ['VT', 'AD', 'FR', 'SP', 'VBO'].includes(serviceType);
 
         // Check if military branch is required
         if (requiresBranch && !militaryBranch) {
@@ -75,6 +75,19 @@ export async function POST(request) {
             password,
             serviceType,
             militaryBranch: requiresBranch ? militaryBranch : '',
+            // Initialize veteran business owner fields if applicable
+            ...(serviceType === 'VBO' && {
+                veteranBusinessOwner: {
+                    isVeteranOwned: true,
+                    verificationStatus: 'pending',
+                    businessIds: [],
+                    certifications: {
+                        sba_vosb: false,
+                        sba_sdvosb: false,
+                        certificationNumbers: []
+                    }
+                }
+            }),
             address1,
             city,
             state,
@@ -98,8 +111,13 @@ export async function POST(request) {
         const verificationLink = `${baseURL}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
         try {
+            // Use Resend's verified domain for development, custom for production
+            const fromEmail = process.env.NODE_ENV === 'production'
+                ? 'Patriot Thanks <noreply@patriotthanks.com>'
+                : 'Patriot Thanks <onboarding@resend.dev>';
+
             await resend.emails.send({
-                from: process.env.FROM_EMAIL || 'noreply@patriotthanks.com',
+                from: fromEmail,
                 to: email,
                 subject: 'Welcome to Patriot Thanks - Verify Your Email',
                 html: getWelcomeVerificationEmailHTML(fname, verificationLink, verificationToken),

@@ -35,6 +35,7 @@ export default function SignUp() {
         { value: 'FR', label: 'First Responder' },
         { value: 'SP', label: 'Spouse' },
         { value: 'BO', label: 'Business Owner' },
+        { value: 'VBO', label: 'Veteran Business Owner' },
         { value: 'SU', label: 'Supporter' }
     ];
 
@@ -115,7 +116,7 @@ export default function SignUp() {
         }));
     };
 
-    const requiresBranch = ['VT', 'AD', 'FR', 'SP'].includes(formData.serviceType);
+    const requiresBranch = ['VT', 'AD', 'FR', 'SP', 'VBO'].includes(formData.serviceType);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-800 to-blue-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -228,6 +229,36 @@ export default function SignUp() {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                    )}
+
+                    {/* Veteran Business Owner Information */}
+                    {formData.serviceType === 'VBO' && (
+                        <div className="border-l-4 border-red-600 bg-red-50 p-4 rounded">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-sm font-medium text-red-800">
+                                        Veteran Business Owner Program
+                                    </h3>
+                                    <div className="mt-2 text-sm text-red-700">
+                                        <p>As a Veteran Business Owner, you&#39;ll be able to:</p>
+                                        <ul className="list-disc list-inside mt-2 space-y-1">
+                                            <li>Display the Veteran-Owned Business badge on your listings</li>
+                                            <li>Get priority placement in search results</li>
+                                            <li>Connect with the veteran business community</li>
+                                            <li>Access special resources and support</li>
+                                        </ul>
+                                        <p className="mt-3 font-medium">
+                                            After registration, you&#39;ll be able to verify your veteran status and claim your business(es).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 

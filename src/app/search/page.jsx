@@ -2239,6 +2239,22 @@ export default function SearchPage() {
                                                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">
                                                                                     {business.bname}
                                                                                 </h3>
+                                                                                {/* Veteran-Owned Badge */}
+                                                                                {business.veteranOwned?.isVeteranOwned && (
+                                                                                        <div className="mb-3">
+                                                                                            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                                                                                                <span className="text-red-600 font-bold">🇺🇸</span>
+                                                                                                <span className="text-sm font-semibold text-red-700">
+                                                                Veteran-Owned
+                                                            </span>
+                                                                                                {business.veteranOwned.verificationStatus === 'certified' && (
+                                                                                                        <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                                                                    Certified
+                                                                </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                )}
 
                                                                                 <div className="text-gray-600 mb-4">
                                                                                     <p>{business.address1}</p>

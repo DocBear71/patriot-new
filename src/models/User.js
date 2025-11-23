@@ -34,7 +34,8 @@ const UserSchema = new mongoose.Schema({
     state: String,
     zip: String,
 
-    // Status field - Based on your data: "VT", "AD", "FR", "SP", "BO", "SU" OR "active"/"inactive"
+    // Status field - Based on your data: "VT", "AD", "FR", "SP", "BO", "SU", "VBO" OR "active"/"inactive"
+    // VBO = Veteran Business Owner (combines veteran status with business ownership)
     status: {
         type: String,
         default: 'SU'
@@ -69,6 +70,34 @@ const UserSchema = new mongoose.Schema({
     // NEW: Additional fields (optional)
     serviceType: String, // Maps to status for new registrations
     militaryBranch: String, // Optional
+
+    // Veteran Business Owner Verification
+    veteranBusinessOwner: {
+        isVeteranOwned: {
+            type: Boolean,
+            default: false
+        },
+        verificationStatus: {
+            type: String,
+            enum: ['pending', 'verified', 'denied', 'not_applicable'],
+            default: 'not_applicable'
+        },
+        verificationDate: Date,
+        verificationDocuments: [{
+            documentType: String, // 'dd214', 'va_card', 'business_license', etc.
+            documentUrl: String,
+            uploadedAt: Date
+        }],
+        businessIds: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Business'
+        }],
+        certifications: {
+            sba_vosb: Boolean, // SBA Veteran-Owned Small Business
+            sba_sdvosb: Boolean, // Service-Disabled Veteran-Owned Small Business
+            certificationNumbers: [String]
+        }
+    },
 
     // Enhanced location for mobile features
     location: {
