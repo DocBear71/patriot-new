@@ -484,29 +484,29 @@ export default function IncentiveAddPage() {
                                     {/* Incentive Available Radio Buttons */}
                                     <div style={{ marginBottom: '20px' }}>
                                         <div style={{ marginBottom: '10px' }}>
-                                            <label style={{ marginRight: '20px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                                 <input
                                                         type="radio"
                                                         name="incentiveAvailable"
                                                         value="true"
                                                         checked={incentiveForm.incentiveAvailable === 'true'}
                                                         onChange={(e) => setIncentiveForm(prev => ({ ...prev, incentiveAvailable: e.target.value }))}
-                                                        style={{ marginRight: '5px' }}
+                                                        style={{ marginRight: '8px', cursor: 'pointer' }}
                                                 />
-                                                Incentive Available <span style={{ color: 'red' }}>*</span>
+                                                <span>Incentive Available <span style={{ color: 'red' }}>*</span></span>
                                             </label>
                                         </div>
                                         <div>
-                                            <label>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                                 <input
                                                         type="radio"
                                                         name="incentiveAvailable"
                                                         value="false"
                                                         checked={incentiveForm.incentiveAvailable === 'false'}
                                                         onChange={(e) => setIncentiveForm(prev => ({ ...prev, incentiveAvailable: e.target.value }))}
-                                                        style={{ marginRight: '5px' }}
+                                                        style={{ marginRight: '8px', cursor: 'pointer' }}
                                                 />
-                                                Incentive NOT Available <span style={{ color: 'red' }}>*</span>
+                                                <span>Incentive NOT Available <span style={{ color: 'red' }}>*</span></span>
                                             </label>
                                         </div>
                                     </div>
@@ -588,31 +588,31 @@ export default function IncentiveAddPage() {
 
                                                 {/* Discount Type */}
                                                 <div style={{ marginBottom: '20px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '10px' }}>Discount Type</label>
+                                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Discount Type</label>
                                                     <div style={{ marginBottom: '10px' }}>
-                                                        <label style={{ marginRight: '20px' }}>
+                                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                                             <input
                                                                     type="radio"
                                                                     name="discountType"
                                                                     value="percentage"
                                                                     checked={incentiveForm.discountType === 'percentage'}
                                                                     onChange={(e) => setIncentiveForm(prev => ({ ...prev, discountType: e.target.value }))}
-                                                                    style={{ marginRight: '5px' }}
+                                                                    style={{ marginRight: '8px', cursor: 'pointer' }}
                                                             />
-                                                            Percentage (%)
+                                                            <span>Percentage (%)</span>
                                                         </label>
                                                     </div>
                                                     <div>
-                                                        <label>
+                                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                                             <input
                                                                     type="radio"
                                                                     name="discountType"
                                                                     value="dollar"
                                                                     checked={incentiveForm.discountType === 'dollar'}
                                                                     onChange={(e) => setIncentiveForm(prev => ({ ...prev, discountType: e.target.value }))}
-                                                                    style={{ marginRight: '5px' }}
+                                                                    style={{ marginRight: '8px', cursor: 'pointer' }}
                                                             />
-                                                            Dollar Amount ($)
+                                                            <span>Dollar Amount ($)</span>
                                                         </label>
                                                     </div>
                                                 </div>

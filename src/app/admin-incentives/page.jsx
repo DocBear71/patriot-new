@@ -118,7 +118,7 @@ export default function AdminIncentivesPage() {
             setIncentiveForm({
                 business_id: incentive.business_id || '',
                 is_available: incentive.is_available !== false,
-                type: incentive.type || '',
+                eligible_categories: incentive.eligible_categories || [],
                 amount: incentive.amount || '',
                 information: incentive.information || '',
                 other_description: incentive.other_description || ''
@@ -128,7 +128,7 @@ export default function AdminIncentivesPage() {
             setIncentiveForm({
                 business_id: '',
                 is_available: true,
-                type: '',
+                eligible_categories: [],
                 amount: '',
                 information: '',
                 other_description: ''
@@ -154,13 +154,15 @@ export default function AdminIncentivesPage() {
         if (!incentiveForm.business_id) errors.push('Please select a business');
 
         if (incentiveForm.is_available) {
-            if (!incentiveForm.type) errors.push('Please select an incentive type');
+            if (!incentiveForm.eligible_categories || incentiveForm.eligible_categories.length === 0) {
+                errors.push('Please select at least one eligible category');
+            }
             if (!incentiveForm.amount || isNaN(parseFloat(incentiveForm.amount))) {
                 errors.push('Please enter a valid incentive amount');
             }
             if (!incentiveForm.information.trim()) errors.push('Please provide incentive information');
-            if (incentiveForm.type === 'OT' && !incentiveForm.other_description.trim()) {
-                errors.push('Please provide a description for the "Other" incentive type');
+            if (incentiveForm.eligible_categories.includes('OT') && !incentiveForm.other_description.trim()) {
+                errors.push('Please provide a description for the "Other" category');
             }
         }
 
@@ -764,9 +766,9 @@ export default function AdminIncentivesPage() {
                                                         name="is_available"
                                                         checked={incentiveForm.is_available === true}
                                                         onChange={() => handleIncentiveFormChange({ target: { name: 'is_available', value: true, type: 'radio' }})}
-                                                        style={{ marginRight: '8px' }}
+                                                        style={{ marginRight: '10px', cursor: 'pointer' }}
                                                 />
-                                                Available
+                                                <span>Available</span>
                                             </label>
                                             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                                 <input
@@ -774,52 +776,60 @@ export default function AdminIncentivesPage() {
                                                         name="is_available"
                                                         checked={incentiveForm.is_available === false}
                                                         onChange={() => handleIncentiveFormChange({ target: { name: 'is_available', value: false, type: 'radio' }})}
-                                                        style={{ marginRight: '8px' }}
+                                                        style={{ marginRight: '10px', cursor: 'pointer' }}
                                                 />
-                                                Not Available
+                                                <span>Not Available</span>
                                             </label>
                                         </div>
                                     </div>
 
                                     {incentiveForm.is_available && (
                                             <>
-                                                <div style={{ marginBottom: '15px' }}>
-                                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                                        Incentive Type *
+                                                <div style={{ marginBottom: '20px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                                                        Eligible Categories <span style={{ color: 'red' }}>*</span>
                                                     </label>
-                                                    <select
-                                                            name="type"
-                                                            value={incentiveForm.type}
-                                                            onChange={handleIncentiveFormChange}
-                                                            required={incentiveForm.is_available}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '8px',
-                                                                border: '1px solid #ddd',
-                                                                borderRadius: '4px'
-                                                            }}
-                                                    >
-                                                        <option value="">Select Type</option>
-                                                        {incentiveTypes.map(type => (
-                                                                <option key={type.value} value={type.value}>
-                                                                    {type.label}
-                                                                </option>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginLeft: '10px' }}>
+                                                        {incentiveTypes.map(category => (
+                                                                <label key={category.value} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                                    <input
+                                                                            type="checkbox"
+                                                                            value={category.value}
+                                                                            checked={incentiveForm.eligible_categories.includes(category.value)}
+                                                                            onChange={(e) => {
+                                                                                const value = e.target.value;
+                                                                                setIncentiveForm(prev => ({
+                                                                                    ...prev,
+                                                                                    eligible_categories: e.target.checked
+                                                                                            ? [...prev.eligible_categories, value]
+                                                                                            : prev.eligible_categories.filter(cat => cat !== value)
+                                                                                }));
+                                                                            }}
+                                                                            style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                                                                    />
+                                                                    <span>{category.label}</span>
+                                                                </label>
                                                         ))}
-                                                    </select>
+                                                    </div>
+                                                    {incentiveForm.eligible_categories.length === 0 && (
+                                                            <small style={{ color: '#dc3545', display: 'block', marginTop: '5px' }}>
+                                                                Please select at least one category
+                                                            </small>
+                                                    )}
                                                 </div>
 
-                                                {incentiveForm.type === 'OT' && (
+                                                {incentiveForm.eligible_categories.includes('OT') && (
                                                         <div style={{ marginBottom: '15px' }}>
                                                             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                                                Other Description *
+                                                                Please Describe <span style={{ color: 'red' }}>*</span>
                                                             </label>
                                                             <input
                                                                     type="text"
                                                                     name="other_description"
                                                                     value={incentiveForm.other_description}
                                                                     onChange={handleIncentiveFormChange}
-                                                                    placeholder="Describe the incentive type"
-                                                                    required={incentiveForm.type === 'OT'}
+                                                                    placeholder="Describe the incentive category..."
+                                                                    required={incentiveForm.eligible_categories.includes('OT')}
                                                                     style={{
                                                                         width: '100%',
                                                                         padding: '8px',
