@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
+import Link from 'next/link';
 
 export default function BusinessAddPage() {
     const { data: session, status } = useSession();
