@@ -274,7 +274,19 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Additional Quick Actions */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <Link
+                                    href="/admin/veteran-verification"
+                                    className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
+                            >
+                                <div className="text-red-600 mb-2 group-hover:text-red-700">
+                                    <svg className="h-8 w-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                    </svg>
+                                </div>
+                                <h3 className="font-semibold text-gray-900 group-hover:text-red-900">Veteran Verification</h3>
+                            </Link>
+
                             <Link
                                     href="/admin-code-management"
                                     className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
@@ -300,24 +312,12 @@ export default function AdminDashboard() {
                             </Link>
 
                             <Link
-                                    href="#"
-                                    className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
-                            >
-                                <div className="text-gray-500 mb-2 group-hover:text-gray-600">
-                                    <svg className="h-8 w-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z" />
-                                    </svg>
-                                </div>
-                                <h3 className="font-semibold text-gray-900 group-hover:text-gray-800">Analytics</h3>
-                            </Link>
-
-                            <Link
                                     href="/admin/coordinate-fix"
                                     className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-center group"
                             >
                                 <div className="text-gray-500 mb-2 group-hover:text-gray-600">
                                     <svg className="h-8 w-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
                                     </svg>
                                 </div>
                                 <h3 className="font-semibold text-gray-900 group-hover:text-gray-800">Coordinate Fix</h3>
