@@ -9,11 +9,18 @@ export async function GET(request) {
     try {
         const url = new URL(request.url);
         const address = url.searchParams.get('address');
+        const lat = url.searchParams.get('lat');
+        const lng = url.searchParams.get('lng');
+
+        // Check if this is a reverse geocoding request (coordinates to address)
+        if (lat && lng) {
+            return handleReverseGeocode(lat, lng);
+        }
 
         if (!address) {
             return NextResponse.json({
                 success: false,
-                message: 'Address parameter is required'
+                message: 'Address parameter or lat/lng coordinates are required'
             }, { status: 400 });
         }
 
@@ -180,6 +187,58 @@ export async function PUT(request) {
         success: false,
         message: 'PUT method not supported for geocode API'
     }, { status: 405 });
+}
+
+/**
+ * Handle reverse geocoding - coordinates to address
+ */
+async function handleReverseGeocode(lat, lng) {
+    try {
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+        if (!apiKey) {
+            console.error('Google Maps API key is not configured');
+            return NextResponse.json({
+                success: false,
+                message: 'Server configuration error: Google Maps API key is missing'
+            }, { status: 500 });
+        }
+
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+
+        console.log(`Reverse geocoding coordinates: ${lat}, ${lng}`);
+
+        const response = await axios.get(geocodeUrl);
+
+        if (response.data.status === 'OK' && response.data.results.length > 0) {
+            const result = response.data.results[0];
+
+            return NextResponse.json({
+                success: true,
+                formatted_address: result.formatted_address,
+                address_components: result.address_components,
+                location: {
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng)
+                },
+                place_id: result.place_id
+            });
+        } else {
+            console.warn(`Reverse geocoding failed with status: ${response.data.status}`);
+            return NextResponse.json({
+                success: false,
+                message: `Reverse geocoding failed: ${response.data.status}`,
+                error: response.data.error_message || 'No results found'
+            }, { status: 404 });
+        }
+    } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Server error while reverse geocoding',
+            error: error.message
+        }, { status: 500 });
+    }
 }
 
 /**

@@ -160,18 +160,21 @@ export default function SearchPage() {
             const mapContainer = document.getElementById('map');
             if (!mapContainer || !window.google) return;
 
+            // Use the new single-object initialization format
             const newMap = new window.google.maps.Map(mapContainer, {
                 center: mapConfig.center,
                 zoom: mapConfig.zoom,
                 mapId: mapConfig.mapId,
+                controlSize: 28,
                 disableDefaultUI: false,
                 zoomControl: true,
                 mapTypeControl: false,
                 scaleControl: true,
                 streetViewControl: false,
                 rotateControl: false,
-                fullscreenControl: true
-                // Note: POI visibility is controlled via the Cloud Console for maps with mapId
+                fullscreenControl: true,
+                gestureHandling: 'auto',
+                clickableIcons: true
             });
 
             const newInfoWindow = new window.google.maps.InfoWindow({
@@ -270,6 +273,133 @@ export default function SearchPage() {
         setMarkers([]);
     };
 
+    // Get appropriate icon based on business type
+    const getBusinessIcon = (business) => {
+        const type = (business.type || '').toUpperCase();
+
+        // Map business types to icons
+        const iconMap = {
+            'RESTAURANT': '🍽️',
+            'FOOD': '🍴',
+            'CAFE': '☕',
+            'COFFEE': '☕',
+            'BAR': '🍺',
+            'HOTEL': '🏨',
+            'LODGING': '🛏️',
+            'GAS': '⛽',
+            'FUEL': '⛽',
+            'AUTO': '🚗',
+            'CAR': '🚗',
+            'REPAIR': '🔧',
+            'MECHANIC': '🔧',
+            'RETAIL': '🛒',
+            'STORE': '🏪',
+            'SHOP': '🏪',
+            'GROCERY': '🛒',
+            'SUPERMARKET': '🛒',
+            'PHARMACY': '💊',
+            'MEDICAL': '🏥',
+            'HOSPITAL': '🏥',
+            'DOCTOR': '👨‍⚕️',
+            'DENTIST': '🦷',
+            'HEALTH': '❤️',
+            'FITNESS': '💪',
+            'GYM': '🏋️',
+            'BANK': '🏦',
+            'FINANCE': '💰',
+            'INSURANCE': '🛡️',
+            'SALON': '💇',
+            'BARBER': '💈',
+            'SPA': '💆',
+            'BEAUTY': '💄',
+            'EDUCATION': '🎓',
+            'SCHOOL': '🏫',
+            'LIBRARY': '📚',
+            'ENTERTAINMENT': '🎭',
+            'MOVIE': '🎬',
+            'THEATER': '🎭',
+            'PARK': '🌳',
+            'RECREATION': '⚽',
+            'SPORTS': '🏆',
+            'PET': '🐾',
+            'VETERINARY': '🐕',
+            'VET': '🐕',
+            'HOME': '🏠',
+            'HARDWARE': '🔨',
+            'CONSTRUCTION': '🏗️',
+            'FURNITURE': '🛋️',
+            'CLOTHING': '👔',
+            'APPAREL': '👕',
+            'SHOES': '👞',
+            'JEWELRY': '💎',
+            'ELECTRONICS': '📱',
+            'COMPUTER': '💻',
+            'TECH': '💻',
+            'OFFICE': '🏢',
+            'PRINTING': '🖨️',
+            'SHIPPING': '📦',
+            'STORAGE': '📦',
+            'MOVING': '🚚',
+            'TRANSPORTATION': '🚌',
+            'TAXI': '🚕',
+            'TRAVEL': '✈️',
+            'TOURISM': '🗺️',
+            'REAL_ESTATE': '🏘️',
+            'LEGAL': '⚖️',
+            'LAW': '⚖️',
+            'ACCOUNTING': '📊',
+            'CLEANING': '🧹',
+            'LAUNDRY': '👕',
+            'DRY_CLEANING': '👔',
+            'FLORIST': '💐',
+            'FLOWERS': '🌸',
+            'BAKERY': '🥖',
+            'PIZZA': '🍕',
+            'BURGER': '🍔',
+            'MEXICAN': '🌮',
+            'CHINESE': '🥡',
+            'JAPANESE': '🍱',
+            'ITALIAN': '🍝',
+            'BBQ': '🍖',
+            'SEAFOOD': '🦞',
+            'ICE_CREAM': '🍦',
+            'DESSERT': '🍰',
+            'CONVENIENCE': '🏪',
+            'LIQUOR': '🍷',
+            'WINE': '🍷',
+            'BREWERY': '🍺',
+            'FAST_FOOD': '🍔',
+            'BUFFET': '🍽️',
+            'DINER': '🍳',
+            'OTHER': '🏢'
+        };
+
+        // Try to match the business type
+        for (const [key, icon] of Object.entries(iconMap)) {
+            if (type.includes(key)) {
+                return icon;
+            }
+        }
+
+        // Check business name for common patterns if type doesn't match
+        const name = (business.bname || business.name || '').toUpperCase();
+
+        if (name.includes('MCDONALD') || name.includes('BURGER') || name.includes('WENDY')) return '🍔';
+        if (name.includes('PIZZA')) return '🍕';
+        if (name.includes('TACO') || name.includes('MEXICAN')) return '🌮';
+        if (name.includes('COFFEE') || name.includes('STARBUCKS')) return '☕';
+        if (name.includes('HOTEL') || name.includes('INN')) return '🏨';
+        if (name.includes('GAS') || name.includes('SHELL') || name.includes('EXXON')) return '⛽';
+        if (name.includes('BANK') || name.includes('CREDIT UNION')) return '🏦';
+        if (name.includes('WALMART') || name.includes('TARGET') || name.includes('STORE')) return '🏪';
+        if (name.includes('GYM') || name.includes('FITNESS')) return '🏋️';
+        if (name.includes('SALON') || name.includes('BARBER')) return '💇';
+        if (name.includes('AUTO') || name.includes('CAR')) return '🚗';
+
+        // Default icon for businesses
+        return '🏢';
+    };
+
     // Create marker for a business
     const createBusinessMarker = async (business, businessType) => {
         if (!map || !business) return null;
@@ -325,6 +455,10 @@ export default function SearchPage() {
                 console.log(`⚠️ DEFAULT RED marker for: ${business.bname}`);
             }
 
+            // Get the appropriate icon for this business
+            const businessIcon = getBusinessIcon(business);
+            console.log(`📍 Icon for ${business.bname}: ${businessIcon} (type: ${business.type})`);
+
             // ALWAYS try to use AdvancedMarkerElement with custom HTML
             try {
                 // Import the marker library if not already imported
@@ -338,141 +472,12 @@ export default function SearchPage() {
                 const pinElement = document.createElement('div');
                 pinElement.className = `custom-marker-pin ${markerClass}`;
                 pinElement.style.cssText = `
-                position: relative;
-                width: 40px;
-                height: 48px;
-                cursor: pointer;
-                transform-origin: center center;
-            `;
-
-                // Get appropriate icon based on business type
-                const getBusinessIcon = (business) => {
-                    const type = (business.type || '').toUpperCase();
-
-                    // Map business types to icons
-                    const iconMap = {
-                        'RESTAURANT': '🍽️',
-                        'FOOD': '🍴',
-                        'CAFE': '☕',
-                        'COFFEE': '☕',
-                        'BAR': '🍺',
-                        'HOTEL': '🏨',
-                        'LODGING': '🛏️',
-                        'GAS': '⛽',
-                        'FUEL': '⛽',
-                        'AUTO': '🚗',
-                        'CAR': '🚗',
-                        'REPAIR': '🔧',
-                        'MECHANIC': '🔧',
-                        'RETAIL': '🛒',
-                        'STORE': '🏪',
-                        'SHOP': '🏪',
-                        'GROCERY': '🛒',
-                        'SUPERMARKET': '🛒',
-                        'PHARMACY': '💊',
-                        'MEDICAL': '🏥',
-                        'HOSPITAL': '🏥',
-                        'DOCTOR': '👨‍⚕️',
-                        'DENTIST': '🦷',
-                        'HEALTH': '❤️',
-                        'FITNESS': '💪',
-                        'GYM': '🏋️',
-                        'BANK': '🏦',
-                        'FINANCE': '💰',
-                        'INSURANCE': '🛡️',
-                        'SALON': '💇',
-                        'BARBER': '💈',
-                        'SPA': '💆',
-                        'BEAUTY': '💄',
-                        'EDUCATION': '🎓',
-                        'SCHOOL': '🏫',
-                        'LIBRARY': '📚',
-                        'ENTERTAINMENT': '🎭',
-                        'MOVIE': '🎬',
-                        'THEATER': '🎭',
-                        'PARK': '🌳',
-                        'RECREATION': '⚽',
-                        'SPORTS': '🏆',
-                        'PET': '🐾',
-                        'VETERINARY': '🐕',
-                        'VET': '🐕',
-                        'HOME': '🏠',
-                        'HARDWARE': '🔨',
-                        'CONSTRUCTION': '🏗️',
-                        'FURNITURE': '🛋️',
-                        'CLOTHING': '👔',
-                        'APPAREL': '👕',
-                        'SHOES': '👞',
-                        'JEWELRY': '💎',
-                        'ELECTRONICS': '📱',
-                        'COMPUTER': '💻',
-                        'TECH': '💻',
-                        'OFFICE': '🏢',
-                        'PRINTING': '🖨️',
-                        'SHIPPING': '📦',
-                        'STORAGE': '📦',
-                        'MOVING': '🚚',
-                        'TRANSPORTATION': '🚌',
-                        'TAXI': '🚕',
-                        'TRAVEL': '✈️',
-                        'TOURISM': '🗺️',
-                        'REAL_ESTATE': '🏘️',
-                        'LEGAL': '⚖️',
-                        'LAW': '⚖️',
-                        'ACCOUNTING': '📊',
-                        'CLEANING': '🧹',
-                        'LAUNDRY': '👕',
-                        'DRY_CLEANING': '👔',
-                        'FLORIST': '💐',
-                        'FLOWERS': '🌸',
-                        'BAKERY': '🥖',
-                        'PIZZA': '🍕',
-                        'BURGER': '🍔',
-                        'MEXICAN': '🌮',
-                        'CHINESE': '🥡',
-                        'JAPANESE': '🍱',
-                        'ITALIAN': '🍝',
-                        'BBQ': '🍖',
-                        'SEAFOOD': '🦞',
-                        'ICE_CREAM': '🍦',
-                        'DESSERT': '🍰',
-                        'CONVENIENCE': '🏪',
-                        'LIQUOR': '🍷',
-                        'WINE': '🍷',
-                        'BREWERY': '🍺',
-                        'FAST_FOOD': '🍔',
-                        'BUFFET': '🍽️',
-                        'DINER': '🍳',
-                        'OTHER': '🏢'
-                    };
-
-                    // Try to match the business type
-                    for (const [key, icon] of Object.entries(iconMap)) {
-                        if (type.includes(key)) {
-                            return icon;
-                        }
-                    }
-
-                    // Check business name for common patterns if type doesn't match
-                    const name = (business.bname || business.name || '').toUpperCase();
-
-                    if (name.includes('MCDONALD') || name.includes('BURGER') || name.includes('WENDY')) return '🍔';
-                    if (name.includes('PIZZA')) return '🍕';
-                    if (name.includes('TACO') || name.includes('MEXICAN')) return '🌮';
-                    if (name.includes('COFFEE') || name.includes('STARBUCKS')) return '☕';
-                    if (name.includes('HOTEL') || name.includes('INN')) return '🏨';
-                    if (name.includes('GAS') || name.includes('SHELL') || name.includes('EXXON')) return '⛽';
-                    if (name.includes('BANK') || name.includes('CREDIT UNION')) return '🏦';
-                    if (name.includes('WALMART') || name.includes('TARGET') || name.includes('STORE')) return '🏪';
-                    if (name.includes('GYM') || name.includes('FITNESS')) return '🏋️';
-                    if (name.includes('SALON') || name.includes('BARBER')) return '💇';
-                    if (name.includes('AUTO') || name.includes('CAR')) return '🚗';
-
-                    // Default icon for businesses
-                    return '🏢';
-                };
-
-                const businessIcon = getBusinessIcon(business);
+                    position: relative;
+                    width: 40px;
+                    height: 48px;
+                    cursor: pointer;
+                    transform-origin: center center;
+                `;
 
                 pinElement.innerHTML = `
                     <div style="
@@ -1314,118 +1319,6 @@ export default function SearchPage() {
         }
     };
 
-    // Handle "Use My Location" button
-    const handleUseMyLocation = async () => {
-        setGettingLocation(true);
-
-        try {
-            // Check if geolocation is supported
-            if (!navigator.geolocation) {
-                alert('Geolocation is not supported by your browser. Please enter your location manually.');
-                setGettingLocation(false);
-                return;
-            }
-
-            // Request user's location
-            navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const { latitude, longitude } = position.coords;
-                        console.log('📍 Got user location:', { latitude, longitude });
-
-                        // Reverse geocode to get address
-                        try {
-                            if (window.google && window.google.maps) {
-                                const geocoder = new window.google.maps.Geocoder();
-                                const latlng = { lat: latitude, lng: longitude };
-
-                                geocoder.geocode({ location: latlng }, async (results, status) => {
-                                    if (status === 'OK' && results[0]) {
-                                        // Extract city, state, and zip from the result
-                                        let city = '';
-                                        let state = '';
-                                        let zip = '';
-
-                                        results[0].address_components.forEach(component => {
-                                            if (component.types.includes('locality')) {
-                                                city = component.long_name;
-                                            }
-                                            if (component.types.includes('administrative_area_level_1')) {
-                                                state = component.short_name;
-                                            }
-                                            if (component.types.includes('postal_code')) {
-                                                zip = component.long_name;
-                                            }
-                                        });
-
-                                        // Format as "City, State Zip" or just use formatted_address
-                                        const formattedLocation = city && state
-                                                ? `${city}, ${state}${zip ? ' ' + zip : ''}`
-                                                : results[0].formatted_address;
-
-                                        console.log('✅ Reverse geocoded to:', formattedLocation);
-
-                                        // Update the address field
-                                        setSearchData(prev => ({
-                                            ...prev,
-                                            address: formattedLocation
-                                        }));
-
-                                        setGettingLocation(false);
-
-                                        // Optionally auto-trigger search
-                                        // Uncomment the next line if you want to automatically search after getting location
-                                        // document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                                    } else {
-                                        console.error('Reverse geocoding failed:', status);
-                                        alert('Could not determine your address. Please enter it manually.');
-                                        setGettingLocation(false);
-                                    }
-                                });
-                            } else {
-                                console.error('Google Maps not loaded');
-                                alert('Maps service not ready. Please try again or enter your location manually.');
-                                setGettingLocation(false);
-                            }
-                        } catch (error) {
-                            console.error('Reverse geocoding error:', error);
-                            alert('Error determining your address. Please enter it manually.');
-                            setGettingLocation(false);
-                        }
-                    },
-                    (error) => {
-                        console.error('Geolocation error:', error);
-                        let errorMessage = 'Could not get your location. ';
-
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage += 'Please enable location permissions in your browser settings.';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage += 'Location information is unavailable.';
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage += 'Location request timed out.';
-                                break;
-                            default:
-                                errorMessage += 'Please enter your location manually.';
-                        }
-
-                        alert(errorMessage);
-                        setGettingLocation(false);
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
-            );
-        } catch (error) {
-            console.error('Error getting location:', error);
-            alert('Error accessing location services. Please enter your location manually.');
-            setGettingLocation(false);
-        }
-    };
-
     // Handle search
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -1647,6 +1540,103 @@ export default function SearchPage() {
             ...prev,
             [e.target.name]: e.target.value
         }));
+    };
+
+    const handleUseMyLocation = () => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        // Show loading state
+        setSearchData(prev => ({
+            ...prev,
+            address: 'Getting your location...'
+        }));
+
+        navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+
+                    try {
+                        // Reverse geocode to get address
+                        const response = await fetch(
+                                `/api/geocode?lat=${latitude}&lng=${longitude}`
+                        );
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.formatted_address) {
+                                // Extract city and state from formatted address
+                                const addressParts = data.formatted_address.split(',');
+                                let cityState = '';
+
+                                if (addressParts.length >= 3) {
+                                    // Format: "City, State Zip, Country"
+                                    const city = addressParts[0].trim();
+                                    const stateZip = addressParts[1].trim();
+                                    const state = stateZip.split(' ')[0]; // Get state abbreviation
+                                    cityState = `${city}, ${state}`;
+                                } else {
+                                    cityState = data.formatted_address;
+                                }
+
+                                setSearchData(prev => ({
+                                    ...prev,
+                                    address: cityState
+                                }));
+                            } else {
+                                // Fallback to coordinates
+                                setSearchData(prev => ({
+                                    ...prev,
+                                    address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                                }));
+                            }
+                        } else {
+                            // Use coordinates as fallback
+                            setSearchData(prev => ({
+                                ...prev,
+                                address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('Reverse geocoding error:', error);
+                        // Use coordinates as fallback
+                        setSearchData(prev => ({
+                            ...prev,
+                            address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                        }));
+                    }
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    setSearchData(prev => ({
+                        ...prev,
+                        address: ''
+                    }));
+
+                    let errorMessage = 'Unable to get your location. ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Please enable location permissions.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMessage += 'Please try again.';
+                    }
+                    alert(errorMessage);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+        );
     };
 
     return (
@@ -1992,21 +1982,17 @@ export default function SearchPage() {
                                                         name="address"
                                                         value={searchData.address}
                                                         onChange={handleInputChange}
-                                                        className="w-full px-3 py-2 pr-32 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="e.g. 52402, Cedar Rapids IA, Portland OR, 1234 Main St"
+                                                        className="w-full px-3 py-2 pr-24 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="e.g. 52402, Cedar Rapids IA, Portland OR"
+                                                        style={{ paddingRight: '100px' }}
                                                 />
                                                 <button
                                                         type="button"
                                                         onClick={handleUseMyLocation}
-                                                        disabled={loading}
-                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-800 text-sm font-medium whitespace-nowrap bg-white px-2 py-1 rounded border border-blue-300 hover:border-blue-500"
                                                         title="Use my current location"
                                                 >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                    Near Me
+                                                    📍 Near Me
                                                 </button>
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">Street address, city with state (Portland OR), or zip code</p>
