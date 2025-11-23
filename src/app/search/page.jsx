@@ -345,6 +345,135 @@ export default function SearchPage() {
                 transform-origin: center center;
             `;
 
+                // Get appropriate icon based on business type
+                const getBusinessIcon = (business) => {
+                    const type = (business.type || '').toUpperCase();
+
+                    // Map business types to icons
+                    const iconMap = {
+                        'RESTAURANT': '🍽️',
+                        'FOOD': '🍴',
+                        'CAFE': '☕',
+                        'COFFEE': '☕',
+                        'BAR': '🍺',
+                        'HOTEL': '🏨',
+                        'LODGING': '🛏️',
+                        'GAS': '⛽',
+                        'FUEL': '⛽',
+                        'AUTO': '🚗',
+                        'CAR': '🚗',
+                        'REPAIR': '🔧',
+                        'MECHANIC': '🔧',
+                        'RETAIL': '🛒',
+                        'STORE': '🏪',
+                        'SHOP': '🏪',
+                        'GROCERY': '🛒',
+                        'SUPERMARKET': '🛒',
+                        'PHARMACY': '💊',
+                        'MEDICAL': '🏥',
+                        'HOSPITAL': '🏥',
+                        'DOCTOR': '👨‍⚕️',
+                        'DENTIST': '🦷',
+                        'HEALTH': '❤️',
+                        'FITNESS': '💪',
+                        'GYM': '🏋️',
+                        'BANK': '🏦',
+                        'FINANCE': '💰',
+                        'INSURANCE': '🛡️',
+                        'SALON': '💇',
+                        'BARBER': '💈',
+                        'SPA': '💆',
+                        'BEAUTY': '💄',
+                        'EDUCATION': '🎓',
+                        'SCHOOL': '🏫',
+                        'LIBRARY': '📚',
+                        'ENTERTAINMENT': '🎭',
+                        'MOVIE': '🎬',
+                        'THEATER': '🎭',
+                        'PARK': '🌳',
+                        'RECREATION': '⚽',
+                        'SPORTS': '🏆',
+                        'PET': '🐾',
+                        'VETERINARY': '🐕',
+                        'VET': '🐕',
+                        'HOME': '🏠',
+                        'HARDWARE': '🔨',
+                        'CONSTRUCTION': '🏗️',
+                        'FURNITURE': '🛋️',
+                        'CLOTHING': '👔',
+                        'APPAREL': '👕',
+                        'SHOES': '👞',
+                        'JEWELRY': '💎',
+                        'ELECTRONICS': '📱',
+                        'COMPUTER': '💻',
+                        'TECH': '💻',
+                        'OFFICE': '🏢',
+                        'PRINTING': '🖨️',
+                        'SHIPPING': '📦',
+                        'STORAGE': '📦',
+                        'MOVING': '🚚',
+                        'TRANSPORTATION': '🚌',
+                        'TAXI': '🚕',
+                        'TRAVEL': '✈️',
+                        'TOURISM': '🗺️',
+                        'REAL_ESTATE': '🏘️',
+                        'LEGAL': '⚖️',
+                        'LAW': '⚖️',
+                        'ACCOUNTING': '📊',
+                        'CLEANING': '🧹',
+                        'LAUNDRY': '👕',
+                        'DRY_CLEANING': '👔',
+                        'FLORIST': '💐',
+                        'FLOWERS': '🌸',
+                        'BAKERY': '🥖',
+                        'PIZZA': '🍕',
+                        'BURGER': '🍔',
+                        'MEXICAN': '🌮',
+                        'CHINESE': '🥡',
+                        'JAPANESE': '🍱',
+                        'ITALIAN': '🍝',
+                        'BBQ': '🍖',
+                        'SEAFOOD': '🦞',
+                        'ICE_CREAM': '🍦',
+                        'DESSERT': '🍰',
+                        'CONVENIENCE': '🏪',
+                        'LIQUOR': '🍷',
+                        'WINE': '🍷',
+                        'BREWERY': '🍺',
+                        'FAST_FOOD': '🍔',
+                        'BUFFET': '🍽️',
+                        'DINER': '🍳',
+                        'OTHER': '🏢'
+                    };
+
+                    // Try to match the business type
+                    for (const [key, icon] of Object.entries(iconMap)) {
+                        if (type.includes(key)) {
+                            return icon;
+                        }
+                    }
+
+                    // Check business name for common patterns if type doesn't match
+                    const name = (business.bname || business.name || '').toUpperCase();
+
+                    if (name.includes('MCDONALD') || name.includes('BURGER') || name.includes('WENDY')) return '🍔';
+                    if (name.includes('PIZZA')) return '🍕';
+                    if (name.includes('TACO') || name.includes('MEXICAN')) return '🌮';
+                    if (name.includes('COFFEE') || name.includes('STARBUCKS')) return '☕';
+                    if (name.includes('HOTEL') || name.includes('INN')) return '🏨';
+                    if (name.includes('GAS') || name.includes('SHELL') || name.includes('EXXON')) return '⛽';
+                    if (name.includes('BANK') || name.includes('CREDIT UNION')) return '🏦';
+                    if (name.includes('WALMART') || name.includes('TARGET') || name.includes('STORE')) return '🏪';
+                    if (name.includes('GYM') || name.includes('FITNESS')) return '🏋️';
+                    if (name.includes('SALON') || name.includes('BARBER')) return '💇';
+                    if (name.includes('AUTO') || name.includes('CAR')) return '🚗';
+
+                    // Default icon for businesses
+                    return '🏢';
+                };
+
+                const businessIcon = getBusinessIcon(business);
+
                 pinElement.innerHTML = `
                     <div style="
                         position: absolute;
@@ -366,7 +495,7 @@ export default function SearchPage() {
                             text-shadow: 0 1px 2px rgba(0,0,0,0.3);
                             margin-top: -4px;
                             margin-left: -4px;
-                        ">🏢</div>
+                        ">${businessIcon}</div>
                     </div>
                 `;
 

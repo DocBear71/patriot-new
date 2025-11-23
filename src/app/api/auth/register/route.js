@@ -113,7 +113,7 @@ export async function POST(request) {
         try {
             // Use Resend's verified domain for development, custom for production
             const fromEmail = process.env.NODE_ENV === 'production'
-                ? 'Patriot Thanks <noreply@patriotthanks.com>'
+                ? 'Patriot Thanks <send@patriotthanks.com>'
                 : 'Patriot Thanks <onboarding@resend.dev>';
 
             await resend.emails.send({

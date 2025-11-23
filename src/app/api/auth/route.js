@@ -719,7 +719,7 @@ async function handleForgotPassword(request) {
         try {
             // Send email using Resend
             const emailResult = await resend.emails.send({
-                from: process.env.FROM_EMAIL || 'noreply@patriotthanks.com',
+                from: process.env.FROM_EMAIL || 'send@patriotthanks.com',
                 to: email,
                 subject: 'Patriot Thanks - Password Reset Request',
                 html: `
@@ -874,7 +874,7 @@ async function handleResendVerification(request) {
 
         try {
             await resend.emails.send({
-                from: process.env.FROM_EMAIL || 'noreply@patriotthanks.com',
+                from: process.env.FROM_EMAIL || 'send@patriotthanks.com',
                 to: email,
                 subject: 'Patriot Thanks - Verify Your Email',
                 html: `

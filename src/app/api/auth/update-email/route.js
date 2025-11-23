@@ -96,7 +96,7 @@ export async function POST(request) {
 
         try {
             await resend.emails.send({
-                from: process.env.FROM_EMAIL || 'noreply@patriotthanks.com',
+                from: process.env.FROM_EMAIL || 'send@patriotthanks.com',
                 to: normalizedNewEmail,
                 subject: 'Verify Your New Email - Patriot Thanks',
                 html: `

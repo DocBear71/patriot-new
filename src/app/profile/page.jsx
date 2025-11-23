@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Navigation from '../../components/layout/Navigation';
+import user from '../../models/User';
 
 export default function ProfilePage() {
     const router = useRouter();
