@@ -478,13 +478,55 @@ export default function BusinessDetailPage() {
                                                 {business.bname}
                                             </h1>
 
-                                            {/* Chain Badges */}
+                                            {/* Chain Badges and Veteran-Owned Status */}
                                             <div style={{
                                                 display: 'flex',
                                                 gap: '10px',
                                                 flexWrap: 'wrap',
                                                 marginBottom: '15px',
                                             }}>
+                                                {/* Veteran-Owned Badge - Show prominently if verified or pending */}
+                                                {business.veteranOwned?.isVeteranOwned && (
+                                                        <span style={{
+                                                            padding: '8px 14px',
+                                                            backgroundColor: business.veteranOwned.verificationStatus === 'verified'
+                                                                    ? '#dc2626'
+                                                                    : business.veteranOwned.verificationStatus === 'pending'
+                                                                            ? '#f59e0b'
+                                                                            : '#6b7280',
+                                                            color: 'white',
+                                                            borderRadius: '6px',
+                                                            fontSize: '14px',
+                                                            fontWeight: 'bold',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            border: business.veteranOwned.verificationStatus === 'verified'
+                                                                    ? '2px solid #991b1b'
+                                                                    : 'none',
+                                                        }}>
+                                                            {business.veteranOwned.verificationStatus === 'verified' ? '⭐' : '🎖️'}
+                                                            Veteran-Owned
+                                                            {business.veteranOwned.verificationStatus === 'verified' && ' ✓'}
+                                                            {business.veteranOwned.verificationStatus === 'pending' && ' (Pending)'}
+                                                        </span>
+                                                )}
+
+                                                {/* Featured Badge */}
+                                                {business.veteranOwned?.priority?.isFeatured && (
+                                                        <span style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#fbbf24',
+                                                            color: '#78350f',
+                                                            borderRadius: '6px',
+                                                            fontSize: '13px',
+                                                            fontWeight: 'bold',
+                                                            border: '2px solid #f59e0b',
+                                                        }}>
+                                                            ⭐ Featured
+                                                        </span>
+                                                )}
+
                                                 {business.is_chain && (
                                                         <span style={{
                                                             padding: '6px 12px',
@@ -494,8 +536,8 @@ export default function BusinessDetailPage() {
                                                             fontSize: '13px',
                                                             fontWeight: 'bold',
                                                         }}>
-                                                🏢 Chain Parent
-                                            </span>
+                                                            🏢 Chain Parent
+                                                        </span>
                                                 )}
                                                 {business.chain_id && (
                                                         <span style={{
@@ -506,9 +548,9 @@ export default function BusinessDetailPage() {
                                                             fontSize: '13px',
                                                             fontWeight: 'bold',
                                                         }}>
-                                                📍 Chain Location
+                                                            📍 Chain Location
                                                             {business.chain_name && ` - ${business.chain_name}`}
-                                            </span>
+                                                            </span>
                                                 )}
                                                 {business.type && (
                                                         <span style={{
@@ -520,8 +562,8 @@ export default function BusinessDetailPage() {
                                                             fontSize: '13px',
                                                             fontWeight: 'bold',
                                                         }}>
-                                                {business.type}
-                                            </span>
+                                                            {business.type}
+                                                        </span>
                                                 )}
                                             </div>
                                         </div>
@@ -599,16 +641,75 @@ export default function BusinessDetailPage() {
                                             {business.phone && (
                                                     <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                                                         <span style={{fontSize: '20px'}}>📞</span>
-                                                        <a
-                                                                href={`tel:${business.phone}`}
-                                                                style={{
-                                                                    color: '#007bff',
-                                                                    textDecoration: 'none',
-                                                                    fontWeight: 'bold',
-                                                                }}
+                                                    <a
+                                                        href={`tel:${business.phone}`}
+                                                        style={{
+                                                        color: '#007bff',
+                                                        textDecoration: 'none',
+                                                        fontWeight: 'bold',
+                                                    }}
                                                         >
-                                                            {business.phone}
-                                                        </a>
+                                                        {business.phone}
+                                                    </a>
+                                                </div>
+                                                )}
+
+                                            {/* Veteran-Owned Information Box */}
+                                            {business.veteranOwned?.isVeteranOwned && (
+                                                    <div style={{
+                                                        marginTop: '15px',
+                                                        padding: '15px',
+                                                        backgroundColor: business.veteranOwned.verificationStatus === 'verified'
+                                                                ? '#fef2f2'
+                                                                : '#fef3c7',
+                                                        border: `2px solid ${business.veteranOwned.verificationStatus === 'verified'
+                                                                ? '#dc2626'
+                                                                : '#f59e0b'}`,
+                                                        borderRadius: '8px',
+                                                    }}>
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '10px',
+                                                            marginBottom: '8px',
+                                                        }}>
+                                                        <span style={{fontSize: '24px'}}>
+                                                            {business.veteranOwned.verificationStatus === 'verified' ? '⭐' : '🎖️'}
+                                                        </span>
+                                                            <div>
+                                                                <div style={{
+                                                                    fontWeight: 'bold',
+                                                                    color: business.veteranOwned.verificationStatus === 'verified'
+                                                                            ? '#991b1b'
+                                                                            : '#92400e',
+                                                                    fontSize: '16px',
+                                                                }}>
+                                                                    Veteran-Owned Business
+                                                                    {business.veteranOwned.verificationStatus === 'verified' && ' ✓'}
+                                                                </div>
+                                                                <div style={{
+                                                                    fontSize: '13px',
+                                                                    color: business.veteranOwned.verificationStatus === 'verified'
+                                                                            ? '#991b1b'
+                                                                            : '#92400e',
+                                                                    marginTop: '2px',
+                                                                }}>
+                                                                    {business.veteranOwned.verificationStatus === 'verified'
+                                                                            ? 'Verified veteran ownership'
+                                                                            : business.veteranOwned.verificationStatus === 'pending'
+                                                                                    ? 'Verification pending'
+                                                                                    : 'Self-reported'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <p style={{
+                                                            margin: '8px 0 0 0',
+                                                            fontSize: '14px',
+                                                            lineHeight: '1.5',
+                                                            color: '#374151',
+                                                        }}>
+                                                            This business is owned by a veteran. Support those who served our country by choosing veteran-owned businesses.
+                                                        </p>
                                                     </div>
                                             )}
                                         </div>
@@ -965,6 +1066,22 @@ export default function BusinessDetailPage() {
                                             {chainIncentives.length > 0 && (
                                                     <div>
                                                         <strong>Chain-Wide:</strong> {chainIncentives.length}
+                                                    </div>
+                                            )}
+                                            {business.veteranOwned?.isVeteranOwned && (
+                                                    <div style={{
+                                                        marginTop: '8px',
+                                                        paddingTop: '8px',
+                                                        borderTop: '1px solid #dee2e6',
+                                                    }}>
+                                                        <strong style={{
+                                                            color: business.veteranOwned.verificationStatus === 'verified'
+                                                                    ? '#dc2626'
+                                                                    : '#f59e0b',
+                                                        }}>
+                                                            {business.veteranOwned.verificationStatus === 'verified' ? '⭐' : '🎖️'}
+                                                            Veteran-Owned
+                                                        </strong>
                                                     </div>
                                             )}
                                         </div>
