@@ -2506,248 +2506,254 @@ export default function SearchPage() {
                                                         })()}
 
                                                         {/* Show exact category matches first */}
-                                                        {searchData.category &&
-                                                                filteredResults.some(b => b.isExactMatch) && (
-                                                                        <>
-                                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                                                                    {filteredResults.filter(
-                                                                                            b => b.isExactMatch).
-                                                                                            map((business) => (
-                                                                                                    <div
-                                                                                                            key={business._id}
-                                                                                                            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                                            onClick={() => router.push(`/business/${business._id}`)}
+                                                        {searchData.category && filteredResults.some(b => b.isExactMatch) && (
+                                                                <>
+                                                                    {/* Exact Matches Section */}
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                                                        {filteredResults
+                                                                        .filter(b => b.isExactMatch)
+                                                                        .map((business) => {
+                                                                            // Detect if this is a Google Places result (not in our database)
+                                                                            const isGooglePlace = business.isGooglePlace ||
+                                                                                    !business._id ||
+                                                                                    business._id?.toString().startsWith('google_') ||
+                                                                                    business._id?.toString().startsWith('place_');
+
+                                                                            const isFromDatabase = !isGooglePlace && business._id;
+
+                                                                            return (
+                                                                                    <div
+                                                                                            key={business._id || business.placeId || `google-${Math.random()}`}
+                                                                                            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                                            onClick={() => {
+                                                                                                if (isFromDatabase) {
+                                                                                                    router.push(`/business/${business._id}`);
+                                                                                                }
+                                                                                            }}
+                                                                                            style={{
+                                                                                                cursor: isFromDatabase ? 'pointer' : 'default',
+                                                                                                border: isGooglePlace ? '2px solid #4285F4' : '2px solid #28a745'
+                                                                                            }}
+                                                                                    >
+                                                                                        {/* Status Badge - Database vs Google Places */}
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            alignItems: 'center',
+                                                                                            gap: '8px',
+                                                                                            marginBottom: '12px',
+                                                                                            flexWrap: 'wrap'
+                                                                                        }}>
+                                                                                            {isGooglePlace ? (
+                                                                                                    <span style={{
+                                                                                                        padding: '4px 10px',
+                                                                                                        backgroundColor: '#dbeafe',
+                                                                                                        color: '#1e40af',
+                                                                                                        borderRadius: '12px',
+                                                                                                        fontSize: '0.75rem',
+                                                                                                        fontWeight: '600',
+                                                                                                        display: 'inline-flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '4px'
+                                                                                                    }}>
+                                                                                                        📍 From Google Maps
+                                                                                                    </span>
+                                                                                            ) : (
+                                                                                                    <span style={{
+                                                                                                        padding: '4px 10px',
+                                                                                                        backgroundColor: '#d1fae5',
+                                                                                                        color: '#065f46',
+                                                                                                        borderRadius: '12px',
+                                                                                                        fontSize: '0.75rem',
+                                                                                                        fontWeight: '600',
+                                                                                                        display: 'inline-flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '4px'
+                                                                                                    }}>
+                                                                                                        ✓ In Database
+                                                                                                    </span>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        {/* Business Name and VBO Badge */}
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            alignItems: 'center',
+                                                                                            gap: '8px',
+                                                                                            flexWrap: 'wrap',
+                                                                                            marginBottom: '8px'
+                                                                                        }}>
+                                                                                            <h3 className="text-xl font-bold text-gray-900" style={{margin: 0}}>
+                                                                                                {business.bname}
+                                                                                            </h3>
+                                                                                            {business.veteranOwned?.isVeteranOwned && (
+                                                                                                    <span style={{
+                                                                                                        padding: '4px 8px',
+                                                                                                        backgroundColor: '#fecaca',
+                                                                                                        color: '#991b1b',
+                                                                                                        borderRadius: '12px',
+                                                                                                        fontSize: '0.75rem',
+                                                                                                        fontWeight: '600',
+                                                                                                        display: 'inline-flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '4px'
+                                                                                                    }}>
+                                                                                                        🇺🇸 VBO
+                                                                                                    </span>
+                                                                                            )}
+                                                                                            {business.veteranOwned?.priority?.isFeatured && (
+                                                                                                    <span style={{
+                                                                                                        padding: '4px 8px',
+                                                                                                        backgroundColor: '#fef3c7',
+                                                                                                        color: '#92400e',
+                                                                                                        borderRadius: '4px',
+                                                                                                        fontSize: '0.75rem',
+                                                                                                        fontWeight: '600',
+                                                                                                        display: 'inline-flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        gap: '4px'
+                                                                                                    }}>
+                                                                                                            ⭐ Featured
+                                                                                                        </span>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        {/* Veteran-Owned Badge */}
+                                                                                        {business.veteranOwned?.isVeteranOwned && (
+                                                                                                <div className="mb-3">
+                                                                                                    <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                                                                                                        <span className="text-red-600 font-bold">🇺🇸</span>
+                                                                                                        <span className="text-sm font-semibold text-red-700">
+                                                                                                            Veteran-Owned
+                                                                                                        </span>
+                                                                                                        {business.veteranOwned.verificationStatus === 'certified' && (
+                                                                                                                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                                                                                                                    Certified
+                                                                                                                </span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                        )}
+
+                                                                                        <div className="text-gray-600 mb-4">
+                                                                                            <p>{business.address1}</p>
+                                                                                            {business.address2 && <p>{business.address2}</p>}
+                                                                                            <p>{business.city}, {business.state} {business.zip}</p>
+                                                                                            {business.phone && <p className="mt-1">📞 {business.phone}</p>}
+                                                                                        </div>
+
+                                                                                        {business.incentives && business.incentives.length > 0 && (
+                                                                                                <div className="border-t pt-4">
+                                                                                                    <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
+                                                                                                    {business.incentives.map((incentive, index) => (
+                                                                                                            <div key={index} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+                                                                                                                <div className="flex items-center justify-between mb-1">
+                                                                                                                    <span className="text-sm font-medium text-green-800">
+                                                                                                                        {incentive.type === 'VT' && 'Veterans'}
+                                                                                                                        {incentive.type === 'AD' && 'Active Duty'}
+                                                                                                                        {incentive.type === 'FR' && 'First Responders'}
+                                                                                                                        {incentive.type === 'SP' && 'Spouses'}
+                                                                                                                    </span>
+                                                                                                                    <span className="text-lg font-bold text-green-700">
+                                                                                                                        {incentive.amount}% off
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                                <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                                                                            </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                        )}
+
+                                                                                        {(!business.incentives || business.incentives.length === 0) && (
+                                                                                                <div className="border-t pt-4">
+                                                                                                    <p className="text-gray-500 text-sm">No specific incentives listed</p>
+                                                                                                </div>
+                                                                                        )}
+
+                                                                                        <div style={{
+                                                                                            marginTop: '15px',
+                                                                                            paddingTop: '15px',
+                                                                                            borderTop: '1px solid #e5e7eb'
+                                                                                        }}>
+                                                                                            {isGooglePlace ? (
+                                                                                                    <button
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                const businessData = {
+                                                                                                                    bname: business.bname || business.name,
+                                                                                                                    address1: business.address1 || business.formatted_address?.split(',')[0] || '',
+                                                                                                                    address2: business.address2 || '',
+                                                                                                                    city: business.city || '',
+                                                                                                                    state: business.state || '',
+                                                                                                                    zip: business.zip || '',
+                                                                                                                    phone: business.phone || business.formatted_phone_number || business.international_phone_number || '',
+                                                                                                                    lat: business.lat || business.coordinates?.lat || business.geometry?.location?.lat || '',
+                                                                                                                    lng: business.lng || business.coordinates?.lng || business.geometry?.location?.lng || '',
+                                                                                                                    placeId: business.placeId || business.place_id || '',
+                                                                                                                    types: business.types || [],
+                                                                                                                    website: business.website || ''
+                                                                                                                };
+                                                                                                                console.log('📝 Preparing to add Google Place:', businessData);
+                                                                                                                sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+                                                                                                                router.push('/business-add');
+                                                                                                            }}
                                                                                                             style={{
+                                                                                                                width: '100%',
+                                                                                                                padding: '10px',
+                                                                                                                backgroundColor: '#2563eb',
+                                                                                                                color: 'white',
+                                                                                                                border: 'none',
+                                                                                                                borderRadius: '6px',
                                                                                                                 cursor: 'pointer',
-                                                                                                                border: business.isGooglePlace ? '2px solid #4285F4' : '2px solid #28a745'
+                                                                                                                fontWeight: 'bold',
+                                                                                                                fontSize: '14px'
                                                                                                             }}
                                                                                                     >
-                                                                                                        {/* Status Badge - Database vs Google Places */}
-                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                                                                                                            {business.isGooglePlace ? (
-                                                                                                                    <span style={{
-                                                                                                                        padding: '4px 10px',
-                                                                                                                        backgroundColor: '#dbeafe',
-                                                                                                                        color: '#1e40af',
-                                                                                                                        borderRadius: '12px',
-                                                                                                                        fontSize: '0.75rem',
-                                                                                                                        fontWeight: '600',
-                                                                                                                        display: 'inline-flex',
-                                                                                                                        alignItems: 'center',
-                                                                                                                        gap: '4px'
-                                                                                                                    }}>
-                                                                                                                        📍 From Google Maps
-                                                                                                                    </span>
-                                                                                                            ) : (
-                                                                                                                    <span style={{
-                                                                                                                        padding: '4px 10px',
-                                                                                                                        backgroundColor: '#d1fae5',
-                                                                                                                        color: '#065f46',
-                                                                                                                        borderRadius: '12px',
-                                                                                                                        fontSize: '0.75rem',
-                                                                                                                        fontWeight: '600',
-                                                                                                                        display: 'inline-flex',
-                                                                                                                        alignItems: 'center',
-                                                                                                                        gap: '4px'
-                                                                                                                    }}>
-                                                                                                                        ✓ In Database
-                                                                                                                    </span>
-                                                                                                            )}
-                                                                                                        </div>
-
-                                                                                                        {/* Business Name and VBO Badge */}
-                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                                                                                                            <h3 className="text-xl font-bold text-gray-900" style={{ margin: 0 }}>
-                                                                                                                {business.bname}
-                                                                                                            </h3>
-                                                                                                            {business.veteranOwned?.isVeteranOwned && (
-                                                                                                                    <span style={{
-                                                                                                                        padding: '4px 8px',
-                                                                                                                        backgroundColor: '#fecaca',
-                                                                                                                        color: '#991b1b',
-                                                                                                                        borderRadius: '12px',
-                                                                                                                        fontSize: '0.75rem',
-                                                                                                                        fontWeight: '600',
-                                                                                                                        display: 'inline-flex',
-                                                                                                                        alignItems: 'center',
-                                                                                                                        gap: '4px'
-                                                                                                                    }}>
-                                                                                                                        🇺🇸 VBO
-                                                                                                                    </span>
-                                                                                                            )}
-                                                                                                            {business.veteranOwned?.priority?.isFeatured && (
-                                                                                                                    <span style={{
-                                                                                                                        padding: '4px 8px',
-                                                                                                                        backgroundColor: '#fef3c7',
-                                                                                                                        color: '#92400e',
-                                                                                                                        borderRadius: '4px',
-                                                                                                                        fontSize: '0.75rem',
-                                                                                                                        fontWeight: '600',
-                                                                                                                        display: 'inline-flex',
-                                                                                                                        alignItems: 'center',
-                                                                                                                        gap: '4px'
-                                                                                                                    }}>
-                                                                                                                        ⭐ Featured
-                                                                                                                    </span>
-                                                                                                            )}
-                                                                                                        </div>
-                                                                                                        {/* Veteran-Owned Badge */}
-                                                                                                        {business.veteranOwned?.isVeteranOwned &&
-                                                                                                                (
-                                                                                                                        <div className="mb-3">
-                                                                                                                            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
-                                                                                                                                <span className="text-red-600 font-bold">🇺🇸</span>
-                                                                                                                                <span className="text-sm font-semibold text-red-700">
-                                                                                                    Veteran-Owned
-                                                                                                </span>
-                                                                                                                                {business.veteranOwned.verificationStatus ===
-                                                                                                                                        'certified' &&
-                                                                                                                                        (
-                                                                                                                                                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                                                                                                            Certified
-                                                                                                        </span>
-                                                                                                                                        )}
-                                                                                                                            </div>
-                                                                                                                        </div>
-                                                                                                                )}
-
-                                                                                                        <div className="text-gray-600 mb-4">
-                                                                                                            <p>{business.address1}</p>
-                                                                                                            {business.address2 &&
-                                                                                                                    <p>{business.address2}</p>}
-                                                                                                            <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                                            {business.phone &&
-                                                                                                                    <p className="mt-1">📞 {business.phone}</p>}
-                                                                                                        </div>
-
-                                                                                                        {business.incentives &&
-                                                                                                                business.incentives.length >
-                                                                                                                0 && (
-                                                                                                                        <div className="border-t pt-4">
-                                                                                                                            <h4 className="font-semibold text-gray-900 mb-2">Available
-                                                                                                                                Incentives:</h4>
-                                                                                                                            {business.incentives.map(
-                                                                                                                                    (
-                                                                                                                                            incentive,
-                                                                                                                                            index) => (
-                                                                                                                                            <div key={index}
-                                                                                                                                                 className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-                                                                                                                                                <div className="flex items-center justify-between mb-1">
-                                                                                                            <span className="text-sm font-medium text-green-800">
-                                                                                                                {incentive.type ===
-                                                                                                                        'VT' &&
-                                                                                                                        'Veterans'}
-                                                                                                                {incentive.type ===
-                                                                                                                        'AD' &&
-                                                                                                                        'Active Duty'}
-                                                                                                                {incentive.type ===
-                                                                                                                        'FR' &&
-                                                                                                                        'First Responders'}
-                                                                                                                {incentive.type ===
-                                                                                                                        'SP' &&
-                                                                                                                        'Spouses'}
-                                                                                                            </span>
-                                                                                                                                                    <span className="text-lg font-bold text-green-700">
-                                                                                                                {incentive.amount}% off
-                                                                                                            </span>
-                                                                                                                                                </div>
-                                                                                                                                                <p className="text-sm text-gray-700">{incentive.information}</p>
-                                                                                                                                            </div>
-                                                                                                                                    ))}
-                                                                                                                        </div>
-                                                                                                                )}
-
-                                                                                                        {(!business.incentives ||
-                                                                                                                business.incentives.length ===
-                                                                                                                0) && (
-                                                                                                                <div className="border-t pt-4">
-                                                                                                                    <p className="text-gray-500 text-sm">No
-                                                                                                                        specific
-                                                                                                                        incentives
-                                                                                                                        listed</p>
-                                                                                                                </div>
-                                                                                                        )}
-                                                                                                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                                                            {business.isGooglePlace ? (
-                                                                                                                    <button
-                                                                                                                            onClick={(e) => {
-                                                                                                                                e.stopPropagation();
-                                                                                                                                // Prepare data for business-add page
-                                                                                                                                const businessData = {
-                                                                                                                                    bname: business.bname,
-                                                                                                                                    address1: business.address1,
-                                                                                                                                    address2: business.address2 || '',
-                                                                                                                                    city: business.city,
-                                                                                                                                    state: business.state,
-                                                                                                                                    zip: business.zip,
-                                                                                                                                    phone: business.phone || '',
-                                                                                                                                    lat: business.lat,
-                                                                                                                                    lng: business.lng,
-                                                                                                                                    placeId: business.placeId || ''
-                                                                                                                                };
-                                                                                                                                sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
-                                                                                                                                router.push('/business-add');
-                                                                                                                            }}
-                                                                                                                            style={{
-                                                                                                                                width: '100%',
-                                                                                                                                padding: '10px',
-                                                                                                                                backgroundColor: '#2563eb',
-                                                                                                                                color: 'white',
-                                                                                                                                border: 'none',
-                                                                                                                                borderRadius: '6px',
-                                                                                                                                cursor: 'pointer',
-                                                                                                                                fontWeight: 'bold',
-                                                                                                                                fontSize: '14px'
-                                                                                                                            }}
-                                                                                                                    >
-                                                                                                                        ➕ Add to Database
-                                                                                                                    </button>
-                                                                                                            ) : (
-                                                                                                                    <button
-                                                                                                                            onClick={(e) => {
-                                                                                                                                e.stopPropagation();
-                                                                                                                                router.push(`/business/${business._id}`);
-                                                                                                                            }}
-                                                                                                                            style={{
-                                                                                                                                width: '100%',
-                                                                                                                                padding: '10px',
-                                                                                                                                backgroundColor: '#059669',
-                                                                                                                                color: 'white',
-                                                                                                                                border: 'none',
-                                                                                                                                borderRadius: '6px',
-                                                                                                                                cursor: 'pointer',
-                                                                                                                                fontWeight: 'bold',
-                                                                                                                                fontSize: '14px'
-                                                                                                                            }}
-                                                                                                                    >
-                                                                                                                        View Details →
-                                                                                                                    </button>
-                                                                                                            )}
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                            ))}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {/* Separator for nearby businesses */}
-                                                                            {filteredResults.some(
-                                                                                    b => !b.isExactMatch) && (
-                                                                                    <div className="my-8">
-                                                                                        <div className="relative">
-                                                                                            <div className="absolute inset-0 flex items-center">
-                                                                                                <div className="w-full border-t-2 border-gray-300"></div>
-                                                                                            </div>
-                                                                                            <div className="relative flex justify-center">
-                                                                                    <span className="bg-gray-50 px-6 py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                                                                                        Additional Nearby Businesses
-                                                                                    </span>
-                                                                                            </div>
+                                                                                                        ➕ Add to Database
+                                                                                                    </button>
+                                                                                            ) : (
+                                                                                                    <button
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                router.push(`/business/${business._id}`);
+                                                                                                            }}
+                                                                                                            style={{
+                                                                                                                width: '100%',
+                                                                                                                padding: '10px',
+                                                                                                                backgroundColor: '#059669',
+                                                                                                                color: 'white',
+                                                                                                                border: 'none',
+                                                                                                                borderRadius: '6px',
+                                                                                                                cursor: 'pointer',
+                                                                                                                fontWeight: 'bold',
+                                                                                                                fontSize: '14px'
+                                                                                                            }}
+                                                                                                    >
+                                                                                                        View Details →
+                                                                                                    </button>
+                                                                                            )}
                                                                                         </div>
                                                                                     </div>
-                                                                            )}
-                                                                        </>
-                                                                )}
+                                                                            );
+                                                                        })}
+                                                                    </div>
+
+                                                                    {/* Separator for nearby businesses */}
+                                                                    {filteredResults.some(b => !b.isExactMatch) && (
+                                                                            <div className="my-8">
+                                                                                <div className="relative">
+                                                                                    <div className="absolute inset-0 flex items-center">
+                                                                                        <div className="w-full border-t-2 border-gray-300"></div>
+                                                                                    </div>
+                                                                                    <div className="relative flex justify-center">
+                                                                                        <span className="bg-gray-50 px-6 py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                                                                                            Additional Nearby Businesses
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                    )}
+                                                                </>
+                                                        )}
 
                                                         {/* Show all businesses if no category filter, or nearby businesses after exact matches */}
                                                         {(() => {
