@@ -2208,8 +2208,8 @@ export default function SearchPage() {
                                             }}></div>
                                         </div>
                                         <span style={{lineHeight: '1.4'}}>
-            <strong style={{color: '#EA4335'}}>Red Pin:</strong> Primary Search Results
-        </span>
+                                            <strong style={{color: '#EA4335'}}>Red Pin:</strong> Primary Search Results
+                                        </span>
                                     </div>
 
                                     {/* Green Pin */}
@@ -2236,8 +2236,8 @@ export default function SearchPage() {
                                             }}></div>
                                         </div>
                                         <span style={{lineHeight: '1.4'}}>
-            <strong style={{color: '#28a745'}}>Green Pin:</strong> Nearby Database Businesses
-        </span>
+                                            <strong style={{color: '#28a745'}}>Green Pin:</strong> Nearby Database Businesses
+                                        </span>
                                     </div>
 
                                     {/* Blue Pin */}
@@ -2264,8 +2264,8 @@ export default function SearchPage() {
                                             }}></div>
                                         </div>
                                         <span style={{lineHeight: '1.4'}}>
-            <strong style={{color: '#4285F4'}}>Blue Pin:</strong> Additional Locations Found
-        </span>
+                                            <strong style={{color: '#4285F4'}}>Blue Pin:</strong> Additional Locations Found
+                                        </span>
                                     </div>
 
                                     {/* Orange Pin */}
@@ -2292,8 +2292,8 @@ export default function SearchPage() {
                                             }}></div>
                                         </div>
                                         <span style={{lineHeight: '1.4'}}>
-            <strong style={{color: '#FF9800'}}>Orange Pin:</strong> Chain Businesses
-        </span>
+                                            <strong style={{color: '#FF9800'}}>Orange Pin:</strong> Chain Businesses
+                                        </span>
                                     </div>
 
                                     {/* Divider */}
@@ -2333,8 +2333,8 @@ export default function SearchPage() {
                                             flexShrink: 0,
                                         }}></div>
                                         <span style={{lineHeight: '1.4'}}>
-            Businesses from Google Maps (not in our database yet)
-        </span>
+                                            Businesses from Google Maps (not in our database yet)
+                                        </span>
                                     </div>
 
                                     {/* Note */}
@@ -2370,27 +2370,26 @@ export default function SearchPage() {
                             {/* Results */}
                             {hasSearched && (
                                     <div id="search-results">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">
-                                                    Search Results
-                                                </h2>
-                                                <div className="text-gray-600">
-                                                    <span>{filteredResults.length} of {results.length} businesses shown</span>
-                                                    {filteredResults.filter(
-                                                            b => b.veteranOwned?.isVeteranOwned).length > 0 && (
-                                                            <span className="ml-2"
-                                                                  style={{color: '#dc2626', fontWeight: '500'}}>
-                    • {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length} Veteran-Owned
-                </span>
-                                                    )}
-                                                </div>
+                                        {/* Header with title and counts */}
+                                        <div className="mb-4">
+                                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                                Search Results
+                                            </h2>
+                                            <div className="text-gray-600">
+                                                <span>{filteredResults.length} of {results.length} businesses shown</span>
+                                                {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length > 0 && (
+                                                        <span className="ml-2" style={{ color: '#dc2626', fontWeight: '500' }}>
+                                                            • {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length} Veteran-Owned
+                                                        </span>
+                                                )}
                                             </div>
+                                        </div>
 
+                                        {/* VBO Summary and Filter Toggles Row */}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                             {/* Compact VBO Summary Badge */}
                                             {(() => {
-                                                const vboCount = filteredResults.filter(
-                                                        b => b.veteranOwned?.isVeteranOwned).length;
+                                                const vboCount = filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length;
                                                 const verifiedVBOCount = filteredResults.filter(b =>
                                                         b.veteranOwned?.isVeteranOwned &&
                                                         b.veteranOwned?.verificationStatus === 'verified',
@@ -2413,16 +2412,76 @@ export default function SearchPage() {
                                                         }}>
                                                             <span>🇺🇸</span>
                                                             <span>
-                    {verifiedVBOCount > 0 ? verifiedVBOCount : vboCount} VBO
+                                                                {verifiedVBOCount > 0 ? verifiedVBOCount : vboCount} VBO
                                                                 {verifiedVBOCount > 0 && ' ✓'}
-                </span>
+                                                            </span>
                                                         </div>
                                                 );
                                             })()}
 
-                                            {/* Toggle for businesses with/without incentives */}
-                                            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
+                                            {/* Filter Toggles - Right Side */}
+                                            <div className="flex flex-wrap gap-3">
+                                                {/* Toggle for businesses with/without incentives */}
+                                                <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        Only show businesses with incentives
+                                                    </span>
+                                                    <button
+                                                            type="button"
+                                                            role="switch"
+                                                            aria-checked={showOnlyWithIncentives}
+                                                            onClick={() => setShowOnlyWithIncentives(!showOnlyWithIncentives)}
+                                                            className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                                            style={{
+                                                                width: '44px',
+                                                                height: '24px',
+                                                                backgroundColor: showOnlyWithIncentives ? '#16a34a' : '#d1d5db',
+                                                                transition: 'background-color 200ms'
+                                                            }}
+                                                    >
+                                                    <span
+                                                            className="inline-block rounded-full bg-white shadow-lg"
+                                                            style={{
+                                                                width: '16px',
+                                                                height: '16px',
+                                                                transform: showOnlyWithIncentives ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 200ms'
+                                                            }}
+                                                    />
+                                                    </button>
+                                                </div>
+
+                                                {/* VBO Filter Toggle */}
+                                                <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        Only show Veteran-Owned businesses
+                                                    </span>
+                                                    <button
+                                                            type="button"
+                                                            role="switch"
+                                                            aria-checked={showOnlyVeteranOwned}
+                                                            onClick={() => setShowOnlyVeteranOwned(!showOnlyVeteranOwned)}
+                                                            className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                                            style={{
+                                                                width: '44px',
+                                                                height: '24px',
+                                                                backgroundColor: showOnlyVeteranOwned ? '#dc2626' : '#d1d5db',
+                                                                transition: 'background-color 200ms'
+                                                            }}
+                                                    >
+                                                    <span
+                                                            className="inline-block rounded-full bg-white shadow-lg"
+                                                            style={{
+                                                                width: '16px',
+                                                                height: '16px',
+                                                                transform: showOnlyVeteranOwned ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 200ms'
+                                                            }}
+                                                    />
+                                                    </button>
+                                                </div>
                                             </div>
+                                        </div>
 
 
                                             {loading ? (
@@ -3232,7 +3291,6 @@ export default function SearchPage() {
                                                         </p>
                                                     </div>
                                             )}
-                                        </div>
                                     </div>
                             )}
                         </div>
