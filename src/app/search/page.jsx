@@ -2517,94 +2517,80 @@ export default function SearchPage() {
                                                                                                     <div
                                                                                                             key={business._id}
                                                                                                             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                                            onClick={() => router.push(
-                                                                                                                    `/business/${business._id}`)}
-                                                                                                            style={{cursor: 'pointer'}}
+                                                                                                            onClick={() => router.push(`/business/${business._id}`)}
+                                                                                                            style={{
+                                                                                                                cursor: 'pointer',
+                                                                                                                border: business.isGooglePlace ? '2px solid #4285F4' : '2px solid #28a745'
+                                                                                                            }}
                                                                                                     >
                                                                                                         {/* Status Badge - Database vs Google Places */}
-                                                                                                        <div style={{
-                                                                                                            display: 'flex',
-                                                                                                            alignItems: 'center',
-                                                                                                            gap: '8px',
-                                                                                                            marginBottom: '12px',
-                                                                                                            flexWrap: 'wrap',
-                                                                                                        }}>
-                                                                                                            {business.isGooglePlace ?
-                                                                                                                    (
-                                                                                                                            <span style={{
-                                                                                                                                padding: '4px 10px',
-                                                                                                                                backgroundColor: '#dbeafe',
-                                                                                                                                color: '#1e40af',
-                                                                                                                                borderRadius: '12px',
-                                                                                                                                fontSize: '0.75rem',
-                                                                                                                                fontWeight: '600',
-                                                                                                                                display: 'inline-flex',
-                                                                                                                                alignItems: 'center',
-                                                                                                                                gap: '4px',
-                                                                                                                            }}>
-                                                                                                📍 From Google Maps
-                                                                                            </span>
-                                                                                                                    ) :
-                                                                                                                    (
-                                                                                                                            <span style={{
-                                                                                                                                padding: '4px 10px',
-                                                                                                                                backgroundColor: '#d1fae5',
-                                                                                                                                color: '#065f46',
-                                                                                                                                borderRadius: '12px',
-                                                                                                                                fontSize: '0.75rem',
-                                                                                                                                fontWeight: '600',
-                                                                                                                                display: 'inline-flex',
-                                                                                                                                alignItems: 'center',
-                                                                                                                                gap: '4px',
-                                                                                                                            }}>
-                                                                                                ✓ In Database
-                                                                                            </span>
-                                                                                                                    )}
+                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                                                                                                            {business.isGooglePlace ? (
+                                                                                                                    <span style={{
+                                                                                                                        padding: '4px 10px',
+                                                                                                                        backgroundColor: '#dbeafe',
+                                                                                                                        color: '#1e40af',
+                                                                                                                        borderRadius: '12px',
+                                                                                                                        fontSize: '0.75rem',
+                                                                                                                        fontWeight: '600',
+                                                                                                                        display: 'inline-flex',
+                                                                                                                        alignItems: 'center',
+                                                                                                                        gap: '4px'
+                                                                                                                    }}>
+                                                                                                                        📍 From Google Maps
+                                                                                                                    </span>
+                                                                                                            ) : (
+                                                                                                                    <span style={{
+                                                                                                                        padding: '4px 10px',
+                                                                                                                        backgroundColor: '#d1fae5',
+                                                                                                                        color: '#065f46',
+                                                                                                                        borderRadius: '12px',
+                                                                                                                        fontSize: '0.75rem',
+                                                                                                                        fontWeight: '600',
+                                                                                                                        display: 'inline-flex',
+                                                                                                                        alignItems: 'center',
+                                                                                                                        gap: '4px'
+                                                                                                                    }}>
+                                                                                                                        ✓ In Database
+                                                                                                                    </span>
+                                                                                                            )}
                                                                                                         </div>
 
-                                                                                                        <div style={{
-                                                                                                            display: 'flex',
-                                                                                                            alignItems: 'center',
-                                                                                                            gap: '8px',
-                                                                                                            flexWrap: 'wrap',
-                                                                                                            marginBottom: '8px',
-                                                                                                        }}>
-                                                                                                            <h3 className="text-xl font-bold text-gray-900"
-                                                                                                                style={{margin: 0}}>
+                                                                                                        {/* Business Name and VBO Badge */}
+                                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                                                                            <h3 className="text-xl font-bold text-gray-900" style={{ margin: 0 }}>
                                                                                                                 {business.bname}
                                                                                                             </h3>
-                                                                                                            {business.veteranOwned?.isVeteranOwned &&
-                                                                                                                    (
-                                                                                                                            <span style={{
-                                                                                                                                padding: '4px 8px',
-                                                                                                                                backgroundColor: '#fecaca',
-                                                                                                                                color: '#991b1b',
-                                                                                                                                borderRadius: '12px',
-                                                                                                                                fontSize: '0.75rem',
-                                                                                                                                fontWeight: '600',
-                                                                                                                                display: 'inline-flex',
-                                                                                                                                alignItems: 'center',
-                                                                                                                                gap: '4px',
-                                                                                                                            }}>
-                                                                                                🇺🇸 VBO
-                                                                                            </span>
-                                                                                                                    )}
-                                                                                                            {business.veteranOwned?.priority?.isFeatured &&
-                                                                                                                    (
-                                                                                                                            <span style={{
-                                                                                                                                padding: '4px 8px',
-                                                                                                                                backgroundColor: '#fef3c7',
-                                                                                                                                color: '#92400e',
-                                                                                                                                borderRadius: '4px',
-                                                                                                                                fontSize: '0.75rem',
-                                                                                                                                fontWeight: '600',
-                                                                                                                                display: 'inline-flex',
-                                                                                                                                alignItems: 'center',
-                                                                                                                                gap: '4px',
-                                                                                                                            }}>
-                                                                                                ⭐ Featured
-                                                                                            </span>
-                                                                                                                    )}
+                                                                                                            {business.veteranOwned?.isVeteranOwned && (
+                                                                                                                    <span style={{
+                                                                                                                        padding: '4px 8px',
+                                                                                                                        backgroundColor: '#fecaca',
+                                                                                                                        color: '#991b1b',
+                                                                                                                        borderRadius: '12px',
+                                                                                                                        fontSize: '0.75rem',
+                                                                                                                        fontWeight: '600',
+                                                                                                                        display: 'inline-flex',
+                                                                                                                        alignItems: 'center',
+                                                                                                                        gap: '4px'
+                                                                                                                    }}>
+                                                                                                                        🇺🇸 VBO
+                                                                                                                    </span>
+                                                                                                            )}
+                                                                                                            {business.veteranOwned?.priority?.isFeatured && (
+                                                                                                                    <span style={{
+                                                                                                                        padding: '4px 8px',
+                                                                                                                        backgroundColor: '#fef3c7',
+                                                                                                                        color: '#92400e',
+                                                                                                                        borderRadius: '4px',
+                                                                                                                        fontSize: '0.75rem',
+                                                                                                                        fontWeight: '600',
+                                                                                                                        display: 'inline-flex',
+                                                                                                                        alignItems: 'center',
+                                                                                                                        gap: '4px'
+                                                                                                                    }}>
+                                                                                                                        ⭐ Featured
+                                                                                                                    </span>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                         {/* Veteran-Owned Badge */}
                                                                                                         {business.veteranOwned?.isVeteranOwned &&
@@ -2682,81 +2668,62 @@ export default function SearchPage() {
                                                                                                                         listed</p>
                                                                                                                 </div>
                                                                                                         )}
-                                                                                                        <div style={{
-                                                                                                            marginTop: '15px',
-                                                                                                            paddingTop: '15px',
-                                                                                                            borderTop: '1px solid #e5e7eb',
-                                                                                                        }}>
-                                                                                                            {business.isGooglePlace ?
-                                                                                                                    (
-                                                                                                                            <button
-                                                                                                                                    onClick={(e) => {
-                                                                                                                                        e.stopPropagation();
-                                                                                                                                        // Prepare data for business-add page
-                                                                                                                                        const businessData = {
-                                                                                                                                            bname: business.bname,
-                                                                                                                                            address1: business.address1,
-                                                                                                                                            address2: business.address2 ||
-                                                                                                                                                    '',
-                                                                                                                                            city: business.city,
-                                                                                                                                            state: business.state,
-                                                                                                                                            zip: business.zip,
-                                                                                                                                            phone: business.phone ||
-                                                                                                                                                    '',
-                                                                                                                                            lat: business.lat,
-                                                                                                                                            lng: business.lng,
-                                                                                                                                            placeId: business.placeId ||
-                                                                                                                                                    '',
-                                                                                                                                        };
-                                                                                                                                        sessionStorage.setItem(
-                                                                                                                                                'prefillBusinessData',
-                                                                                                                                                JSON.stringify(
-                                                                                                                                                        businessData));
-                                                                                                                                        router.push(
-                                                                                                                                                '/business-add');
-                                                                                                                                    }}
-                                                                                                                                    style={{
-                                                                                                                                        width: '100%',
-                                                                                                                                        padding: '10px',
-                                                                                                                                        backgroundColor: '#2563eb',
-                                                                                                                                        color: 'white',
-                                                                                                                                        border: 'none',
-                                                                                                                                        borderRadius: '6px',
-                                                                                                                                        cursor: 'pointer',
-                                                                                                                                        fontWeight: 'bold',
-                                                                                                                                        fontSize: '14px',
-                                                                                                                                    }}
-                                                                                                                            >
-                                                                                                                                ➕
-                                                                                                                                Add
-                                                                                                                                to
-                                                                                                                                Database
-                                                                                                                            </button>
-                                                                                                                    ) :
-                                                                                                                    (
-                                                                                                                            <button
-                                                                                                                                    onClick={(e) => {
-                                                                                                                                        e.stopPropagation();
-                                                                                                                                        router.push(
-                                                                                                                                                `/business/${business._id}`);
-                                                                                                                                    }}
-                                                                                                                                    style={{
-                                                                                                                                        width: '100%',
-                                                                                                                                        padding: '10px',
-                                                                                                                                        backgroundColor: '#059669',
-                                                                                                                                        color: 'white',
-                                                                                                                                        border: 'none',
-                                                                                                                                        borderRadius: '6px',
-                                                                                                                                        cursor: 'pointer',
-                                                                                                                                        fontWeight: 'bold',
-                                                                                                                                        fontSize: '14px',
-                                                                                                                                    }}
-                                                                                                                            >
-                                                                                                                                View
-                                                                                                                                Details
-                                                                                                                                →
-                                                                                                                            </button>
-                                                                                                                    )}
+                                                                                                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
+                                                                                                            {business.isGooglePlace ? (
+                                                                                                                    <button
+                                                                                                                            onClick={(e) => {
+                                                                                                                                e.stopPropagation();
+                                                                                                                                // Prepare data for business-add page
+                                                                                                                                const businessData = {
+                                                                                                                                    bname: business.bname,
+                                                                                                                                    address1: business.address1,
+                                                                                                                                    address2: business.address2 || '',
+                                                                                                                                    city: business.city,
+                                                                                                                                    state: business.state,
+                                                                                                                                    zip: business.zip,
+                                                                                                                                    phone: business.phone || '',
+                                                                                                                                    lat: business.lat,
+                                                                                                                                    lng: business.lng,
+                                                                                                                                    placeId: business.placeId || ''
+                                                                                                                                };
+                                                                                                                                sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+                                                                                                                                router.push('/business-add');
+                                                                                                                            }}
+                                                                                                                            style={{
+                                                                                                                                width: '100%',
+                                                                                                                                padding: '10px',
+                                                                                                                                backgroundColor: '#2563eb',
+                                                                                                                                color: 'white',
+                                                                                                                                border: 'none',
+                                                                                                                                borderRadius: '6px',
+                                                                                                                                cursor: 'pointer',
+                                                                                                                                fontWeight: 'bold',
+                                                                                                                                fontSize: '14px'
+                                                                                                                            }}
+                                                                                                                    >
+                                                                                                                        ➕ Add to Database
+                                                                                                                    </button>
+                                                                                                            ) : (
+                                                                                                                    <button
+                                                                                                                            onClick={(e) => {
+                                                                                                                                e.stopPropagation();
+                                                                                                                                router.push(`/business/${business._id}`);
+                                                                                                                            }}
+                                                                                                                            style={{
+                                                                                                                                width: '100%',
+                                                                                                                                padding: '10px',
+                                                                                                                                backgroundColor: '#059669',
+                                                                                                                                color: 'white',
+                                                                                                                                border: 'none',
+                                                                                                                                borderRadius: '6px',
+                                                                                                                                cursor: 'pointer',
+                                                                                                                                fontWeight: 'bold',
+                                                                                                                                fontSize: '14px'
+                                                                                                                            }}
+                                                                                                                    >
+                                                                                                                        View Details →
+                                                                                                                    </button>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                     </div>
                                                                                             ))}
