@@ -97,11 +97,25 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
             console.log(`✅ Google Places text search returned ${data.results.length} results`);
 
             // Fetch detailed information for each place to get address_components
+            console.log('🔍 DEBUG: Fetching detailed info for', data.results.length, 'places');
+
             const detailedResults = await Promise.all(
                 data.results.slice(0, 20).map(async (place) => {
+                    console.log('🔍 DEBUG: Getting details for:', place.name, 'place_id:', place.place_id);
+
                     // Get full details including address_components
                     const details = await getPlaceDetails(place.place_id);
+
+                    console.log('🔍 DEBUG: Got details for', place.name, ':', details ? 'SUCCESS' : 'NULL');
+
                     if (details) {
+                        console.log('🔍 DEBUG: Details for', place.name, ':', {
+                            city: details.city,
+                            state: details.state,
+                            zip: details.zip,
+                            address1: details.address1
+                        });
+
                         // Merge the details with the original place data
                         return {
                             ...place,
@@ -110,8 +124,17 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
                             detailedInfo: details
                         };
                     }
+                    console.log('⚠️ DEBUG: No details returned for', place.name);
                     return place;
                 })
+            );
+
+            console.log('🔍 DEBUG: First detailed result sample:',
+                detailedResults[0] ? {
+                    name: detailedResults[0].name,
+                    hasDetailedInfo: !!detailedResults[0].detailedInfo,
+                    detailedInfo: detailedResults[0].detailedInfo
+                } : 'NO RESULTS'
             );
 
             return detailedResults.map(place => transformPlaceResult(place));
@@ -134,6 +157,18 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
  * @returns {Object} Transformed business object
  */
 function transformPlaceResult(place) {
+    // DEBUG: Log the raw place object to see what we're receiving
+    console.log('🔍 DEBUG transformPlaceResult - Raw place object:', {
+        name: place.name,
+        place_id: place.place_id,
+        formatted_address: place.formatted_address,
+        vicinity: place.vicinity,
+        hasDetailedInfo: !!place.detailedInfo,
+        hasAddressComponents: !!(place.address_components && place.address_components.length > 0),
+        address_components: place.address_components,
+        detailedInfo: place.detailedInfo,
+        geometry: place.geometry
+    });
     let city = '';
     let state = '';
     let zip = '';
@@ -143,34 +178,63 @@ function transformPlaceResult(place) {
 
     // If we have detailed info from Place Details API, use it (most accurate)
     if (place.detailedInfo) {
-        console.log('📍 Using detailed Place API data for:', place.name);
+        console.log('📍 DEBUG: Using detailed Place API data for:', place.name);
+        console.log('📍 DEBUG: detailedInfo contents:', JSON.stringify(place.detailedInfo, null, 2));
+
         city = place.detailedInfo.city || '';
         state = place.detailedInfo.state || '';
         zip = place.detailedInfo.zip || '';
         streetAddress = place.detailedInfo.address1 || '';
         phone = place.detailedInfo.phone || '';
         businessType = mapGoogleTypeToBusinessType(place.detailedInfo.types || place.types || []);
+
+        console.log('📍 DEBUG: After detailedInfo extraction:', { city, state, zip, streetAddress, phone, businessType });
     } else if (place.address_components && place.address_components.length > 0) {
         // Fallback: Use address_components if available
-        console.log('📍 Using address_components for:', place.name);
+        console.log('📍 DEBUG: Using address_components for:', place.name);
+        console.log('📍 DEBUG: address_components:', JSON.stringify(place.address_components, null, 2));
+
         city = extractCityFromComponents(place.address_components);
         state = extractStateFromComponents(place.address_components);
         zip = extractZipFromComponents(place.address_components);
         streetAddress = extractStreetAddress(place.address_components);
         phone = place.formatted_phone_number || place.international_phone_number || '';
+
+        console.log('📍 DEBUG: After address_components extraction:', { city, state, zip, streetAddress, phone });
     } else {
         // Last resort: Parse formatted_address string
-        console.log('📍 Parsing formatted_address for:', place.name);
+        console.log('📍 DEBUG: Falling back to parseFormattedAddress for:', place.name);
+        console.log('📍 DEBUG: formatted_address:', place.formatted_address);
+        console.log('📍 DEBUG: vicinity:', place.vicinity);
+
         const addressParts = parseFormattedAddress(place.formatted_address || place.vicinity || '');
+        console.log('📍 DEBUG: parseFormattedAddress returned:', addressParts);
+
         city = addressParts.city;
         state = addressParts.state;
         zip = addressParts.zip;
         streetAddress = addressParts.street;
         phone = place.formatted_phone_number || place.international_phone_number || '';
+
+        console.log('📍 DEBUG: After parseFormattedAddress extraction:', { city, state, zip, streetAddress, phone });
     }
 
-    // Map Google Place types to our business types
-    businessType = mapGoogleTypeToBusinessType(place.types || []);
+    // Map Google Place types to our business types (if not already set from detailedInfo)
+    if (!businessType) {
+        businessType = mapGoogleTypeToBusinessType(place.types || []);
+    }
+
+    console.log('✅ DEBUG: FINAL transformed place data:', {
+        name: place.name,
+        streetAddress,
+        city,
+        state,
+        zip,
+        phone,
+        businessType,
+        lat: place.geometry?.location?.lat || place.detailedInfo?.lat,
+        lng: place.geometry?.location?.lng || place.detailedInfo?.lng
+    });
 
     console.log('✅ Transformed place:', {
         name: place.name,
@@ -358,22 +422,44 @@ export async function getPlaceDetails(placeId) {
     try {
         const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${apiKey}&fields=name,formatted_address,formatted_phone_number,geometry,address_components,website,rating,user_ratings_total,types`;
 
-        console.log('🔍 Fetching place details for:', placeId);
+        console.log('🔍 DEBUG getPlaceDetails: Fetching for placeId:', placeId);
 
         const response = await fetch(url);
         const data = await response.json();
 
+        console.log('🔍 DEBUG getPlaceDetails: API response status:', data.status);
+
         if (data.status === 'OK' && data.result) {
             const place = data.result;
 
-            return {
+            console.log('🔍 DEBUG getPlaceDetails: Raw API result:', {
+                name: place.name,
+                formatted_address: place.formatted_address,
+                address_components: place.address_components,
+                formatted_phone_number: place.formatted_phone_number,
+                geometry: place.geometry
+            });
+
+            const extractedCity = extractCityFromComponents(place.address_components);
+            const extractedState = extractStateFromComponents(place.address_components);
+            const extractedZip = extractZipFromComponents(place.address_components);
+            const extractedStreet = extractStreetAddress(place.address_components);
+
+            console.log('🔍 DEBUG getPlaceDetails: Extracted values:', {
+                city: extractedCity,
+                state: extractedState,
+                zip: extractedZip,
+                street: extractedStreet
+            });
+
+            const result = {
                 placeId: placeId,
                 bname: place.name,
-                address1: extractStreetAddress(place.address_components),
+                address1: extractedStreet,
                 address2: '',
-                city: extractCityFromComponents(place.address_components),
-                state: extractStateFromComponents(place.address_components),
-                zip: extractZipFromComponents(place.address_components),
+                city: extractedCity,
+                state: extractedState,
+                zip: extractedZip,
                 phone: place.formatted_phone_number || '',
                 website: place.website || '',
                 lat: place.geometry?.location?.lat || 0,
@@ -382,6 +468,27 @@ export async function getPlaceDetails(placeId) {
                 user_ratings_total: place.user_ratings_total || 0,
                 types: place.types || []
             };
+
+            console.log('🔍 DEBUG getPlaceDetails: Returning result:', result);
+
+            return result;
+
+            // return {
+            //     placeId: placeId,
+            //     bname: place.name,
+            //     address1: extractStreetAddress(place.address_components),
+            //     address2: '',
+            //     city: extractCityFromComponents(place.address_components),
+            //     state: extractStateFromComponents(place.address_components),
+            //     zip: extractZipFromComponents(place.address_components),
+            //     phone: place.formatted_phone_number || '',
+            //     website: place.website || '',
+            //     lat: place.geometry?.location?.lat || 0,
+            //     lng: place.geometry?.location?.lng || 0,
+            //     rating: place.rating || null,
+            //     user_ratings_total: place.user_ratings_total || 0,
+            //     types: place.types || []
+            // };
         } else {
             console.warn('⚠️ Could not fetch place details:', data.status);
             return null;
