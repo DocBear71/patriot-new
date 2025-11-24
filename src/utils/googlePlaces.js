@@ -115,22 +115,46 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
  * @returns {Object} Transformed business object
  */
 function transformPlaceResult(place) {
-    // Parse the formatted address to extract components
-    const addressParts = parseFormattedAddress(place.formatted_address || place.vicinity || '');
+    // First, try to extract from address_components (available in Place Details API)
+    let city = '';
+    let state = '';
+    let zip = '';
+    let streetAddress = '';
+
+    if (place.address_components && place.address_components.length > 0) {
+        // Use address_components if available (Place Details API)
+        city = extractCityFromComponents(place.address_components);
+        state = extractStateFromComponents(place.address_components);
+        zip = extractZipFromComponents(place.address_components);
+        streetAddress = extractStreetAddress(place.address_components);
+        console.log('📍 Extracted from address_components:', { city, state, zip, streetAddress });
+    } else {
+        // Fallback: Parse the formatted_address string (Text Search API)
+        const addressParts = parseFormattedAddress(place.formatted_address || place.vicinity || '');
+        city = addressParts.city;
+        state = addressParts.state;
+        zip = addressParts.zip;
+        streetAddress = addressParts.street;
+        console.log('📍 Parsed from formatted_address:', { city, state, zip, streetAddress });
+    }
+
+    // Map Google Place types to our business types
+    const businessType = mapGoogleTypeToBusinessType(place.types || []);
 
     return {
         // Use a temporary ID that can be identified as Google Place
         _id: `google_${place.place_id}`,
         placeId: place.place_id,
 
-        // Business info - Use parsed address components
+        // Business info - Use extracted/parsed address components
         bname: place.name,
-        address1: addressParts.street || place.vicinity || '',
+        address1: streetAddress || place.vicinity || '',
         address2: '',
-        city: addressParts.city || extractCity(place),
-        state: addressParts.state || extractState(place),
-        zip: addressParts.zip || extractZip(place),
+        city: city,
+        state: state,
+        zip: zip,
         phone: place.formatted_phone_number || place.international_phone_number || '',
+        type: businessType, // NEW: Map Google types to our business type
 
         // Location data
         lat: place.geometry?.location?.lat || 0,
@@ -162,6 +186,112 @@ function transformPlaceResult(place) {
         // Status
         status: 'google_place' // Special status to identify Google Places
     };
+}
+
+/**
+ * Map Google Place types to our business type codes
+ * @param {Array} googleTypes - Array of Google Place type strings
+ * @returns {string} Our business type code (or empty string if no match)
+ */
+function mapGoogleTypeToBusinessType(googleTypes) {
+    if (!googleTypes || googleTypes.length === 0) return '';
+
+    // Mapping from Google types to our codes
+    const typeMapping = {
+        // Restaurant/Food
+        'restaurant': 'REST',
+        'food': 'REST',
+        'cafe': 'REST',
+        'bakery': 'REST',
+        'bar': 'REST',
+        'meal_delivery': 'REST',
+        'meal_takeaway': 'REST',
+
+        // Automotive
+        'car_dealer': 'AUTO',
+        'car_rental': 'AUTO',
+        'car_repair': 'AUTO',
+        'car_wash': 'AUTO',
+
+        // Grocery
+        'grocery_or_supermarket': 'GROC',
+        'supermarket': 'GROC',
+
+        // Gas/Convenience
+        'gas_station': 'FUEL',
+        'convenience_store': 'CONV',
+
+        // Hotel/Lodging
+        'lodging': 'HOTEL',
+        'hotel': 'HOTEL',
+        'motel': 'HOTEL',
+
+        // Health
+        'pharmacy': 'RX',
+        'drugstore': 'RX',
+        'hospital': 'HEAL',
+        'doctor': 'HEAL',
+        'dentist': 'HEAL',
+        'health': 'HEAL',
+        'gym': 'HEAL',
+
+        // Beauty
+        'beauty_salon': 'BEAU',
+        'hair_care': 'BEAU',
+        'spa': 'BEAU',
+
+        // Retail/Shopping
+        'department_store': 'DEPT',
+        'shopping_mall': 'DEPT',
+        'clothing_store': 'CLTH',
+        'shoe_store': 'CLTH',
+        'jewelry_store': 'JEWL',
+        'electronics_store': 'ELEC',
+        'furniture_store': 'FURN',
+        'home_goods_store': 'FURN',
+        'hardware_store': 'HARDW',
+        'pet_store': 'RETAIL',
+        'florist': 'GIFT',
+        'book_store': 'BOOK',
+
+        // Entertainment
+        'movie_theater': 'ENTR',
+        'amusement_park': 'ENTR',
+        'bowling_alley': 'ENTR',
+        'casino': 'ENTR',
+        'night_club': 'ENTR',
+        'stadium': 'ENTR',
+
+        // Sporting Goods
+        'sporting_goods_store': 'SPRT',
+
+        // Services
+        'bank': 'SERV',
+        'atm': 'SERV',
+        'insurance_agency': 'SERV',
+        'real_estate_agency': 'SERV',
+        'travel_agency': 'SERV',
+        'laundry': 'SERV',
+        'locksmith': 'SERV',
+        'electrician': 'SERV',
+        'plumber': 'SERV',
+
+        // Store (generic)
+        'store': 'RETAIL'
+    };
+
+    // Check each Google type and return first match
+    for (const googleType of googleTypes) {
+        const lowerType = googleType.toLowerCase();
+        if (typeMapping[lowerType]) {
+            console.log(`🏷️ Mapped Google type "${googleType}" to "${typeMapping[lowerType]}"`);
+            return typeMapping[lowerType];
+        }
+    }
+
+    // No match found
+    console.log('⚠️ No business type mapping for:', googleTypes);
+    return '';
 }
 
 /**
