@@ -2514,12 +2514,14 @@ export default function SearchPage() {
                                                                         .filter(b => b.isExactMatch)
                                                                         .map((business) => {
                                                                             // Detect if this is a Google Places result (not in our database)
-                                                                            const isGooglePlace = business.isGooglePlace ||
+                                                                            const isGooglePlace = business.isGooglePlace === true ||
+                                                                                    business.status === 'google_place' ||
                                                                                     !business._id ||
-                                                                                    business._id?.toString().startsWith('google_') ||
-                                                                                    business._id?.toString().startsWith('place_');
+                                                                                    (business._id && business._id.toString().startsWith('google_'));
 
-                                                                            const isFromDatabase = !isGooglePlace && business._id;
+                                                                            const isFromDatabase = !isGooglePlace && business._id && !business._id.toString().startsWith('google_');
+
+                                                                            console.log(`🔍 Business: ${business.bname}, isGooglePlace: ${isGooglePlace}, isFromDatabase: ${isFromDatabase}, _id: ${business._id}`);
 
                                                                             // Determine border color matching map pins
                                                                             let borderColor = '#28a745'; // Default green (database)
@@ -2851,13 +2853,27 @@ export default function SearchPage() {
                                                                             return (
                                                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                                                                         {sortedNameMatches.map(
-                                                                                                (business) => (
-                                                                                                        <div
-                                                                                                                key={business._id}
-                                                                                                                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                                                onClick={() => router.push(
-                                                                                                                        `/business/${business._id}`)}
-                                                                                                                style={{
+                                                                                                (business) => {
+                                                                                                    // Check if this is a Google Place
+                                                                                                    const isGooglePlace = business.isGooglePlace === true ||
+                                                                                                            business.status === 'google_place' ||
+                                                                                                            !business._id ||
+                                                                                                            (business._id && business._id.toString().startsWith('google_'));
+
+                                                                                                    const isFromDatabase = !isGooglePlace;
+
+                                                                                                    console.log(`🔍 NameMatch: ${business.bname}, isGooglePlace: ${isGooglePlace}, _id: ${business._id}`);
+
+                                                                                                    return (
+                                                                                                            <div
+                                                                                                                    key={business._id || business.placeId || `business-${Math.random()}`}
+                                                                                                                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                                                                    onClick={() => {
+                                                                                                                        if (isFromDatabase) {
+                                                                                                                            router.push(`/business/${business._id}`);
+                                                                                                                        }
+                                                                                                                    }}
+                                                                                                                    style={{
                                                                                                                     cursor: 'pointer',
                                                                                                                     border: business.veteranOwned?.isVeteranOwned &&
                                                                                                                     business.veteranOwned?.verificationStatus ===
@@ -2992,12 +3008,50 @@ export default function SearchPage() {
                                                                                                                             </div>
                                                                                                                     )}
 
-                                                                                                            <div style={{
-                                                                                                                marginTop: '15px',
-                                                                                                                paddingTop: '15px',
-                                                                                                                borderTop: '1px solid #e5e7eb',
-                                                                                                            }}>
-                                                                                                                <button
+                                                                                                                <div style={{
+                                                                                                                    marginTop: '15px',
+                                                                                                                    paddingTop: '15px',
+                                                                                                                    borderTop: '1px solid #e5e7eb',
+                                                                                                                }}>
+                                                                                                                    {isGooglePlace ? (
+                                                                                                                            <button
+                                                                                                                                    onClick={(e) => {
+                                                                                                                                        e.stopPropagation();
+                                                                                                                                        const businessData = {
+                                                                                                                                            bname: business.bname || business.name,
+                                                                                                                                            address1: business.address1 || '',
+                                                                                                                                            address2: business.address2 || '',
+                                                                                                                                            city: business.city || '',
+                                                                                                                                            state: business.state || '',
+                                                                                                                                            zip: business.zip || '',
+                                                                                                                                            phone: business.phone || '',
+                                                                                                                                            types: business.types || [],
+                                                                                                                                            website: business.website || '',
+                                                                                                                                            lat: business.lat || business.coordinates?.lat || '',
+                                                                                                                                            lng: business.lng || business.coordinates?.lng || '',
+                                                                                                                                            placeId: business.placeId || business.place_id || '',
+                                                                                                                                            chainId: business.possibleChain?.chain_id || '',
+                                                                                                                                            chainName: business.possibleChain?.chain_name || '',
+                                                                                                                                        };
+                                                                                                                                        sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+                                                                                                                                        router.push('/business-add');
+                                                                                                                                    }}
+                                                                                                                                    style={{
+                                                                                                                                        width: '100%',
+                                                                                                                                        padding: '10px',
+                                                                                                                                        backgroundColor: '#2563eb',
+                                                                                                                                        color: 'white',
+                                                                                                                                        border: 'none',
+                                                                                                                                        borderRadius: '6px',
+                                                                                                                                        cursor: 'pointer',
+                                                                                                                                        fontWeight: 'bold',
+                                                                                                                                        fontSize: '14px',
+                                                                                                                                    }}
+                                                                                                                            >
+                                                                                                                                ➕ Add to Database
+                                                                                                                            </button>
+                                                                                                                    ) : (
+                                                                                                                            <button
                                                                                                                         onClick={(e) => {
                                                                                                                             e.stopPropagation();
                                                                                                                             router.push(
@@ -3015,13 +3069,13 @@ export default function SearchPage() {
                                                                                                                             fontSize: '14px',
                                                                                                                         }}
                                                                                                                 >
-                                                                                                                    View
-                                                                                                                    Details
-                                                                                                                    →
-                                                                                                                </button>
+                                                                                                                                View Details →
+                                                                                                                            </button>
+                                                                                                                    )}
+                                                                                                                </div>
                                                                                                             </div>
-                                                                                                        </div>
-                                                                                                ))}
+                                                                                                    );
+                                                                                                })}
                                                                                     </div>
                                                                             );
                                                                         })()}
@@ -3047,6 +3101,47 @@ export default function SearchPage() {
                                                                             // Sort otherBusinesses with VBO priority
                                                                             const sortedOtherBusinesses = [...otherBusinesses].sort(
                                                                                     (a, b) => {
+                                                                                        // Priority 1: Verified veteran-owned with featured status
+                                                                                        const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus === 'verified' &&
+                                                                                                a.veteranOwned?.priority?.isFeatured;
+                                                                                        const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus === 'verified' &&
+                                                                                                b.veteranOwned?.priority?.isFeatured;
+
+                                                                                        if (aVerifiedFeatured && !bVerifiedFeatured) return -1;
+                                                                                        if (!aVerifiedFeatured && bVerifiedFeatured) return 1;
+
+                                                                                        // Priority 2: Verified veteran-owned
+                                                                                        const aVerified = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus === 'verified';
+                                                                                        const bVerified = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus === 'verified';
+
+                                                                                        if (aVerified && !bVerified) return -1;
+                                                                                        if (!aVerified && bVerified) return 1;
+
+                                                                                        // Priority 3: Any veteran-owned
+                                                                                        const aVBO = a.veteranOwned?.isVeteranOwned;
+                                                                                        const bVBO = b.veteranOwned?.isVeteranOwned;
+
+                                                                                        if (aVBO && !bVBO) return -1;
+                                                                                        if (!aVBO && bVBO) return 1;
+
+                                                                                        return 0;
+                                                                                    });
+
+                                                                            return (
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                                        {sortedOtherBusinesses.map(
+                                                                                                (business) => {
+                                                                                                    // Check if this is a Google Place
+                                                                                                    const isGooglePlace = business.isGooglePlace === true ||
+                                                                                                            business.status === 'google_place' ||
+                                                                                                            !business._id ||
+                                                                                                            (business._id && business._id.toString().startsWith('google_'));
+
+                                                                                                    const isFromDatabase = !isGooglePlace;
                                                                                         // Priority 1: Verified veteran-owned with featured status
                                                                                         const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
                                                                                                 a.veteranOwned?.verificationStatus ===
@@ -3083,9 +3178,8 @@ export default function SearchPage() {
                                                                                         if (!aVBO && bVBO) return 1;
 
                                                                                         return 0;
-                                                                                    });
+                                                                                    })};
 
-                                                                            return (
                                                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                                                         {sortedOtherBusinesses.map(
                                                                                                 (business) => (
@@ -3234,12 +3328,51 @@ export default function SearchPage() {
                                                                                                                 paddingTop: '15px',
                                                                                                                 borderTop: '1px solid #e5e7eb',
                                                                                                             }}>
-                                                                                                                <button
-                                                                                                                        onClick={(e) => {
-                                                                                                                            e.stopPropagation();
-                                                                                                                            router.push(
-                                                                                                                                    `/business/${business._id}`);
-                                                                                                                        }}
+                                                                                                                {isGooglePlace ? (
+                                                                                                                        <button
+                                                                                                                                onClick={(e) => {
+                                                                                                                                    e.stopPropagation();
+                                                                                                                                    const businessData = {
+                                                                                                                                        bname: business.bname || business.name,
+                                                                                                                                        address1: business.address1 || '',
+                                                                                                                                        address2: business.address2 || '',
+                                                                                                                                        city: business.city || '',
+                                                                                                                                        state: business.state || '',
+                                                                                                                                        zip: business.zip || '',
+                                                                                                                                        phone: business.phone || '',
+                                                                                                                                        types: business.types || [],
+                                                                                                                                        website: business.website || '',
+                                                                                                                                        lat: business.lat || business.coordinates?.lat || '',
+                                                                                                                                        lng: business.lng || business.coordinates?.lng || '',
+                                                                                                                                        placeId: business.placeId || business.place_id || '',
+                                                                                                                                        chainId: business.possibleChain?.chain_id || '',
+                                                                                                                                        chainName: business.possibleChain?.chain_name || '',
+                                                                                                                                    };
+                                                                                                                                    console.log('📝 Adding Google Place:', businessData);
+                                                                                                                                    sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
+                                                                                                                                    router.push('/business-add');
+                                                                                                                                }}
+                                                                                                                                style={{
+                                                                                                                                    width: '100%',
+                                                                                                                                    padding: '10px',
+                                                                                                                                    backgroundColor: '#2563eb',
+                                                                                                                                    color: 'white',
+                                                                                                                                    border: 'none',
+                                                                                                                                    borderRadius: '6px',
+                                                                                                                                    cursor: 'pointer',
+                                                                                                                                    fontWeight: 'bold',
+                                                                                                                                    fontSize: '14px',
+                                                                                                                                }}
+                                                                                                                        >
+                                                                                                                            ➕ Add to Database
+                                                                                                                        </button>
+                                                                                                                ) : (
+                                                                                                                        <button
+                                                                                                                                onClick={(e) => {
+                                                                                                                                    e.stopPropagation();
+                                                                                                                                    router.push(
+                                                                                                                                            `/business/${business._id}`);
+                                                                                                                                }}
                                                                                                                         style={{
                                                                                                                             width: '100%',
                                                                                                                             padding: '10px',
@@ -3252,15 +3385,17 @@ export default function SearchPage() {
                                                                                                                             fontSize: '14px',
                                                                                                                         }}
                                                                                                                 >
-                                                                                                                    View
-                                                                                                                    Details
-                                                                                                                    →
-                                                                                                                </button>
+                                                                                                                            View Details →
+                                                                                                                        </button>
+                                                                                                                )}
                                                                                                             </div>
                                                                                                         </div>
-                                                                                                ))}
+                                                                                                ))
+                                                                                        })
                                                                                     </div>
-                                                                            );
+                                                                                    </div>
+                                                                            )
+
                                                                         })()}
                                                                     </>
                                                             );
