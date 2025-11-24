@@ -2,8 +2,8 @@
 
 // file: /src/app/search/page.jsx v3 - Temporarily disabled Google Maps functionality
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import {useState, useEffect} from 'react';
+import {useRouter} from 'next/navigation';
 import Navigation from '../../components/layout/Navigation';
 import Footer from '../../components/legal/Footer';
 import SearchLoadingModal from '../../components/search/SearchLoadingModal';
@@ -15,7 +15,7 @@ export default function SearchPage() {
         address: '',
         query: '',
         cityState: '',  // Combined city and state
-        category: ''  // Category filter
+        category: '',  // Category filter
     });
     const [showOnlyWithIncentives, setShowOnlyWithIncentives] = useState(true); // Hide businesses without incentives by default
     const [filteredResults, setFilteredResults] = useState([]);
@@ -33,35 +33,33 @@ export default function SearchPage() {
     const [markers, setMarkers] = useState([]);
     const [infoWindow, setInfoWindow] = useState(null);
 
-
-
     const businessTypes = [
-        { value: '', label: 'All Categories' },
-        { value: 'AUTO', label: 'Automotive' },
-        { value: 'BEAU', label: 'Beauty' },
-        { value: 'BOOK', label: 'Bookstore' },
-        { value: 'CLTH', label: 'Clothing' },
-        { value: 'CONV', label: 'Convenience Store/Gas Station' },
-        { value: 'DEPT', label: 'Department Store' },
-        { value: 'ELEC', label: 'Electronics' },
-        { value: 'ENTR', label: 'Entertainment' },
-        { value: 'FURN', label: 'Furniture' },
-        { value: 'FUEL', label: 'Fuel Station/Truck Stop' },
-        { value: 'GIFT', label: 'Gift Shop' },
-        { value: 'GROC', label: 'Grocery' },
-        { value: 'HARDW', label: 'Hardware' },
-        { value: 'HEAL', label: 'Health' },
-        { value: 'HOTEL', label: 'Hotel/Motel' },
-        { value: 'JEWL', label: 'Jewelry' },
-        { value: 'OTHER', label: 'Other' },
-        { value: 'RX', label: 'Pharmacy' },
-        { value: 'REST', label: 'Restaurant' },
-        { value: 'RETAIL', label: 'Retail' },
-        { value: 'SERV', label: 'Service' },
-        { value: 'SPEC', label: 'Specialty' },
-        { value: 'SPRT', label: 'Sporting Goods' },
-        { value: 'TECH', label: 'Technology' },
-        { value: 'TOYS', label: 'Toys' }
+        {value: '', label: 'All Categories'},
+        {value: 'AUTO', label: 'Automotive'},
+        {value: 'BEAU', label: 'Beauty'},
+        {value: 'BOOK', label: 'Bookstore'},
+        {value: 'CLTH', label: 'Clothing'},
+        {value: 'CONV', label: 'Convenience Store/Gas Station'},
+        {value: 'DEPT', label: 'Department Store'},
+        {value: 'ELEC', label: 'Electronics'},
+        {value: 'ENTR', label: 'Entertainment'},
+        {value: 'FURN', label: 'Furniture'},
+        {value: 'FUEL', label: 'Fuel Station/Truck Stop'},
+        {value: 'GIFT', label: 'Gift Shop'},
+        {value: 'GROC', label: 'Grocery'},
+        {value: 'HARDW', label: 'Hardware'},
+        {value: 'HEAL', label: 'Health'},
+        {value: 'HOTEL', label: 'Hotel/Motel'},
+        {value: 'JEWL', label: 'Jewelry'},
+        {value: 'OTHER', label: 'Other'},
+        {value: 'RX', label: 'Pharmacy'},
+        {value: 'REST', label: 'Restaurant'},
+        {value: 'RETAIL', label: 'Retail'},
+        {value: 'SERV', label: 'Service'},
+        {value: 'SPEC', label: 'Specialty'},
+        {value: 'SPRT', label: 'Sporting Goods'},
+        {value: 'TECH', label: 'Technology'},
+        {value: 'TOYS', label: 'Toys'},
     ];
 
     // Get service type label
@@ -75,23 +73,22 @@ export default function SearchPage() {
             'NC': 'No Chain Incentives',
             'WS': 'WeSalute',
             'OT': 'Other',
-            'NA': 'Not Available'
+            'NA': 'Not Available',
         };
         return labels[type] || type;
     };
 
-
     // COMMENTED OUT: Google Maps configuration for future implementation
     const mapConfig = {
-        center: { lat: 41.9778, lng: -91.6656 }, // Cedar Rapids, IA
+        center: {lat: 41.9778, lng: -91.6656}, // Cedar Rapids, IA
         zoom: 11,
         mapId: 'ebe8ec43a7bc252d', // Your map ID from the existing implementation
         markerColors: {
             primary: '#EA4335',    // RED - Primary search results (database)
             database: '#28a745',   // GREEN - Nearby database businesses
             nearby: '#4285F4',     // BLUE - Google Places results
-            chain: '#FF9800'       // ORANGE - Chain indicators
-        }
+            chain: '#FF9800',       // ORANGE - Chain indicators
+        },
     };
 
     // COMMENTED OUT: Initialize Google Maps using the same approach as the original HTML
@@ -174,13 +171,13 @@ export default function SearchPage() {
                 rotateControl: false,
                 fullscreenControl: true,
                 gestureHandling: 'auto',
-                clickableIcons: true
+                clickableIcons: true,
             });
 
             const newInfoWindow = new window.google.maps.InfoWindow({
                 maxWidth: 320,
                 disableAutoPan: false,
-                pixelOffset: new window.google.maps.Size(0, -10)
+                pixelOffset: new window.google.maps.Size(0, -10),
             });
 
             setMap(newMap);
@@ -205,12 +202,12 @@ export default function SearchPage() {
 
                         try {
                             // Use the NEW Places API (not deprecated)
-                            const { Place } = await window.google.maps.importLibrary("places");
+                            const {Place} = await window.google.maps.importLibrary('places');
 
                             // Create a Place instance
                             const place = new Place({
                                 id: placeId,
-                                requestedLanguage: 'en'
+                                requestedLanguage: 'en',
                             });
 
                             // Fetch place details
@@ -223,8 +220,8 @@ export default function SearchPage() {
                                     'internationalPhoneNumber',
                                     'nationalPhoneNumber',
                                     'websiteURI',
-                                    'addressComponents'
-                                ]
+                                    'addressComponents',
+                                ],
                             });
 
                             console.log('✅ Place details fetched:', place);
@@ -388,7 +385,7 @@ export default function SearchPage() {
             'ELECTRICIAN': '⚡',
             'PLUMBER': '🔧',
             'ROOFING_CONTRACTOR': '🏠',
-            'PAINTER': '🎨'
+            'PAINTER': '🎨',
         };
 
         // Try to match any of the business types
@@ -425,7 +422,9 @@ export default function SearchPage() {
 
         // Default icon - use different defaults for database vs Google
         const defaultIcon = isFromDatabase ? '🏢' : '📍';
-        console.log(`ℹ️ Using default icon for ${business.bname}: ${defaultIcon} (database: ${isFromDatabase}, types: ${businessTypes.join(', ')})`);
+        console.log(
+                `ℹ️ Using default icon for ${business.bname}: ${defaultIcon} (database: ${isFromDatabase}, types: ${businessTypes.join(
+                        ', ')})`);
         return defaultIcon;
     };
 
@@ -456,7 +455,7 @@ export default function SearchPage() {
                 return null;
             }
 
-            const position = { lat, lng };
+            const position = {lat, lng};
 
             // Determine marker color based on business properties
             let markerColor, markerClass;
@@ -492,10 +491,10 @@ export default function SearchPage() {
             try {
                 // Import the marker library if not already imported
                 if (!window.google.maps.marker) {
-                    await window.google.maps.importLibrary("marker");
+                    await window.google.maps.importLibrary('marker');
                 }
 
-                const { AdvancedMarkerElement } = window.google.maps.marker;
+                const {AdvancedMarkerElement} = window.google.maps.marker;
 
                 // Create custom HTML pin element with icon and rotation
                 const pinElement = document.createElement('div');
@@ -539,7 +538,7 @@ export default function SearchPage() {
                     map: map,
                     title: business.bname,
                     content: pinElement,
-                    gmpClickable: true
+                    gmpClickable: true,
                 });
 
                 // Add click listener to the pin element
@@ -562,14 +561,14 @@ export default function SearchPage() {
                     strokeColor: '#ffffff',
                     rotation: 0,
                     scale: 1.5,
-                    anchor: new window.google.maps.Point(12, 24)
+                    anchor: new window.google.maps.Point(12, 24),
                 };
 
                 const marker = new window.google.maps.Marker({
                     position: position,
                     map: map,
                     title: business.bname,
-                    icon: svgMarker
+                    icon: svgMarker,
                 });
 
                 marker.addListener('click', () => {
@@ -682,7 +681,7 @@ export default function SearchPage() {
                             phone: business.phone || '',
                             lat: business.coordinates?.lat || business.lat,
                             lng: business.coordinates?.lng || business.lng,
-                            placeId: business.placeId || ''
+                            placeId: business.placeId || '',
                         };
 
                         // Store in sessionStorage to pre-fill the form
@@ -708,35 +707,34 @@ export default function SearchPage() {
             searchVariations.push(businessName);
 
             // Variation 2: Remove business type suffixes (most comprehensive)
-            let cleaned = businessName
-            .replace(/\s+(Grocery Store|Grocery|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine|Food Co\.|Co\.|Inc\.|LLC)$/i, '')
-            .trim();
+            let cleaned = businessName.replace(
+                    /\s+(Grocery Store|Grocery|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine|Food Co\.|Co\.|Inc\.|LLC)$/i,
+                    '').trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
             // Variation 3: Remove cuisine + food type combinations
-            cleaned = businessName
-            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi, '')
-            .trim();
+            cleaned = businessName.replace(
+                    /\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese)\s+(Restaurant|Kitchen|Cuisine|Food|Grill|Bistro|Dining)/gi,
+                    '').trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
             // Variation 4: Remove standalone cuisine/food descriptors at the end
-            cleaned = businessName
-            .replace(/\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese|Food|Restaurant|Cuisine|Kitchen)$/i, '')
-            .trim();
+            cleaned = businessName.replace(
+                    /\s+(Italian|Chinese|Mexican|Japanese|Thai|Indian|American|Greek|French|Mediterranean|Asian|Korean|Vietnamese|Food|Restaurant|Cuisine|Kitchen)$/i,
+                    '').trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
 
             // Variation 5: Remove symbols like +, &, and company suffixes
-            cleaned = businessName
-            .replace(/\s*[\+\&]\s*/g, ' ')
-            .replace(/\s+(Grill|Bar|Restaurant|Kitchen|Food Co\.|Co\.|Inc\.|LLC)$/i, '')
-            .replace(/\s+/g, ' ')
-            .trim();
+            cleaned = businessName.replace(/\s*[\+\&]\s*/g, ' ').
+                    replace(/\s+(Grill|Bar|Restaurant|Kitchen|Food Co\.|Co\.|Inc\.|LLC)$/i, '').
+                    replace(/\s+/g, ' ').
+                    trim();
             if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
                 searchVariations.push(cleaned);
             }
@@ -784,7 +782,8 @@ export default function SearchPage() {
                 console.log(`🔍 Trying: "${variation}"`);
 
                 try {
-                    const response = await fetch(`/api/chains?operation=find_match&business_name=${encodeURIComponent(variation)}`);
+                    const response = await fetch(
+                            `/api/chains?operation=find_match&business_name=${encodeURIComponent(variation)}`);
 
                     if (!response.ok) {
                         console.log(`   ⚠️ Search failed for "${variation}"`);
@@ -799,17 +798,19 @@ export default function SearchPage() {
                         console.log(`   ✅ MATCH FOUND with "${variation}":`, matchedChain.chain_name);
 
                         // Get chain incentives
-                        const incentivesResponse = await fetch(`/api/combined-api?operation=get_chain_incentives&chain_id=${matchedChain._id}`);
+                        const incentivesResponse = await fetch(
+                                `/api/combined-api?operation=get_chain_incentives&chain_id=${matchedChain._id}`);
 
                         if (incentivesResponse.ok) {
                             const incentivesData = await incentivesResponse.json();
                             console.log('   📋 Chain incentives:', incentivesData);
 
-                            if (incentivesData.success && incentivesData.incentives && incentivesData.incentives.length > 0) {
+                            if (incentivesData.success && incentivesData.incentives &&
+                                    incentivesData.incentives.length > 0) {
                                 return {
                                     chain: matchedChain,
                                     incentives: incentivesData.incentives,
-                                    matchedWith: variation // Store which variation matched
+                                    matchedWith: variation, // Store which variation matched
                                 };
                             }
                         }
@@ -834,7 +835,6 @@ export default function SearchPage() {
             return null;
         }
     };
-
 
     // Handle clicks on Google Places POI markers (not in our database)
     const handleGooglePlaceClickWithWindow = async (place, infoWindowRef, mapRef) => {
@@ -886,7 +886,7 @@ export default function SearchPage() {
             name: normalizedPlaceName,
             address: normalizedPlaceAddress.substring(0, 50) + '...',
             phone: normalizedPlacePhone,
-            placeId: placeId
+            placeId: placeId,
         });
 
         // Query the database directly to check for duplicates
@@ -965,13 +965,15 @@ export default function SearchPage() {
 
                     // Build info window content for existing business
                     const incentivesHtml = existingBusiness.incentives && existingBusiness.incentives.length > 0
-                            ? existingBusiness.incentives.map(incentive => `
+                            ?
+                            existingBusiness.incentives.map(incentive => `
                             <div style="padding: 8px; background: #e8f5e9; border-radius: 4px; margin: 4px 0;">
                                 <strong>${getServiceTypeLabel(incentive.type)}: ${incentive.amount}% off</strong>
                                 <br><small>${incentive.information}</small>
                             </div>
                         `).join('')
-                            : '<div style="padding: 8px; color: #666; font-style: italic;">No specific incentives listed</div>';
+                            :
+                            '<div style="padding: 8px; color: #666; font-style: italic;">No specific incentives listed</div>';
 
                     const existingBusinessContent = `
                         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 300px;">
@@ -984,9 +986,13 @@ export default function SearchPage() {
                             
                             <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
                                 <p style="margin: 2px 0;">${existingBusiness.address1}</p>
-                                ${existingBusiness.address2 ? `<p style="margin: 2px 0;">${existingBusiness.address2}</p>` : ''}
+                                ${existingBusiness.address2 ?
+                            `<p style="margin: 2px 0;">${existingBusiness.address2}</p>` :
+                            ''}
                                 <p style="margin: 2px 0;">${existingBusiness.city}, ${existingBusiness.state} ${existingBusiness.zip}</p>
-                                ${existingBusiness.phone ? `<p style="margin: 6px 0 0 0;">📞 ${existingBusiness.phone}</p>` : ''}
+                                ${existingBusiness.phone ?
+                            `<p style="margin: 6px 0 0 0;">📞 ${existingBusiness.phone}</p>` :
+                            ''}
                             </div>
                             
                             <div style="margin-top: 12px;">
@@ -1060,7 +1066,9 @@ export default function SearchPage() {
                             ${incentive.amount}% off
                         </span>
                     </div>
-                    ${incentive.information ? `<p style="margin: 0; font-size: 11px; color: #666;">${incentive.information}</p>` : ''}
+                    ${incentive.information ?
+                        `<p style="margin: 0; font-size: 11px; color: #666;">${incentive.information}</p>` :
+                        ''}
                 </div>
             `;
             }).join('');
@@ -1104,7 +1112,9 @@ export default function SearchPage() {
 
             <div style="margin-top: 12px; padding: 10px; background: #f0f8ff; border-radius: 6px;">
                 <p style="margin: 0 0 8px 0; font-size: 13px; color: #666;">
-                    ${chainMatchInfo ? '✨ Add this business to access chain incentives!' : '💡 Want to add this business to Patriot Thanks?'}
+                    ${chainMatchInfo ?
+                '✨ Add this business to access chain incentives!' :
+                '💡 Want to add this business to Patriot Thanks?'}
                 </p>
                 <button 
                     id="add-google-place-btn"
@@ -1140,7 +1150,7 @@ export default function SearchPage() {
 
             if (lat && lng) {
                 position = new window.google.maps.LatLng(lat, lng);
-                console.log('📍 Got position from placeData.location:', { lat, lng });
+                console.log('📍 Got position from placeData.location:', {lat, lng});
             }
         }
 
@@ -1148,7 +1158,7 @@ export default function SearchPage() {
         if (!position && place.Gg) {
             position = new window.google.maps.LatLng(
                     place.Gg.lat(),
-                    place.Gg.lng()
+                    place.Gg.lng(),
             );
             console.log('📍 Got position from place.Gg:', position.toString());
         }
@@ -1193,7 +1203,7 @@ export default function SearchPage() {
                             website: website,
                             // Add chain info if found
                             chainId: chainMatchInfo?.chain?._id || '',
-                            chainName: chainMatchInfo?.chain?.chain_name || ''
+                            chainName: chainMatchInfo?.chain?.chain_name || '',
                         };
 
                         console.log('📝 Preparing to add Google Place:', businessData);
@@ -1211,7 +1221,6 @@ export default function SearchPage() {
         }
     };
 
-
     // Display businesses on map
     const displayBusinessesOnMap = async (businesses) => {
         if (!map || !businesses.length) return;
@@ -1223,7 +1232,7 @@ export default function SearchPage() {
         console.log('📍 Displaying businesses on map:', businesses.length);
         console.log('🔍 Search criteria:', {
             businessName: searchData.businessName,
-            address: searchData.address
+            address: searchData.address,
         });
 
         for (const business of businesses) {
@@ -1261,7 +1270,9 @@ export default function SearchPage() {
                 business.markerColor = 'nearby';
             }
 
-            console.log(`🎨 ${business.bname}: ${businessType.toUpperCase()} marker (${business.markerColor}) - Primary: ${business.isPrimaryResult || false}, Chain: ${!!business.chain_id}, NameMatch: ${business.nameMatches || false}`);
+            console.log(
+                    `🎨 ${business.bname}: ${businessType.toUpperCase()} marker (${business.markerColor}) - Primary: ${business.isPrimaryResult ||
+                    false}, Chain: ${!!business.chain_id}, NameMatch: ${business.nameMatches || false}`);
 
             const marker = await createBusinessMarker(business, businessType);
             if (marker) {
@@ -1274,12 +1285,12 @@ export default function SearchPage() {
                 } else if (business.coordinates?.lat && business.coordinates?.lng) {
                     position = new window.google.maps.LatLng(
                             parseFloat(business.coordinates.lat),
-                            parseFloat(business.coordinates.lng)
+                            parseFloat(business.coordinates.lng),
                     );
                 } else if (business.lat && business.lng) {
                     position = new window.google.maps.LatLng(
                             parseFloat(business.lat),
-                            parseFloat(business.lng)
+                            parseFloat(business.lng),
                     );
                 }
 
@@ -1327,12 +1338,12 @@ export default function SearchPage() {
             const geocoder = new google.maps.Geocoder();
 
             return new Promise((resolve, reject) => {
-                geocoder.geocode({ address: addressString }, (results, status) => {
+                geocoder.geocode({address: addressString}, (results, status) => {
                     if (status === 'OK' && results[0]) {
                         const location = results[0].geometry.location;
                         const coords = {
                             lat: location.lat(),
-                            lng: location.lng()
+                            lng: location.lng(),
                         };
                         console.log('✅ Geocoded to:', coords);
                         resolve(coords);
@@ -1494,7 +1505,7 @@ export default function SearchPage() {
                     resultsElement.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start',
-                        inline: 'nearest'
+                        inline: 'nearest',
                     });
                 }
             }, 100);
@@ -1543,14 +1554,14 @@ export default function SearchPage() {
         // Apply incentives filter
         if (onlyWithIncentives) {
             filtered = filtered.filter(business =>
-                    business.incentives && business.incentives.length > 0
+                    business.incentives && business.incentives.length > 0,
             );
         }
 
         // Apply VBO filter
         if (onlyVeteranOwned) {
             filtered = filtered.filter(business =>
-                    business.veteranOwned?.isVeteranOwned === true
+                    business.veteranOwned?.isVeteranOwned === true,
             );
         }
 
@@ -1567,7 +1578,7 @@ export default function SearchPage() {
     const handleInputChange = (e) => {
         setSearchData(prev => ({
             ...prev,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         }));
     };
 
@@ -1580,18 +1591,18 @@ export default function SearchPage() {
         // Show loading state
         setSearchData(prev => ({
             ...prev,
-            address: 'Getting your location...'
+            address: 'Getting your location...',
         }));
         setGettingLocation(true);
 
         navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    const { latitude, longitude } = position.coords;
+                    const {latitude, longitude} = position.coords;
 
                     try {
                         // Reverse geocode to get address
                         const response = await fetch(
-                                `/api/geocode?lat=${latitude}&lng=${longitude}`
+                                `/api/geocode?lat=${latitude}&lng=${longitude}`,
                         );
 
                         if (response.ok) {
@@ -1601,7 +1612,7 @@ export default function SearchPage() {
                                 let zipCode = '';
                                 if (data.address_components) {
                                     const zipComponent = data.address_components.find(
-                                            component => component.types.includes('postal_code')
+                                            component => component.types.includes('postal_code'),
                                     );
                                     zipCode = zipComponent?.long_name || zipComponent?.short_name || '';
                                 }
@@ -1610,7 +1621,7 @@ export default function SearchPage() {
                                     lat: latitude,
                                     lng: longitude,
                                     address: data.formatted_address,
-                                    zip: zipCode
+                                    zip: zipCode,
                                 });
 
                                 // CRITICAL FIX: Use zip code for better database matching
@@ -1618,7 +1629,7 @@ export default function SearchPage() {
                                 if (zipCode) {
                                     setSearchData(prev => ({
                                         ...prev,
-                                        address: zipCode  // Use zip for reliable database search
+                                        address: zipCode,  // Use zip for reliable database search
                                     }));
                                     console.log('✅ Using zip code for Near Me search:', zipCode);
                                 } else {
@@ -1642,7 +1653,7 @@ export default function SearchPage() {
 
                                     setSearchData(prev => ({
                                         ...prev,
-                                        address: cityState
+                                        address: cityState,
                                     }));
                                     console.log('✅ Using city/state for Near Me search:', cityState);
                                 }
@@ -1650,14 +1661,14 @@ export default function SearchPage() {
                                 // Fallback to coordinates
                                 setSearchData(prev => ({
                                     ...prev,
-                                    address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                                    address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
                                 }));
                             }
                         } else {
                             // Use coordinates as fallback
                             setSearchData(prev => ({
                                 ...prev,
-                                address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                                address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
                             }));
                         }
                     } catch (error) {
@@ -1665,7 +1676,7 @@ export default function SearchPage() {
                         // Use coordinates as fallback
                         setSearchData(prev => ({
                             ...prev,
-                            address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                            address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
                         }));
                     } finally {
                         setGettingLocation(false);
@@ -1675,11 +1686,11 @@ export default function SearchPage() {
                     console.error('Geolocation error:', error);
                     setSearchData(prev => ({
                         ...prev,
-                        address: ''
+                        address: '',
                     }));
 
                     let errorMessage = 'Unable to get your location. ';
-                    switch(error.code) {
+                    switch (error.code) {
                         case error.PERMISSION_DENIED:
                             errorMessage += 'Please enable location permissions.';
                             break;
@@ -1697,8 +1708,8 @@ export default function SearchPage() {
                 {
                     enableHighAccuracy: true,
                     timeout: 10000,
-                    maximumAge: 0
-                }
+                    maximumAge: 0,
+                },
         );
     };
 
@@ -1824,7 +1835,7 @@ export default function SearchPage() {
                         justify-content: center;
                         align-items: center;
                         border: 2px solid white;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
                     }
 
                     .marker-icon {
@@ -1852,7 +1863,7 @@ export default function SearchPage() {
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+                        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
                         position: absolute;
                         top: 0;
                         left: 2px;
@@ -1883,7 +1894,7 @@ export default function SearchPage() {
                         width: 20px;
                         height: 20px;
                         font-size: 16px;
-                        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+                        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
                     }
 
                     .enhanced-marker-shadow {
@@ -1892,7 +1903,7 @@ export default function SearchPage() {
                         left: 8px;
                         width: 20px;
                         height: 8px;
-                        background: radial-gradient(ellipse, rgba(0,0,0,0.3) 0%, transparent 70%);
+                        background: radial-gradient(ellipse, rgba(0, 0, 0, 0.3) 0%, transparent 70%);
                         border-radius: 50%;
                         filter: blur(1px);
                     }
@@ -1980,7 +1991,7 @@ export default function SearchPage() {
                                 setLoadingProgress(0);
                             }}
                     />
-                    <Navigation />
+                    <Navigation/>
 
                     <div className="pt-20 pb-12">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1990,24 +2001,28 @@ export default function SearchPage() {
                                     Find Businesses That Support Our Heroes
                                 </h1>
                                 <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
-                                    Search for local businesses offering discounts and incentives to military personnel, veterans, and first responders.
+                                    Search for local businesses offering discounts and incentives to military personnel,
+                                    veterans, and first responders.
                                 </p>
 
                                 {/* Search Tips */}
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-4xl mx-auto">
-                                    <h3 className="text-sm font-semibold text-blue-900 mb-2">Quick Search Tips: Must include include at least one search item </h3>
+                                    <h3 className="text-sm font-semibold text-blue-900 mb-2">Quick Search Tips: Must
+                                        include include at least one search item </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
                                         <div>
                                             <strong>Business Name:</strong> "Olive Garden", "McDonald's", "Home Depot"
                                         </div>
                                         <div>
-                                            <strong>Location:</strong> "Cedar Rapids IA", "52402", "Portland OR 97201", or Select "Near Me"
+                                            <strong>Location:</strong> "Cedar Rapids IA", "52402", "Portland OR 97201",
+                                            or Select "Near Me"
                                         </div>
                                         <div>
                                             <strong>Keywords:</strong> "restaurant", "automotive", "grocery store"
                                         </div>
                                         <div>
-                                            <strong>Category:</strong> Use the dropdown to filter by specific business types
+                                            <strong>Category:</strong> Use the dropdown to filter by specific business
+                                            types
                                         </div>
                                     </div>
                                 </div>
@@ -2019,7 +2034,8 @@ export default function SearchPage() {
                                     {/* Primary Search Fields */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label htmlFor="businessName"
+                                                   className="block text-sm font-medium text-gray-700 mb-2">
                                                 Business Name
                                             </label>
                                             <input
@@ -2031,11 +2047,13 @@ export default function SearchPage() {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     placeholder="e.g. Olive Garden, McDonald's, Home Depot"
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Search for specific business names or chains</p>
+                                            <p className="text-xs text-gray-500 mt-1">Search for specific business names
+                                                or chains</p>
                                         </div>
 
                                         <div>
-                                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label htmlFor="address"
+                                                   className="block text-sm font-medium text-gray-700 mb-2">
                                                 Address, City & State, or Zip Code
                                             </label>
                                             <div className="relative">
@@ -2047,7 +2065,7 @@ export default function SearchPage() {
                                                         onChange={handleInputChange}
                                                         className="w-full px-3 py-2 pr-24 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                         placeholder="e.g. 52402, Cedar Rapids IA, Portland OR"
-                                                        style={{ paddingRight: '100px' }}
+                                                        style={{paddingRight: '100px'}}
                                                 />
                                                 <button
                                                         type="button"
@@ -2058,7 +2076,8 @@ export default function SearchPage() {
                                                     📍 Near Me
                                                 </button>
                                             </div>
-                                            <p className="text-xs text-gray-500 mt-1">Street address, city with state (Portland OR), or zip code</p>
+                                            <p className="text-xs text-gray-500 mt-1">Street address, city with state
+                                                (Portland OR), or zip code</p>
                                         </div>
                                     </div>
 
@@ -2067,7 +2086,8 @@ export default function SearchPage() {
                                         <h3 className="text-sm font-medium text-gray-700 mb-3">Filter Options</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
+                                                <label htmlFor="query"
+                                                       className="block text-sm font-medium text-gray-700 mb-2">
                                                     Keywords
                                                 </label>
                                                 <input
@@ -2079,11 +2099,13 @@ export default function SearchPage() {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                         placeholder="restaurant, automotive, grocery, etc."
                                                 />
-                                                <p className="text-xs text-gray-500 mt-1">Search by business type (e.g., restaurant, automotive, hotel)</p>
+                                                <p className="text-xs text-gray-500 mt-1">Search by business type (e.g.,
+                                                    restaurant, automotive, hotel)</p>
                                             </div>
 
                                             <div>
-                                                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                                                <label htmlFor="category"
+                                                       className="block text-sm font-medium text-gray-700 mb-2">
                                                     Category
                                                 </label>
                                                 <select
@@ -2099,12 +2121,14 @@ export default function SearchPage() {
                                                             </option>
                                                     ))}
                                                 </select>
-                                                <p className="text-xs text-gray-500 mt-1">Select a specific business category</p>
+                                                <p className="text-xs text-gray-500 mt-1">Select a specific business
+                                                    category</p>
                                             </div>
                                         </div>
                                         <div className="mt-3 bg-blue-50 border border-blue-200 rounded-md p-3">
                                             <p className="text-xs text-blue-800">
-                                                <strong>Note:</strong> All service types (Veterans, Active Duty, First Responders, and Spouses) are shown by default.
+                                                <strong>Note:</strong> All service types (Veterans, Active Duty, First
+                                                Responders, and Spouses) are shown by default.
                                             </p>
                                         </div>
                                     </div>
@@ -2146,7 +2170,7 @@ export default function SearchPage() {
                                     margin: '15px 0',
                                     borderRadius: '8px',
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
                                 }}>
                                     {/* Header */}
                                     <div style={{
@@ -2155,7 +2179,7 @@ export default function SearchPage() {
                                         marginBottom: '15px',
                                         color: '#333',
                                         paddingBottom: '10px',
-                                        borderBottom: '2px solid #e0e0e0'
+                                        borderBottom: '2px solid #e0e0e0',
                                     }}>
                                         📍 Patriot Thanks Database Markers (Custom Pins)
                                     </div>
@@ -2165,14 +2189,14 @@ export default function SearchPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         marginBottom: '12px',
-                                        fontSize: '14px'
+                                        fontSize: '14px',
                                     }}>
                                         <div style={{
                                             width: '24px',
                                             height: '30px',
                                             marginRight: '12px',
                                             position: 'relative',
-                                            flexShrink: 0
+                                            flexShrink: 0,
                                         }}>
                                             <div style={{
                                                 width: '24px',
@@ -2180,11 +2204,11 @@ export default function SearchPage() {
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#EA4335',
                                                 transform: 'rotate(-45deg)',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                                             }}></div>
                                         </div>
-                                        <span style={{ lineHeight: '1.4' }}>
-            <strong style={{ color: '#EA4335' }}>Red Pin:</strong> Primary Search Results
+                                        <span style={{lineHeight: '1.4'}}>
+            <strong style={{color: '#EA4335'}}>Red Pin:</strong> Primary Search Results
         </span>
                                     </div>
 
@@ -2193,14 +2217,14 @@ export default function SearchPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         marginBottom: '12px',
-                                        fontSize: '14px'
+                                        fontSize: '14px',
                                     }}>
                                         <div style={{
                                             width: '24px',
                                             height: '30px',
                                             marginRight: '12px',
                                             position: 'relative',
-                                            flexShrink: 0
+                                            flexShrink: 0,
                                         }}>
                                             <div style={{
                                                 width: '24px',
@@ -2208,11 +2232,11 @@ export default function SearchPage() {
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#28a745',
                                                 transform: 'rotate(-45deg)',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                                             }}></div>
                                         </div>
-                                        <span style={{ lineHeight: '1.4' }}>
-            <strong style={{ color: '#28a745' }}>Green Pin:</strong> Nearby Database Businesses
+                                        <span style={{lineHeight: '1.4'}}>
+            <strong style={{color: '#28a745'}}>Green Pin:</strong> Nearby Database Businesses
         </span>
                                     </div>
 
@@ -2221,14 +2245,14 @@ export default function SearchPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         marginBottom: '12px',
-                                        fontSize: '14px'
+                                        fontSize: '14px',
                                     }}>
                                         <div style={{
                                             width: '24px',
                                             height: '30px',
                                             marginRight: '12px',
                                             position: 'relative',
-                                            flexShrink: 0
+                                            flexShrink: 0,
                                         }}>
                                             <div style={{
                                                 width: '24px',
@@ -2236,11 +2260,11 @@ export default function SearchPage() {
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#4285F4',
                                                 transform: 'rotate(-45deg)',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                                             }}></div>
                                         </div>
-                                        <span style={{ lineHeight: '1.4' }}>
-            <strong style={{ color: '#4285F4' }}>Blue Pin:</strong> Additional Locations Found
+                                        <span style={{lineHeight: '1.4'}}>
+            <strong style={{color: '#4285F4'}}>Blue Pin:</strong> Additional Locations Found
         </span>
                                     </div>
 
@@ -2249,14 +2273,14 @@ export default function SearchPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         marginBottom: '12px',
-                                        fontSize: '14px'
+                                        fontSize: '14px',
                                     }}>
                                         <div style={{
                                             width: '24px',
                                             height: '30px',
                                             marginRight: '12px',
                                             position: 'relative',
-                                            flexShrink: 0
+                                            flexShrink: 0,
                                         }}>
                                             <div style={{
                                                 width: '24px',
@@ -2264,11 +2288,11 @@ export default function SearchPage() {
                                                 borderRadius: '50% 50% 50% 0',
                                                 background: '#FF9800',
                                                 transform: 'rotate(-45deg)',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                                             }}></div>
                                         </div>
-                                        <span style={{ lineHeight: '1.4' }}>
-            <strong style={{ color: '#FF9800' }}>Orange Pin:</strong> Chain Businesses
+                                        <span style={{lineHeight: '1.4'}}>
+            <strong style={{color: '#FF9800'}}>Orange Pin:</strong> Chain Businesses
         </span>
                                     </div>
 
@@ -2276,7 +2300,7 @@ export default function SearchPage() {
                                     <div style={{
                                         height: '1px',
                                         background: '#e0e0e0',
-                                        margin: '15px 0'
+                                        margin: '15px 0',
                                     }}></div>
 
                                     {/* Google Maps Header */}
@@ -2286,7 +2310,7 @@ export default function SearchPage() {
                                         marginBottom: '15px',
                                         color: '#333',
                                         paddingBottom: '10px',
-                                        borderBottom: '2px solid #e0e0e0'
+                                        borderBottom: '2px solid #e0e0e0',
                                     }}>
                                         ⭕ Google Maps Markers (Round Icons)
                                     </div>
@@ -2296,7 +2320,7 @@ export default function SearchPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         marginBottom: '12px',
-                                        fontSize: '14px'
+                                        fontSize: '14px',
                                     }}>
                                         <div style={{
                                             width: '20px',
@@ -2306,9 +2330,9 @@ export default function SearchPage() {
                                             background: 'linear-gradient(135deg, #FF6B6B 0%, #FFE66D 50%, #4ECDC4 100%)',
                                             border: '2px solid white',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                            flexShrink: 0
+                                            flexShrink: 0,
                                         }}></div>
-                                        <span style={{ lineHeight: '1.4' }}>
+                                        <span style={{lineHeight: '1.4'}}>
             Businesses from Google Maps (not in our database yet)
         </span>
                                     </div>
@@ -2322,7 +2346,7 @@ export default function SearchPage() {
                                         fontSize: '13px',
                                         color: '#666',
                                         borderRadius: '4px',
-                                        lineHeight: '1.5'
+                                        lineHeight: '1.5',
                                     }}>
                                         💡 <em>Click any Google Maps marker to add that business to our database!</em>
                                     </div>
@@ -2353,447 +2377,464 @@ export default function SearchPage() {
                                                 </h2>
                                                 <div className="text-gray-600">
                                                     <span>{filteredResults.length} of {results.length} businesses shown</span>
-                                                    {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length > 0 && (
-                                                            <span className="ml-2" style={{ color: '#dc2626', fontWeight: '500' }}>
-                                                            • {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length} Veteran-Owned
-                                                        </span>
+                                                    {filteredResults.filter(
+                                                            b => b.veteranOwned?.isVeteranOwned).length > 0 && (
+                                                            <span className="ml-2"
+                                                                  style={{color: '#dc2626', fontWeight: '500'}}>
+                    • {filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length} Veteran-Owned
+                </span>
                                                     )}
                                                 </div>
-                                                <span className="text-gray-600">
-                                                    {filteredResults.length} of {results.length} businesses shown
-                                                    {showOnlyWithIncentives && filteredResults.length === 0 && results.length > 0 && (
-                                                            <span className="block text-amber-600 font-medium mt-1">
-                                                                No businesses with incentives available
-                                                            </span>
-                                                    )}
-                                                    {/* Show message when name matches exist but are filtered out */}
-                                                    {showOnlyWithIncentives &&
-                                                            searchData.businessName &&
-                                                            results.some(b => b.nameMatches) &&
-                                                            !filteredResults.some(b => b.isNameMatch) && (
-                                                                    <span className="block text-blue-600 font-medium mt-1">
-                                                                        💡 {searchData.businessName} locations found but don't offer incentives. Toggle off "Only show businesses with incentives" to see them.
-                                                                    </span>
-                                                            )}
-                                                    {/* Helpful tip for category-only searches */}
-                                                    {searchData.category && !searchData.address && !searchData.businessName && results.length > 0 && (
-                                                            <span className="block text-blue-600 font-medium mt-1">
-                                                                💡 Tip: Add a location (zip code or city) to find {businessTypes.find(t => t.value === searchData.category)?.label.toLowerCase() || 'businesses'} near you
-                                                            </span>
-                                                    )}
-                                                </span>
                                             </div>
 
-                                            {/* VBO Summary Banner */}
+                                            {/* Compact VBO Summary Badge */}
                                             {(() => {
-                                                const vboCount = filteredResults.filter(b => b.veteranOwned?.isVeteranOwned).length;
+                                                const vboCount = filteredResults.filter(
+                                                        b => b.veteranOwned?.isVeteranOwned).length;
                                                 const verifiedVBOCount = filteredResults.filter(b =>
                                                         b.veteranOwned?.isVeteranOwned &&
-                                                        b.veteranOwned?.verificationStatus === 'verified'
+                                                        b.veteranOwned?.verificationStatus === 'verified',
                                                 ).length;
 
                                                 if (vboCount === 0) return null;
 
                                                 return (
                                                         <div style={{
-                                                            padding: '12px 20px',
+                                                            padding: '6px 12px',
                                                             backgroundColor: '#fef2f2',
-                                                            border: '2px solid #dc2626',
-                                                            borderRadius: '8px',
-                                                            display: 'flex',
+                                                            border: '1px solid #dc2626',
+                                                            borderRadius: '6px',
+                                                            display: 'inline-flex',
                                                             alignItems: 'center',
-                                                            gap: '12px',
-                                                            width: '100%',
-                                                            marginBottom: '10px',
+                                                            gap: '6px',
+                                                            fontSize: '13px',
+                                                            fontWeight: '600',
+                                                            color: '#991b1b',
                                                         }}>
-                                                            <span style={{ fontSize: '24px' }}>⭐</span>
-                                                            <div>
-                                                                <div style={{ fontWeight: 'bold', color: '#991b1b', fontSize: '16px' }}>
-                                                                    {verifiedVBOCount > 0 ? verifiedVBOCount : vboCount} Veteran-Owned
-                                                                    {vboCount > 1 ? ' Businesses' : ' Business'} Found
-                                                                </div>
-                                                                <div style={{ fontSize: '13px', color: '#991b1b', marginTop: '2px' }}>
-                                                                    {verifiedVBOCount > 0
-                                                                            ? `${verifiedVBOCount} verified • Showing at top of results`
-                                                                            : 'Support those who served our country'}
-                                                                </div>
-                                                            </div>
+                                                            <span>🇺🇸</span>
+                                                            <span>
+                    {verifiedVBOCount > 0 ? verifiedVBOCount : vboCount} VBO
+                                                                {verifiedVBOCount > 0 && ' ✓'}
+                </span>
                                                         </div>
                                                 );
                                             })()}
 
                                             {/* Toggle for businesses with/without incentives */}
                                             <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
-                                                <span className="text-sm font-medium text-gray-700">
-                                                    Only show businesses with incentives
-                                                </span>
-                                                <button
-                                                        type="button"
-                                                        role="switch"
-                                                        aria-checked={showOnlyWithIncentives}
-                                                        onClick={() => setShowOnlyWithIncentives(!showOnlyWithIncentives)}
-                                                        className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                                                        style={{
-                                                            width: '44px',
-                                                            height: '24px',
-                                                            backgroundColor: showOnlyWithIncentives ? '#16a34a' : '#d1d5db',
-                                                            transition: 'background-color 200ms'
-                                                        }}
-                                                >
-                                                    <span
-                                                            className="inline-block rounded-full bg-white shadow-lg"
-                                                            style={{
-                                                                width: '16px',
-                                                                height: '16px',
-                                                                transform: showOnlyWithIncentives ? 'translateX(24px)' : 'translateX(4px)',
-                                                                transition: 'transform 200ms'
-                                                            }}
-                                                    />
-                                                </button>
                                             </div>
 
-                                            {/* VBO Filter Toggle - NEW */}
-                                            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
-                                                <span className="text-sm font-medium text-gray-700">
-                                                    Only show Veteran-Owned businesses
-                                                </span>
-                                                <button
-                                                        type="button"
-                                                        role="switch"
-                                                        aria-checked={showOnlyVeteranOwned}
-                                                        onClick={() => setShowOnlyVeteranOwned(!showOnlyVeteranOwned)}
-                                                        className="relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                                        style={{
-                                                            width: '44px',
-                                                            height: '24px',
-                                                            backgroundColor: showOnlyVeteranOwned ? '#dc2626' : '#d1d5db',
-                                                            transition: 'background-color 200ms'
-                                                        }}
-                                                >
-                                                    <span
-                                                            className="inline-block rounded-full bg-white shadow-lg"
-                                                            style={{
-                                                                width: '16px',
-                                                                height: '16px',
-                                                                transform: showOnlyVeteranOwned ? 'translateX(24px)' : 'translateX(4px)',
-                                                                transition: 'transform 200ms'
-                                                            }}
-                                                    />
-                                                </button>
-                                            </div>
-                                        </div>
 
+                                            {loading ? (
+                                                    <div className="text-center py-12">
+                                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                                                        <p className="mt-4 text-gray-600">Searching...</p>
+                                                    </div>
+                                            ) : filteredResults.length > 0 ? (
+                                                    <div>
+                                                        {/* Helper function to determine if we need a zip separator */}
+                                                        {(() => {
+                                                            const showZipSeparator = (index) => {
+                                                                if (index === 0) return false;
+                                                                const current = filteredResults[index];
+                                                                const previous = filteredResults[index - 1];
 
-                                        {loading ? (
-                                                <div className="text-center py-12">
-                                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                                                    <p className="mt-4 text-gray-600">Searching...</p>
-                                                </div>
-                                        ) : filteredResults.length > 0 ? (
-                                                <div>
-                                                    {/* Helper function to determine if we need a zip separator */}
-                                                    {(() => {
-                                                        const showZipSeparator = (index) => {
-                                                            if (index === 0) return false;
-                                                            const current = filteredResults[index];
-                                                            const previous = filteredResults[index - 1];
+                                                                // Show separator when transitioning from search zip to other zips
+                                                                return previous.isInSearchZip && !current.isInSearchZip;
+                                                            };
 
-                                                            // Show separator when transitioning from search zip to other zips
-                                                            return previous.isInSearchZip && !current.isInSearchZip;
-                                                        };
+                                                            return null; // This is just to define the function
+                                                        })()}
 
-                                                        return null; // This is just to define the function
-                                                    })()}
-
-                                                    {/* Show exact category matches first */}
-                                                    {searchData.category && filteredResults.some(b => b.isExactMatch) && (
-                                                            <>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                                                    {filteredResults.filter(b => b.isExactMatch).map((business) => (
-                                                                            <div
-                                                                                    key={business._id}
-                                                                                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                    onClick={() => router.push(`/business/${business._id}`)}
-                                                                                    style={{ cursor: 'pointer' }}
-                                                                            >
-                                                                                {/* Status Badge - Database vs Google Places */}
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                                                                                    {business.isGooglePlace ? (
-                                                                                            <span style={{
-                                                                                                padding: '4px 10px',
-                                                                                                backgroundColor: '#dbeafe',
-                                                                                                color: '#1e40af',
-                                                                                                borderRadius: '12px',
-                                                                                                fontSize: '0.75rem',
-                                                                                                fontWeight: '600',
-                                                                                                display: 'inline-flex',
-                                                                                                alignItems: 'center',
-                                                                                                gap: '4px'
-                                                                                            }}>
+                                                        {/* Show exact category matches first */}
+                                                        {searchData.category &&
+                                                                filteredResults.some(b => b.isExactMatch) && (
+                                                                        <>
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                                                                    {filteredResults.filter(
+                                                                                            b => b.isExactMatch).
+                                                                                            map((business) => (
+                                                                                                    <div
+                                                                                                            key={business._id}
+                                                                                                            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                                                            onClick={() => router.push(
+                                                                                                                    `/business/${business._id}`)}
+                                                                                                            style={{cursor: 'pointer'}}
+                                                                                                    >
+                                                                                                        {/* Status Badge - Database vs Google Places */}
+                                                                                                        <div style={{
+                                                                                                            display: 'flex',
+                                                                                                            alignItems: 'center',
+                                                                                                            gap: '8px',
+                                                                                                            marginBottom: '12px',
+                                                                                                            flexWrap: 'wrap',
+                                                                                                        }}>
+                                                                                                            {business.isGooglePlace ?
+                                                                                                                    (
+                                                                                                                            <span style={{
+                                                                                                                                padding: '4px 10px',
+                                                                                                                                backgroundColor: '#dbeafe',
+                                                                                                                                color: '#1e40af',
+                                                                                                                                borderRadius: '12px',
+                                                                                                                                fontSize: '0.75rem',
+                                                                                                                                fontWeight: '600',
+                                                                                                                                display: 'inline-flex',
+                                                                                                                                alignItems: 'center',
+                                                                                                                                gap: '4px',
+                                                                                                                            }}>
                                                                                                 📍 From Google Maps
                                                                                             </span>
-                                                                                    ) : (
-                                                                                            <span style={{
-                                                                                                padding: '4px 10px',
-                                                                                                backgroundColor: '#d1fae5',
-                                                                                                color: '#065f46',
-                                                                                                borderRadius: '12px',
-                                                                                                fontSize: '0.75rem',
-                                                                                                fontWeight: '600',
-                                                                                                display: 'inline-flex',
-                                                                                                alignItems: 'center',
-                                                                                                gap: '4px'
-                                                                                            }}>
+                                                                                                                    ) :
+                                                                                                                    (
+                                                                                                                            <span style={{
+                                                                                                                                padding: '4px 10px',
+                                                                                                                                backgroundColor: '#d1fae5',
+                                                                                                                                color: '#065f46',
+                                                                                                                                borderRadius: '12px',
+                                                                                                                                fontSize: '0.75rem',
+                                                                                                                                fontWeight: '600',
+                                                                                                                                display: 'inline-flex',
+                                                                                                                                alignItems: 'center',
+                                                                                                                                gap: '4px',
+                                                                                                                            }}>
                                                                                                 ✓ In Database
                                                                                             </span>
-                                                                                    )}
-                                                                                </div>
+                                                                                                                    )}
+                                                                                                        </div>
 
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                                                                                    <h3 className="text-xl font-bold text-gray-900" style={{ margin: 0 }}>
-                                                                                        {business.bname}
-                                                                                    </h3>
-                                                                                    {business.veteranOwned?.isVeteranOwned && (
-                                                                                            <span style={{
-                                                                                                padding: '4px 8px',
-                                                                                                backgroundColor: '#fecaca',
-                                                                                                color: '#991b1b',
-                                                                                                borderRadius: '12px',
-                                                                                                fontSize: '0.75rem',
-                                                                                                fontWeight: '600',
-                                                                                                display: 'inline-flex',
-                                                                                                alignItems: 'center',
-                                                                                                gap: '4px'
-                                                                                            }}>
+                                                                                                        <div style={{
+                                                                                                            display: 'flex',
+                                                                                                            alignItems: 'center',
+                                                                                                            gap: '8px',
+                                                                                                            flexWrap: 'wrap',
+                                                                                                            marginBottom: '8px',
+                                                                                                        }}>
+                                                                                                            <h3 className="text-xl font-bold text-gray-900"
+                                                                                                                style={{margin: 0}}>
+                                                                                                                {business.bname}
+                                                                                                            </h3>
+                                                                                                            {business.veteranOwned?.isVeteranOwned &&
+                                                                                                                    (
+                                                                                                                            <span style={{
+                                                                                                                                padding: '4px 8px',
+                                                                                                                                backgroundColor: '#fecaca',
+                                                                                                                                color: '#991b1b',
+                                                                                                                                borderRadius: '12px',
+                                                                                                                                fontSize: '0.75rem',
+                                                                                                                                fontWeight: '600',
+                                                                                                                                display: 'inline-flex',
+                                                                                                                                alignItems: 'center',
+                                                                                                                                gap: '4px',
+                                                                                                                            }}>
                                                                                                 🇺🇸 VBO
                                                                                             </span>
-                                                                                    )}
-                                                                                    {business.veteranOwned?.priority?.isFeatured && (
-                                                                                            <span style={{
-                                                                                                padding: '4px 8px',
-                                                                                                backgroundColor: '#fef3c7',
-                                                                                                color: '#92400e',
-                                                                                                borderRadius: '4px',
-                                                                                                fontSize: '0.75rem',
-                                                                                                fontWeight: '600',
-                                                                                                display: 'inline-flex',
-                                                                                                alignItems: 'center',
-                                                                                                gap: '4px'
-                                                                                            }}>
+                                                                                                                    )}
+                                                                                                            {business.veteranOwned?.priority?.isFeatured &&
+                                                                                                                    (
+                                                                                                                            <span style={{
+                                                                                                                                padding: '4px 8px',
+                                                                                                                                backgroundColor: '#fef3c7',
+                                                                                                                                color: '#92400e',
+                                                                                                                                borderRadius: '4px',
+                                                                                                                                fontSize: '0.75rem',
+                                                                                                                                fontWeight: '600',
+                                                                                                                                display: 'inline-flex',
+                                                                                                                                alignItems: 'center',
+                                                                                                                                gap: '4px',
+                                                                                                                            }}>
                                                                                                 ⭐ Featured
                                                                                             </span>
-                                                                                    )}
-                                                                                </div>
-                                                                                {/* Veteran-Owned Badge */}
-                                                                                {business.veteranOwned?.isVeteranOwned && (
-                                                                                        <div className="mb-3">
-                                                                                            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
-                                                                                                <span className="text-red-600 font-bold">🇺🇸</span>
-                                                                                                <span className="text-sm font-semibold text-red-700">
+                                                                                                                    )}
+                                                                                                        </div>
+                                                                                                        {/* Veteran-Owned Badge */}
+                                                                                                        {business.veteranOwned?.isVeteranOwned &&
+                                                                                                                (
+                                                                                                                        <div className="mb-3">
+                                                                                                                            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                                                                                                                                <span className="text-red-600 font-bold">🇺🇸</span>
+                                                                                                                                <span className="text-sm font-semibold text-red-700">
                                                                                                     Veteran-Owned
                                                                                                 </span>
-                                                                                                {business.veteranOwned.verificationStatus === 'certified' && (
-                                                                                                        <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                                                                                                                                {business.veteranOwned.verificationStatus ===
+                                                                                                                                        'certified' &&
+                                                                                                                                        (
+                                                                                                                                                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
                                                                                                             Certified
                                                                                                         </span>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                )}
+                                                                                                                                        )}
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                )}
 
-                                                                                <div className="text-gray-600 mb-4">
-                                                                                    <p>{business.address1}</p>
-                                                                                    {business.address2 && <p>{business.address2}</p>}
-                                                                                    <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                    {business.phone && <p className="mt-1">📞 {business.phone}</p>}
-                                                                                </div>
+                                                                                                        <div className="text-gray-600 mb-4">
+                                                                                                            <p>{business.address1}</p>
+                                                                                                            {business.address2 &&
+                                                                                                                    <p>{business.address2}</p>}
+                                                                                                            <p>{business.city}, {business.state} {business.zip}</p>
+                                                                                                            {business.phone &&
+                                                                                                                    <p className="mt-1">📞 {business.phone}</p>}
+                                                                                                        </div>
 
-                                                                                {business.incentives && business.incentives.length > 0 && (
-                                                                                        <div className="border-t pt-4">
-                                                                                            <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
-                                                                                            {business.incentives.map((incentive, index) => (
-                                                                                                    <div key={index} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-                                                                                                        <div className="flex items-center justify-between mb-1">
+                                                                                                        {business.incentives &&
+                                                                                                                business.incentives.length >
+                                                                                                                0 && (
+                                                                                                                        <div className="border-t pt-4">
+                                                                                                                            <h4 className="font-semibold text-gray-900 mb-2">Available
+                                                                                                                                Incentives:</h4>
+                                                                                                                            {business.incentives.map(
+                                                                                                                                    (
+                                                                                                                                            incentive,
+                                                                                                                                            index) => (
+                                                                                                                                            <div key={index}
+                                                                                                                                                 className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+                                                                                                                                                <div className="flex items-center justify-between mb-1">
                                                                                                             <span className="text-sm font-medium text-green-800">
-                                                                                                                {incentive.type === 'VT' && 'Veterans'}
-                                                                                                                {incentive.type === 'AD' && 'Active Duty'}
-                                                                                                                {incentive.type === 'FR' && 'First Responders'}
-                                                                                                                {incentive.type === 'SP' && 'Spouses'}
+                                                                                                                {incentive.type ===
+                                                                                                                        'VT' &&
+                                                                                                                        'Veterans'}
+                                                                                                                {incentive.type ===
+                                                                                                                        'AD' &&
+                                                                                                                        'Active Duty'}
+                                                                                                                {incentive.type ===
+                                                                                                                        'FR' &&
+                                                                                                                        'First Responders'}
+                                                                                                                {incentive.type ===
+                                                                                                                        'SP' &&
+                                                                                                                        'Spouses'}
                                                                                                             </span>
-                                                                                                            <span className="text-lg font-bold text-green-700">
+                                                                                                                                                    <span className="text-lg font-bold text-green-700">
                                                                                                                 {incentive.amount}% off
                                                                                                             </span>
+                                                                                                                                                </div>
+                                                                                                                                                <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                                                                                                            </div>
+                                                                                                                                    ))}
+                                                                                                                        </div>
+                                                                                                                )}
+
+                                                                                                        {(!business.incentives ||
+                                                                                                                business.incentives.length ===
+                                                                                                                0) && (
+                                                                                                                <div className="border-t pt-4">
+                                                                                                                    <p className="text-gray-500 text-sm">No
+                                                                                                                        specific
+                                                                                                                        incentives
+                                                                                                                        listed</p>
+                                                                                                                </div>
+                                                                                                        )}
+                                                                                                        <div style={{
+                                                                                                            marginTop: '15px',
+                                                                                                            paddingTop: '15px',
+                                                                                                            borderTop: '1px solid #e5e7eb',
+                                                                                                        }}>
+                                                                                                            {business.isGooglePlace ?
+                                                                                                                    (
+                                                                                                                            <button
+                                                                                                                                    onClick={(e) => {
+                                                                                                                                        e.stopPropagation();
+                                                                                                                                        // Prepare data for business-add page
+                                                                                                                                        const businessData = {
+                                                                                                                                            bname: business.bname,
+                                                                                                                                            address1: business.address1,
+                                                                                                                                            address2: business.address2 ||
+                                                                                                                                                    '',
+                                                                                                                                            city: business.city,
+                                                                                                                                            state: business.state,
+                                                                                                                                            zip: business.zip,
+                                                                                                                                            phone: business.phone ||
+                                                                                                                                                    '',
+                                                                                                                                            lat: business.lat,
+                                                                                                                                            lng: business.lng,
+                                                                                                                                            placeId: business.placeId ||
+                                                                                                                                                    '',
+                                                                                                                                        };
+                                                                                                                                        sessionStorage.setItem(
+                                                                                                                                                'prefillBusinessData',
+                                                                                                                                                JSON.stringify(
+                                                                                                                                                        businessData));
+                                                                                                                                        router.push(
+                                                                                                                                                '/business-add');
+                                                                                                                                    }}
+                                                                                                                                    style={{
+                                                                                                                                        width: '100%',
+                                                                                                                                        padding: '10px',
+                                                                                                                                        backgroundColor: '#2563eb',
+                                                                                                                                        color: 'white',
+                                                                                                                                        border: 'none',
+                                                                                                                                        borderRadius: '6px',
+                                                                                                                                        cursor: 'pointer',
+                                                                                                                                        fontWeight: 'bold',
+                                                                                                                                        fontSize: '14px',
+                                                                                                                                    }}
+                                                                                                                            >
+                                                                                                                                ➕
+                                                                                                                                Add
+                                                                                                                                to
+                                                                                                                                Database
+                                                                                                                            </button>
+                                                                                                                    ) :
+                                                                                                                    (
+                                                                                                                            <button
+                                                                                                                                    onClick={(e) => {
+                                                                                                                                        e.stopPropagation();
+                                                                                                                                        router.push(
+                                                                                                                                                `/business/${business._id}`);
+                                                                                                                                    }}
+                                                                                                                                    style={{
+                                                                                                                                        width: '100%',
+                                                                                                                                        padding: '10px',
+                                                                                                                                        backgroundColor: '#059669',
+                                                                                                                                        color: 'white',
+                                                                                                                                        border: 'none',
+                                                                                                                                        borderRadius: '6px',
+                                                                                                                                        cursor: 'pointer',
+                                                                                                                                        fontWeight: 'bold',
+                                                                                                                                        fontSize: '14px',
+                                                                                                                                    }}
+                                                                                                                            >
+                                                                                                                                View
+                                                                                                                                Details
+                                                                                                                                →
+                                                                                                                            </button>
+                                                                                                                    )}
                                                                                                         </div>
-                                                                                                        <p className="text-sm text-gray-700">{incentive.information}</p>
                                                                                                     </div>
                                                                                             ))}
-                                                                                        </div>
-                                                                                )}
-
-                                                                                {(!business.incentives || business.incentives.length === 0) && (
-                                                                                        <div className="border-t pt-4">
-                                                                                            <p className="text-gray-500 text-sm">No specific incentives listed</p>
-                                                                                        </div>
-                                                                                )}
-                                                                                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                                    {business.isGooglePlace ? (
-                                                                                            <button
-                                                                                                    onClick={(e) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        // Prepare data for business-add page
-                                                                                                        const businessData = {
-                                                                                                            bname: business.bname,
-                                                                                                            address1: business.address1,
-                                                                                                            address2: business.address2 || '',
-                                                                                                            city: business.city,
-                                                                                                            state: business.state,
-                                                                                                            zip: business.zip,
-                                                                                                            phone: business.phone || '',
-                                                                                                            lat: business.lat,
-                                                                                                            lng: business.lng,
-                                                                                                            placeId: business.placeId || ''
-                                                                                                        };
-                                                                                                        sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
-                                                                                                        router.push('/business-add');
-                                                                                                    }}
-                                                                                                    style={{
-                                                                                                        width: '100%',
-                                                                                                        padding: '10px',
-                                                                                                        backgroundColor: '#2563eb',
-                                                                                                        color: 'white',
-                                                                                                        border: 'none',
-                                                                                                        borderRadius: '6px',
-                                                                                                        cursor: 'pointer',
-                                                                                                        fontWeight: 'bold',
-                                                                                                        fontSize: '14px'
-                                                                                                    }}
-                                                                                            >
-                                                                                                ➕ Add to Database
-                                                                                            </button>
-                                                                                    ) : (
-                                                                                            <button
-                                                                                                    onClick={(e) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        router.push(`/business/${business._id}`);
-                                                                                                    }}
-                                                                                                    style={{
-                                                                                                        width: '100%',
-                                                                                                        padding: '10px',
-                                                                                                        backgroundColor: '#059669',
-                                                                                                        color: 'white',
-                                                                                                        border: 'none',
-                                                                                                        borderRadius: '6px',
-                                                                                                        cursor: 'pointer',
-                                                                                                        fontWeight: 'bold',
-                                                                                                        fontSize: '14px'
-                                                                                                    }}
-                                                                                            >
-                                                                                                View Details →
-                                                                                            </button>
-                                                                                    )}
                                                                                 </div>
                                                                             </div>
-                                                                    ))}
-                                                                </div>
 
-                                                                {/* Separator for nearby businesses */}
-                                                                {filteredResults.some(b => !b.isExactMatch) && (
-                                                                        <div className="my-8">
-                                                                            <div className="relative">
-                                                                                <div className="absolute inset-0 flex items-center">
-                                                                                    <div className="w-full border-t-2 border-gray-300"></div>
-                                                                                </div>
-                                                                                <div className="relative flex justify-center">
+                                                                            {/* Separator for nearby businesses */}
+                                                                            {filteredResults.some(
+                                                                                    b => !b.isExactMatch) && (
+                                                                                    <div className="my-8">
+                                                                                        <div className="relative">
+                                                                                            <div className="absolute inset-0 flex items-center">
+                                                                                                <div className="w-full border-t-2 border-gray-300"></div>
+                                                                                            </div>
+                                                                                            <div className="relative flex justify-center">
                                                                                     <span className="bg-gray-50 px-6 py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                                                                                         Additional Nearby Businesses
                                                                                     </span>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                            )}
+                                                                        </>
                                                                 )}
-                                                            </>
-                                                    )}
 
-                                                    {/* Show all businesses if no category filter, or nearby businesses after exact matches */}
-                                                    {(() => {
-                                                        const businessesToShow = filteredResults.filter(b => !searchData.category || !b.isExactMatch);
+                                                        {/* Show all businesses if no category filter, or nearby businesses after exact matches */}
+                                                        {(() => {
+                                                            const businessesToShow = filteredResults.filter(
+                                                                    b => !searchData.category || !b.isExactMatch);
 
-                                                        // Separate name-matching businesses from other businesses
-                                                        const nameMatches = businessesToShow.filter(b => b.isNameMatch);
-                                                        const otherBusinesses = businessesToShow.filter(b => !b.isNameMatch);
+                                                            // Separate name-matching businesses from other businesses
+                                                            const nameMatches = businessesToShow.filter(
+                                                                    b => b.isNameMatch);
+                                                            const otherBusinesses = businessesToShow.filter(
+                                                                    b => !b.isNameMatch);
 
-                                                        // Check if we should show the separator
-                                                        // Show it if: (1) we have both name matches AND other businesses, OR
-                                                        //             (2) we searched for a business name and have other businesses (even if name matches are filtered out)
-                                                        const hasNameMatchesInFullResults = searchData.businessName && results.some(b => b.nameMatches);
-                                                        const showSeparator = (nameMatches.length > 0 && otherBusinesses.length > 0) ||
-                                                                (hasNameMatchesInFullResults && otherBusinesses.length > 0 && nameMatches.length === 0);
+                                                            // Check if we should show the separator
+                                                            // Show it if: (1) we have both name matches AND other businesses, OR
+                                                            //             (2) we searched for a business name and have other businesses (even if name matches are filtered out)
+                                                            const hasNameMatchesInFullResults = searchData.businessName &&
+                                                                    results.some(b => b.nameMatches);
+                                                            const showSeparator = (nameMatches.length > 0 &&
+                                                                            otherBusinesses.length > 0) ||
+                                                                    (hasNameMatchesInFullResults &&
+                                                                            otherBusinesses.length > 0 &&
+                                                                            nameMatches.length === 0);
 
-                                                        return (
-                                                                <>
-                                                                    {(() => {
-                                                                        // Sort nameMatches with VBO priority
-                                                                        const sortedNameMatches = [...nameMatches].sort((a, b) => {
-                                                                            // Priority 1: Verified veteran-owned with featured status
-                                                                            const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
-                                                                                    a.veteranOwned?.verificationStatus === 'verified' &&
-                                                                                    a.veteranOwned?.priority?.isFeatured;
-                                                                            const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
-                                                                                    b.veteranOwned?.verificationStatus === 'verified' &&
-                                                                                    b.veteranOwned?.priority?.isFeatured;
+                                                            return (
+                                                                    <>
+                                                                        {(() => {
+                                                                            // Sort nameMatches with VBO priority
+                                                                            const sortedNameMatches = [...nameMatches].sort(
+                                                                                    (a, b) => {
+                                                                                        // Priority 1: Verified veteran-owned with featured status
+                                                                                        const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus ===
+                                                                                                'verified' &&
+                                                                                                a.veteranOwned?.priority?.isFeatured;
+                                                                                        const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus ===
+                                                                                                'verified' &&
+                                                                                                b.veteranOwned?.priority?.isFeatured;
 
-                                                                            if (aVerifiedFeatured && !bVerifiedFeatured) return -1;
-                                                                            if (!aVerifiedFeatured && bVerifiedFeatured) return 1;
+                                                                                        if (aVerifiedFeatured &&
+                                                                                                !bVerifiedFeatured) return -1;
+                                                                                        if (!aVerifiedFeatured &&
+                                                                                                bVerifiedFeatured) return 1;
 
-                                                                            // Priority 2: Verified veteran-owned
-                                                                            const aVerified = a.veteranOwned?.isVeteranOwned &&
-                                                                                    a.veteranOwned?.verificationStatus === 'verified';
-                                                                            const bVerified = b.veteranOwned?.isVeteranOwned &&
-                                                                                    b.veteranOwned?.verificationStatus === 'verified';
+                                                                                        // Priority 2: Verified veteran-owned
+                                                                                        const aVerified = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus ===
+                                                                                                'verified';
+                                                                                        const bVerified = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus ===
+                                                                                                'verified';
 
-                                                                            if (aVerified && !bVerified) return -1;
-                                                                            if (!aVerified && bVerified) return 1;
+                                                                                        if (aVerified &&
+                                                                                                !bVerified) return -1;
+                                                                                        if (!aVerified &&
+                                                                                                bVerified) return 1;
 
-                                                                            // Priority 3: Any veteran-owned
-                                                                            const aVBO = a.veteranOwned?.isVeteranOwned;
-                                                                            const bVBO = b.veteranOwned?.isVeteranOwned;
+                                                                                        // Priority 3: Any veteran-owned
+                                                                                        const aVBO = a.veteranOwned?.isVeteranOwned;
+                                                                                        const bVBO = b.veteranOwned?.isVeteranOwned;
 
-                                                                            if (aVBO && !bVBO) return -1;
-                                                                            if (!aVBO && bVBO) return 1;
+                                                                                        if (aVBO && !bVBO) return -1;
+                                                                                        if (!aVBO && bVBO) return 1;
 
-                                                                            return 0;
-                                                                        });
+                                                                                        return 0;
+                                                                                    });
 
-                                                                        return sortedNameMatches.map((business) => (
-                                                                                <div
-                                                                                        key={business._id}
-                                                                                        className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                        onClick={() => router.push(`/business/${business._id}`)}
-                                                                                        style={{
-                                                                                            cursor: 'pointer',
-                                                                                            border: business.veteranOwned?.isVeteranOwned &&
-                                                                                            business.veteranOwned?.verificationStatus === 'verified'
-                                                                                                    ? '3px solid #dc2626'
-                                                                                                    : business.veteranOwned?.isVeteranOwned
-                                                                                                            ? '2px solid #f59e0b'
-                                                                                                            : 'none'
-                                                                                        }}
-                                                                                >
-                                                                                    {/* Veteran-Owned Badges */}
-                                                                                    {business.veteranOwned?.isVeteranOwned && (
-                                                                                            <div style={{
-                                                                                                marginBottom: '12px',
-                                                                                                display: 'flex',
-                                                                                                gap: '8px',
-                                                                                                flexWrap: 'wrap',
-                                                                                            }}>
+                                                                            return (
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                                                                        {sortedNameMatches.map(
+                                                                                                (business) => (
+                                                                                                        <div
+                                                                                                                key={business._id}
+                                                                                                                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                                                                onClick={() => router.push(
+                                                                                                                        `/business/${business._id}`)}
+                                                                                                                style={{
+                                                                                                                    cursor: 'pointer',
+                                                                                                                    border: business.veteranOwned?.isVeteranOwned &&
+                                                                                                                    business.veteranOwned?.verificationStatus ===
+                                                                                                                    'verified'
+                                                                                                                            ?
+                                                                                                                            '3px solid #dc2626'
+                                                                                                                            :
+                                                                                                                            business.veteranOwned?.isVeteranOwned
+                                                                                                                                    ?
+                                                                                                                                    '2px solid #f59e0b'
+                                                                                                                                    :
+                                                                                                                                    'none',
+                                                                                                                }}
+                                                                                                        >
+                                                                                                            {/* Veteran-Owned Badges */}
+                                                                                                            {business.veteranOwned?.isVeteranOwned &&
+                                                                                                                    (
+                                                                                                                            <div style={{
+                                                                                                                                marginBottom: '12px',
+                                                                                                                                display: 'flex',
+                                                                                                                                gap: '8px',
+                                                                                                                                flexWrap: 'wrap',
+                                                                                                                            }}>
                                                                                                     <span style={{
                                                                                                         padding: '6px 12px',
-                                                                                                        backgroundColor: business.veteranOwned.verificationStatus === 'verified'
-                                                                                                                ? '#dc2626'
-                                                                                                                : business.veteranOwned.verificationStatus === 'pending'
-                                                                                                                        ? '#f59e0b'
-                                                                                                                        : '#6b7280',
+                                                                                                        backgroundColor: business.veteranOwned.verificationStatus ===
+                                                                                                        'verified'
+                                                                                                                ?
+                                                                                                                '#dc2626'
+                                                                                                                :
+                                                                                                                business.veteranOwned.verificationStatus ===
+                                                                                                                'pending'
+                                                                                                                        ?
+                                                                                                                        '#f59e0b'
+                                                                                                                        :
+                                                                                                                        '#6b7280',
                                                                                                         color: 'white',
                                                                                                         borderRadius: '6px',
                                                                                                         fontSize: '13px',
@@ -2802,171 +2843,235 @@ export default function SearchPage() {
                                                                                                         alignItems: 'center',
                                                                                                         gap: '4px',
                                                                                                     }}>
-                                                                                                        {business.veteranOwned.verificationStatus === 'verified' ? '⭐' : '🎖️'}
+                                                                                                        {business.veteranOwned.verificationStatus ===
+                                                                                                        'verified' ?
+                                                                                                                '⭐' :
+                                                                                                                '🎖️'}
                                                                                                         Veteran-Owned
-                                                                                                        {business.veteranOwned.verificationStatus === 'verified' && ' ✓'}
+                                                                                                        {business.veteranOwned.verificationStatus ===
+                                                                                                                'verified' &&
+                                                                                                                ' ✓'}
                                                                                                     </span>
 
-                                                                                                {business.veteranOwned.priority?.isFeatured && (
-                                                                                                        <span style={{
-                                                                                                            padding: '6px 10px',
-                                                                                                            backgroundColor: '#fbbf24',
-                                                                                                            color: '#78350f',
-                                                                                                            borderRadius: '6px',
-                                                                                                            fontSize: '12px',
-                                                                                                            fontWeight: 'bold',
-                                                                                                            border: '2px solid #f59e0b',
-                                                                                                        }}>
+                                                                                                                                {business.veteranOwned.priority?.isFeatured &&
+                                                                                                                                        (
+                                                                                                                                                <span style={{
+                                                                                                                                                    padding: '6px 10px',
+                                                                                                                                                    backgroundColor: '#fbbf24',
+                                                                                                                                                    color: '#78350f',
+                                                                                                                                                    borderRadius: '6px',
+                                                                                                                                                    fontSize: '12px',
+                                                                                                                                                    fontWeight: 'bold',
+                                                                                                                                                    border: '2px solid #f59e0b',
+                                                                                                                                                }}>
                                                                                                             Featured
                                                                                                         </span>
-                                                                                                )}
-                                                                                            </div>
-                                                                                    )}
+                                                                                                                                        )}
+                                                                                                                            </div>
+                                                                                                                    )}
 
-                                                                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                                                        {business.bname}
-                                                                                    </h3>
+                                                                                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                                                                                {business.bname}
+                                                                                                            </h3>
 
-                                                                                    <div className="text-gray-600 mb-4">
-                                                                                        <p>{business.address1}</p>
-                                                                                        {business.address2 && <p>{business.address2}</p>}
-                                                                                        <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                        {business.phone && <p className="mt-1">📞 {business.phone}</p>}
-                                                                                    </div>
+                                                                                                            <div className="text-gray-600 mb-4">
+                                                                                                                <p>{business.address1}</p>
+                                                                                                                {business.address2 &&
+                                                                                                                        <p>{business.address2}</p>}
+                                                                                                                <p>{business.city}, {business.state} {business.zip}</p>
+                                                                                                                {business.phone &&
+                                                                                                                        <p className="mt-1">📞 {business.phone}</p>}
+                                                                                                            </div>
 
-                                                                                    {business.incentives && business.incentives.length > 0 && (
-                                                                                            <div className="border-t pt-4">
-                                                                                                <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
-                                                                                                {business.incentives.map((incentive, index) => (
-                                                                                                        <div key={index} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-                                                                                                            <div className="flex items-center justify-between mb-1">
+                                                                                                            {business.incentives &&
+                                                                                                                    business.incentives.length >
+                                                                                                                    0 &&
+                                                                                                                    (
+                                                                                                                            <div className="border-t pt-4">
+                                                                                                                                <h4 className="font-semibold text-gray-900 mb-2">Available
+                                                                                                                                    Incentives:</h4>
+                                                                                                                                {business.incentives.map(
+                                                                                                                                        (
+                                                                                                                                                incentive,
+                                                                                                                                                index) => (
+                                                                                                                                                <div key={index}
+                                                                                                                                                     className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+                                                                                                                                                    <div className="flex items-center justify-between mb-1">
                                                                                                                 <span className="text-sm font-medium text-green-800">
-                                                                                                                    {incentive.type === 'VT' && 'Veterans'}
-                                                                                                                    {incentive.type === 'AD' && 'Active Duty'}
-                                                                                                                    {incentive.type === 'FR' && 'First Responders'}
-                                                                                                                    {incentive.type === 'SP' && 'Spouses'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'VT' &&
+                                                                                                                            'Veterans'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'AD' &&
+                                                                                                                            'Active Duty'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'FR' &&
+                                                                                                                            'First Responders'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'SP' &&
+                                                                                                                            'Spouses'}
                                                                                                                 </span>
-                                                                                                                <span className="text-lg font-bold text-green-700">
+                                                                                                                                                        <span className="text-lg font-bold text-green-700">
                                                                                                                     {incentive.amount}% off
                                                                                                                 </span>
+                                                                                                                                                    </div>
+                                                                                                                                                    <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                                                                                                                </div>
+                                                                                                                                        ))}
+                                                                                                                            </div>
+                                                                                                                    )}
+
+                                                                                                            {(!business.incentives ||
+                                                                                                                            business.incentives.length ===
+                                                                                                                            0) &&
+                                                                                                                    (
+                                                                                                                            <div className="border-t pt-4">
+                                                                                                                                <p className="text-gray-500 text-sm">No
+                                                                                                                                    specific
+                                                                                                                                    incentives
+                                                                                                                                    listed</p>
+                                                                                                                            </div>
+                                                                                                                    )}
+
+                                                                                                            <div style={{
+                                                                                                                marginTop: '15px',
+                                                                                                                paddingTop: '15px',
+                                                                                                                borderTop: '1px solid #e5e7eb',
+                                                                                                            }}>
+                                                                                                                <button
+                                                                                                                        onClick={(e) => {
+                                                                                                                            e.stopPropagation();
+                                                                                                                            router.push(
+                                                                                                                                    `/business/${business._id}`);
+                                                                                                                        }}
+                                                                                                                        style={{
+                                                                                                                            width: '100%',
+                                                                                                                            padding: '10px',
+                                                                                                                            backgroundColor: '#007bff',
+                                                                                                                            color: 'white',
+                                                                                                                            border: 'none',
+                                                                                                                            borderRadius: '6px',
+                                                                                                                            cursor: 'pointer',
+                                                                                                                            fontWeight: 'bold',
+                                                                                                                            fontSize: '14px',
+                                                                                                                        }}
+                                                                                                                >
+                                                                                                                    View
+                                                                                                                    Details
+                                                                                                                    →
+                                                                                                                </button>
                                                                                                             </div>
-                                                                                                            <p className="text-sm text-gray-700">{incentive.information}</p>
                                                                                                         </div>
                                                                                                 ))}
-                                                                                            </div>
-                                                                                    )}
-
-                                                                                    {(!business.incentives || business.incentives.length === 0) && (
-                                                                                            <div className="border-t pt-4">
-                                                                                                <p className="text-gray-500 text-sm">No specific incentives listed</p>
-                                                                                            </div>
-                                                                                    )}
-
-                                                                                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                                        <button
-                                                                                                onClick={(e) => {
-                                                                                                    e.stopPropagation();
-                                                                                                    router.push(`/business/${business._id}`);
-                                                                                                }}
-                                                                                                style={{
-                                                                                                    width: '100%',
-                                                                                                    padding: '10px',
-                                                                                                    backgroundColor: '#007bff',
-                                                                                                    color: 'white',
-                                                                                                    border: 'none',
-                                                                                                    borderRadius: '6px',
-                                                                                                    cursor: 'pointer',
-                                                                                                    fontWeight: 'bold',
-                                                                                                    fontSize: '14px'
-                                                                                                }}
-                                                                                        >
-                                                                                            View Details →
-                                                                                        </button>
                                                                                     </div>
-                                                                                </div>
-                                                                        ));
-                                                                    })()}
+                                                                            );
+                                                                        })()}
 
-                                                                    {/* Separator between name matches and other businesses */}
-                                                                    {showSeparator && (
-                                                                            <div className="my-8">
-                                                                                <div className="relative">
-                                                                                    <div className="absolute inset-0 flex items-center">
-                                                                                        <div className="w-full border-t-2 border-gray-300"></div>
-                                                                                    </div>
-                                                                                    <div className="relative flex justify-center">
+                                                                        {/* Separator between name matches and other businesses */}
+                                                                        {showSeparator && (
+                                                                                <div className="my-8">
+                                                                                    <div className="relative">
+                                                                                        <div className="absolute inset-0 flex items-center">
+                                                                                            <div className="w-full border-t-2 border-gray-300"></div>
+                                                                                        </div>
+                                                                                        <div className="relative flex justify-center">
                                                                                         <span className="bg-gray-50 px-6 py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                                                                                             Other Nearby Businesses
                                                                                         </span>
+                                                                                        </div>
                                                                                     </div>
                                                                                 </div>
-                                                                            </div>
-                                                                    )}
+                                                                        )}
 
-                                                                    {/* Other nearby businesses */}
-                                                                    {(() => {
-                                                                        // Sort otherBusinesses with VBO priority
-                                                                        const sortedOtherBusinesses = [...otherBusinesses].sort((a, b) => {
-                                                                            // Priority 1: Verified veteran-owned with featured status
-                                                                            const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
-                                                                                    a.veteranOwned?.verificationStatus === 'verified' &&
-                                                                                    a.veteranOwned?.priority?.isFeatured;
-                                                                            const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
-                                                                                    b.veteranOwned?.verificationStatus === 'verified' &&
-                                                                                    b.veteranOwned?.priority?.isFeatured;
+                                                                        {/* Other nearby businesses */}
+                                                                        {(() => {
+                                                                            // Sort otherBusinesses with VBO priority
+                                                                            const sortedOtherBusinesses = [...otherBusinesses].sort(
+                                                                                    (a, b) => {
+                                                                                        // Priority 1: Verified veteran-owned with featured status
+                                                                                        const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus ===
+                                                                                                'verified' &&
+                                                                                                a.veteranOwned?.priority?.isFeatured;
+                                                                                        const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus ===
+                                                                                                'verified' &&
+                                                                                                b.veteranOwned?.priority?.isFeatured;
 
-                                                                            if (aVerifiedFeatured && !bVerifiedFeatured) return -1;
-                                                                            if (!aVerifiedFeatured && bVerifiedFeatured) return 1;
+                                                                                        if (aVerifiedFeatured &&
+                                                                                                !bVerifiedFeatured) return -1;
+                                                                                        if (!aVerifiedFeatured &&
+                                                                                                bVerifiedFeatured) return 1;
 
-                                                                            // Priority 2: Verified veteran-owned
-                                                                            const aVerified = a.veteranOwned?.isVeteranOwned &&
-                                                                                    a.veteranOwned?.verificationStatus === 'verified';
-                                                                            const bVerified = b.veteranOwned?.isVeteranOwned &&
-                                                                                    b.veteranOwned?.verificationStatus === 'verified';
+                                                                                        // Priority 2: Verified veteran-owned
+                                                                                        const aVerified = a.veteranOwned?.isVeteranOwned &&
+                                                                                                a.veteranOwned?.verificationStatus ===
+                                                                                                'verified';
+                                                                                        const bVerified = b.veteranOwned?.isVeteranOwned &&
+                                                                                                b.veteranOwned?.verificationStatus ===
+                                                                                                'verified';
 
-                                                                            if (aVerified && !bVerified) return -1;
-                                                                            if (!aVerified && bVerified) return 1;
+                                                                                        if (aVerified &&
+                                                                                                !bVerified) return -1;
+                                                                                        if (!aVerified &&
+                                                                                                bVerified) return 1;
 
-                                                                            // Priority 3: Any veteran-owned
-                                                                            const aVBO = a.veteranOwned?.isVeteranOwned;
-                                                                            const bVBO = b.veteranOwned?.isVeteranOwned;
+                                                                                        // Priority 3: Any veteran-owned
+                                                                                        const aVBO = a.veteranOwned?.isVeteranOwned;
+                                                                                        const bVBO = b.veteranOwned?.isVeteranOwned;
 
-                                                                            if (aVBO && !bVBO) return -1;
-                                                                            if (!aVBO && bVBO) return 1;
+                                                                                        if (aVBO && !bVBO) return -1;
+                                                                                        if (!aVBO && bVBO) return 1;
 
-                                                                            return 0;
-                                                                        });
+                                                                                        return 0;
+                                                                                    });
 
-                                                                        return sortedOtherBusinesses.map((business) => (
-                                                                                <div
-                                                                                        key={business._id}
-                                                                                        className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                                                                        onClick={() => router.push(`/business/${business._id}`)}
-                                                                                        style={{
-                                                                                            cursor: 'pointer',
-                                                                                            border: business.veteranOwned?.isVeteranOwned &&
-                                                                                            business.veteranOwned?.verificationStatus === 'verified'
-                                                                                                    ? '3px solid #dc2626'
-                                                                                                    : business.veteranOwned?.isVeteranOwned
-                                                                                                            ? '2px solid #f59e0b'
-                                                                                                            : 'none'
-                                                                                        }}
-                                                                                >
-                                                                                    {/* Veteran-Owned Badges */}
-                                                                                    {business.veteranOwned?.isVeteranOwned && (
-                                                                                            <div style={{
-                                                                                                marginBottom: '12px',
-                                                                                                display: 'flex',
-                                                                                                gap: '8px',
-                                                                                                flexWrap: 'wrap',
-                                                                                            }}>
+                                                                            return (
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                                        {sortedOtherBusinesses.map(
+                                                                                                (business) => (
+                                                                                                        <div
+                                                                                                                key={business._id}
+                                                                                                                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                                                                                                onClick={() => router.push(
+                                                                                                                        `/business/${business._id}`)}
+                                                                                                                style={{
+                                                                                                                    cursor: 'pointer',
+                                                                                                                    border: business.veteranOwned?.isVeteranOwned &&
+                                                                                                                    business.veteranOwned?.verificationStatus ===
+                                                                                                                    'verified'
+                                                                                                                            ?
+                                                                                                                            '3px solid #dc2626'
+                                                                                                                            :
+                                                                                                                            business.veteranOwned?.isVeteranOwned
+                                                                                                                                    ?
+                                                                                                                                    '2px solid #f59e0b'
+                                                                                                                                    :
+                                                                                                                                    'none',
+                                                                                                                }}
+                                                                                                        >
+                                                                                                            {/* Veteran-Owned Badges */}
+                                                                                                            {business.veteranOwned?.isVeteranOwned &&
+                                                                                                                    (
+                                                                                                                            <div style={{
+                                                                                                                                marginBottom: '12px',
+                                                                                                                                display: 'flex',
+                                                                                                                                gap: '8px',
+                                                                                                                                flexWrap: 'wrap',
+                                                                                                                            }}>
                                                                                                         <span style={{
                                                                                                             padding: '6px 12px',
-                                                                                                            backgroundColor: business.veteranOwned.verificationStatus === 'verified'
-                                                                                                                    ? '#dc2626'
-                                                                                                                    : business.veteranOwned.verificationStatus === 'pending'
-                                                                                                                            ? '#f59e0b'
-                                                                                                                            : '#6b7280',
+                                                                                                            backgroundColor: business.veteranOwned.verificationStatus ===
+                                                                                                            'verified'
+                                                                                                                    ?
+                                                                                                                    '#dc2626'
+                                                                                                                    :
+                                                                                                                    business.veteranOwned.verificationStatus ===
+                                                                                                                    'pending'
+                                                                                                                            ?
+                                                                                                                            '#f59e0b'
+                                                                                                                            :
+                                                                                                                            '#6b7280',
                                                                                                             color: 'white',
                                                                                                             borderRadius: '6px',
                                                                                                             fontSize: '13px',
@@ -2975,117 +3080,165 @@ export default function SearchPage() {
                                                                                                             alignItems: 'center',
                                                                                                             gap: '4px',
                                                                                                         }}>
-                                                                                                            {business.veteranOwned.verificationStatus === 'verified' ? '⭐' : '🎖️'}
+                                                                                                            {business.veteranOwned.verificationStatus ===
+                                                                                                            'verified' ?
+                                                                                                                    '⭐' :
+                                                                                                                    '🎖️'}
                                                                                                             Veteran-Owned
-                                                                                                            {business.veteranOwned.verificationStatus === 'verified' && ' ✓'}
+                                                                                                            {business.veteranOwned.verificationStatus ===
+                                                                                                                    'verified' &&
+                                                                                                                    ' ✓'}
                                                                                                         </span>
 
-                                                                                                {business.veteranOwned.priority?.isFeatured && (
-                                                                                                        <span style={{
-                                                                                                            padding: '6px 10px',
-                                                                                                            backgroundColor: '#fbbf24',
-                                                                                                            color: '#78350f',
-                                                                                                            borderRadius: '6px',
-                                                                                                            fontSize: '12px',
-                                                                                                            fontWeight: 'bold',
-                                                                                                            border: '2px solid #f59e0b',
-                                                                                                        }}>
+                                                                                                                                {business.veteranOwned.priority?.isFeatured &&
+                                                                                                                                        (
+                                                                                                                                                <span style={{
+                                                                                                                                                    padding: '6px 10px',
+                                                                                                                                                    backgroundColor: '#fbbf24',
+                                                                                                                                                    color: '#78350f',
+                                                                                                                                                    borderRadius: '6px',
+                                                                                                                                                    fontSize: '12px',
+                                                                                                                                                    fontWeight: 'bold',
+                                                                                                                                                    border: '2px solid #f59e0b',
+                                                                                                                                                }}>
                                                                                                             Featured
                                                                                                         </span>
-                                                                                                )}
-                                                                                            </div>
-                                                                                    )}
+                                                                                                                                        )}
+                                                                                                                            </div>
+                                                                                                                    )}
 
-                                                                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                                                        {business.bname}
-                                                                                    </h3>
+                                                                                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                                                                                {business.bname}
+                                                                                                            </h3>
 
-                                                                                    <div className="text-gray-600 mb-4">
-                                                                                        <p>{business.address1}</p>
-                                                                                        {business.address2 && <p>{business.address2}</p>}
-                                                                                        <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                        {business.phone && <p className="mt-1">📞 {business.phone}</p>}
-                                                                                    </div>
+                                                                                                            <div className="text-gray-600 mb-4">
+                                                                                                                <p>{business.address1}</p>
+                                                                                                                {business.address2 &&
+                                                                                                                        <p>{business.address2}</p>}
+                                                                                                                <p>{business.city}, {business.state} {business.zip}</p>
+                                                                                                                {business.phone &&
+                                                                                                                        <p className="mt-1">📞 {business.phone}</p>}
+                                                                                                            </div>
 
-                                                                                    {business.incentives && business.incentives.length > 0 && (
-                                                                                            <div className="border-t pt-4">
-                                                                                                <h4 className="font-semibold text-gray-900 mb-2">Available Incentives:</h4>
-                                                                                                {business.incentives.map((incentive, index) => (
-                                                                                                        <div key={index} className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-                                                                                                            <div className="flex items-center justify-between mb-1">
+                                                                                                            {business.incentives &&
+                                                                                                                    business.incentives.length >
+                                                                                                                    0 &&
+                                                                                                                    (
+                                                                                                                            <div className="border-t pt-4">
+                                                                                                                                <h4 className="font-semibold text-gray-900 mb-2">Available
+                                                                                                                                    Incentives:</h4>
+                                                                                                                                {business.incentives.map(
+                                                                                                                                        (
+                                                                                                                                                incentive,
+                                                                                                                                                index) => (
+                                                                                                                                                <div key={index}
+                                                                                                                                                     className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+                                                                                                                                                    <div className="flex items-center justify-between mb-1">
                                                                                                                 <span className="text-sm font-medium text-green-800">
-                                                                                                                    {incentive.type === 'VT' && 'Veterans'}
-                                                                                                                    {incentive.type === 'AD' && 'Active Duty'}
-                                                                                                                    {incentive.type === 'FR' && 'First Responders'}
-                                                                                                                    {incentive.type === 'SP' && 'Spouses'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'VT' &&
+                                                                                                                            'Veterans'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'AD' &&
+                                                                                                                            'Active Duty'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'FR' &&
+                                                                                                                            'First Responders'}
+                                                                                                                    {incentive.type ===
+                                                                                                                            'SP' &&
+                                                                                                                            'Spouses'}
                                                                                                                 </span>
-                                                                                                                <span className="text-lg font-bold text-green-700">
+                                                                                                                                                        <span className="text-lg font-bold text-green-700">
                                                                                                                     {incentive.amount}% off
                                                                                                                 </span>
+                                                                                                                                                    </div>
+                                                                                                                                                    <p className="text-sm text-gray-700">{incentive.information}</p>
+                                                                                                                                                </div>
+                                                                                                                                        ))}
+                                                                                                                            </div>
+                                                                                                                    )}
+
+                                                                                                            {(!business.incentives ||
+                                                                                                                            business.incentives.length ===
+                                                                                                                            0) &&
+                                                                                                                    (
+                                                                                                                            <div className="border-t pt-4">
+                                                                                                                                <p className="text-gray-500 text-sm">No
+                                                                                                                                    specific
+                                                                                                                                    incentives
+                                                                                                                                    listed</p>
+                                                                                                                            </div>
+                                                                                                                    )}
+
+                                                                                                            <div style={{
+                                                                                                                marginTop: '15px',
+                                                                                                                paddingTop: '15px',
+                                                                                                                borderTop: '1px solid #e5e7eb',
+                                                                                                            }}>
+                                                                                                                <button
+                                                                                                                        onClick={(e) => {
+                                                                                                                            e.stopPropagation();
+                                                                                                                            router.push(
+                                                                                                                                    `/business/${business._id}`);
+                                                                                                                        }}
+                                                                                                                        style={{
+                                                                                                                            width: '100%',
+                                                                                                                            padding: '10px',
+                                                                                                                            backgroundColor: '#007bff',
+                                                                                                                            color: 'white',
+                                                                                                                            border: 'none',
+                                                                                                                            borderRadius: '6px',
+                                                                                                                            cursor: 'pointer',
+                                                                                                                            fontWeight: 'bold',
+                                                                                                                            fontSize: '14px',
+                                                                                                                        }}
+                                                                                                                >
+                                                                                                                    View
+                                                                                                                    Details
+                                                                                                                    →
+                                                                                                                </button>
                                                                                                             </div>
-                                                                                                            <p className="text-sm text-gray-700">{incentive.information}</p>
                                                                                                         </div>
                                                                                                 ))}
-                                                                                            </div>
-                                                                                    )}
-
-                                                                                    {(!business.incentives || business.incentives.length === 0) && (
-                                                                                            <div className="border-t pt-4">
-                                                                                                <p className="text-gray-500 text-sm">No specific incentives listed</p>
-                                                                                            </div>
-                                                                                    )}
-
-                                                                                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                                                                                        <button
-                                                                                                onClick={(e) => {
-                                                                                                    e.stopPropagation();
-                                                                                                    router.push(`/business/${business._id}`);
-                                                                                                }}
-                                                                                                style={{
-                                                                                                    width: '100%',
-                                                                                                    padding: '10px',
-                                                                                                    backgroundColor: '#007bff',
-                                                                                                    color: 'white',
-                                                                                                    border: 'none',
-                                                                                                    borderRadius: '6px',
-                                                                                                    cursor: 'pointer',
-                                                                                                    fontWeight: 'bold',
-                                                                                                    fontSize: '14px'
-                                                                                                }}
-                                                                                        >
-                                                                                            View Details →
-                                                                                        </button>
                                                                                     </div>
-                                                                                </div>
-                                                                        ));
-                                                                    })()}
-                                                                </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                        ) : (
-                                                <div className="text-center py-12">
-                                                    <div className="text-gray-400 mb-4">
-                                                        <svg className="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                                        </svg>
+                                                                            );
+                                                                        })()}
+                                                                    </>
+                                                            );
+                                                        })()}
                                                     </div>
-                                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                        {results.length > 0 ? 'No businesses match your filter' : 'No businesses found'}
-                                                    </h3>
-                                                    <p className="text-gray-600">
-                                                        {results.length > 0
-                                                                ? 'Try toggling the incentive filter to see all results.'
-                                                                : 'Try adjusting your search criteria or browse all businesses.'
-                                                        }
-                                                    </p>
-                                                </div>
-                                        )}
+                                            ) : (
+                                                    <div className="text-center py-12">
+                                                        <div className="text-gray-400 mb-4">
+                                                            <svg className="mx-auto h-16 w-16" fill="none"
+                                                                 stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round"
+                                                                      strokeWidth={1}
+                                                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                                            </svg>
+                                                        </div>
+                                                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                            {results.length > 0 ?
+                                                                    'No businesses match your filter' :
+                                                                    'No businesses found'}
+                                                        </h3>
+                                                        <p className="text-gray-600">
+                                                            {results.length > 0
+                                                                    ?
+                                                                    'Try toggling the incentive filter to see all results.'
+                                                                    :
+                                                                    'Try adjusting your search criteria or browse all businesses.'
+                                                            }
+                                                        </p>
+                                                    </div>
+                                            )}
+                                        </div>
                                     </div>
                             )}
                         </div>
                     </div>
-                    <Footer />
+
+                    <Footer/>
                 </div>
             </>
     );
