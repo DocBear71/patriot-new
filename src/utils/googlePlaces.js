@@ -95,7 +95,26 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
 
         if (data.status === 'OK' && data.results) {
             console.log(`✅ Google Places text search returned ${data.results.length} results`);
-            return data.results.map(place => transformPlaceResult(place));
+
+            // Fetch detailed information for each place to get address_components
+            const detailedResults = await Promise.all(
+                data.results.slice(0, 20).map(async (place) => {
+                    // Get full details including address_components
+                    const details = await getPlaceDetails(place.place_id);
+                    if (details) {
+                        // Merge the details with the original place data
+                        return {
+                            ...place,
+                            // Override with detailed info
+                            address_components_available: true,
+                            detailedInfo: details
+                        };
+                    }
+                    return place;
+                })
+            );
+
+            return detailedResults.map(place => transformPlaceResult(place));
         } else if (data.status === 'ZERO_RESULTS') {
             console.log('ℹ️ Google Places text search returned zero results');
             return [];
@@ -111,54 +130,68 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
 
 /**
  * Transform a Google Place result to match your business schema
- * @param {Object} place - Raw Google Place result
+ * @param {Object} place - Raw Google Place result (may include detailedInfo)
  * @returns {Object} Transformed business object
  */
 function transformPlaceResult(place) {
-    // First, try to extract from address_components (available in Place Details API)
     let city = '';
     let state = '';
     let zip = '';
     let streetAddress = '';
+    let phone = '';
+    let businessType = '';
 
-    if (place.address_components && place.address_components.length > 0) {
-        // Use address_components if available (Place Details API)
+    // If we have detailed info from Place Details API, use it (most accurate)
+    if (place.detailedInfo) {
+        console.log('📍 Using detailed Place API data for:', place.name);
+        city = place.detailedInfo.city || '';
+        state = place.detailedInfo.state || '';
+        zip = place.detailedInfo.zip || '';
+        streetAddress = place.detailedInfo.address1 || '';
+        phone = place.detailedInfo.phone || '';
+    } else if (place.address_components && place.address_components.length > 0) {
+        // Fallback: Use address_components if available
+        console.log('📍 Using address_components for:', place.name);
         city = extractCityFromComponents(place.address_components);
         state = extractStateFromComponents(place.address_components);
         zip = extractZipFromComponents(place.address_components);
         streetAddress = extractStreetAddress(place.address_components);
-        console.log('📍 Extracted from address_components:', { city, state, zip, streetAddress });
+        phone = place.formatted_phone_number || place.international_phone_number || '';
     } else {
-        // Fallback: Parse the formatted_address string (Text Search API)
+        // Last resort: Parse formatted_address string
+        console.log('📍 Parsing formatted_address for:', place.name);
         const addressParts = parseFormattedAddress(place.formatted_address || place.vicinity || '');
         city = addressParts.city;
         state = addressParts.state;
         zip = addressParts.zip;
         streetAddress = addressParts.street;
-        console.log('📍 Parsed from formatted_address:', { city, state, zip, streetAddress });
+        phone = place.formatted_phone_number || place.international_phone_number || '';
     }
 
     // Map Google Place types to our business types
-    const businessType = mapGoogleTypeToBusinessType(place.types || []);
+    businessType = mapGoogleTypeToBusinessType(place.types || []);
+
+    console.log('✅ Transformed place:', {
+        name: place.name,
+        city,
+        state,
+        zip,
+        type: businessType
+    });
 
     return {
-        // Use a temporary ID that can be identified as Google Place
         _id: `google_${place.place_id}`,
         placeId: place.place_id,
-
-        // Business info - Use extracted/parsed address components
         bname: place.name,
         address1: streetAddress || place.vicinity || '',
         address2: '',
         city: city,
         state: state,
         zip: zip,
-        phone: place.formatted_phone_number || place.international_phone_number || '',
-        type: businessType, // NEW: Map Google types to our business type
-
-        // Location data
-        lat: place.geometry?.location?.lat || 0,
-        lng: place.geometry?.location?.lng || 0,
+        phone: phone,
+        type: businessType,
+        lat: place.geometry?.location?.lat || place.detailedInfo?.lat || 0,
+        lng: place.geometry?.location?.lng || place.detailedInfo?.lng || 0,
         location: place.geometry?.location ? {
             type: 'Point',
             coordinates: [
@@ -166,25 +199,18 @@ function transformPlaceResult(place) {
                 place.geometry.location.lat
             ]
         } : null,
-
-        // Additional Google Places data
         rating: place.rating || null,
         user_ratings_total: place.user_ratings_total || 0,
         types: place.types || [],
         business_status: place.business_status || 'OPERATIONAL',
-
-        // Flags for frontend
+        website: place.detailedInfo?.website || '',
         isGooglePlace: true,
         isFromDatabase: false,
-        markerColor: 'nearby', // Blue marker
+        markerColor: 'nearby',
         google_place_id: place.place_id,
-
-        // No incentives from Google Places
         incentives: [],
         hasIncentives: false,
-
-        // Status
-        status: 'google_place' // Special status to identify Google Places
+        status: 'google_place'
     };
 }
 
@@ -440,48 +466,131 @@ function extractZipFromComponents(addressComponents) {
 
 /**
  * Parse formatted address string to extract components
- * Handles formats like: "123 Main St, Cedar Rapids, IA 52402, USA"
+ * Handles formats like:
+ * - "4420 220th Trail, Amana, IA 52203, USA"
+ * - "123 Main St, Cedar Rapids, IA 52402"
+ * - "456 Oak Ave, Portland, OR"
  */
 function parseFormattedAddress(formattedAddress) {
-    if (!formattedAddress) return { street: '', city: '', state: '', zip: '' };
+    console.log('🔍 Parsing formatted address:', formattedAddress);
+
+    if (!formattedAddress) {
+        console.log('⚠️ No address to parse');
+        return { street: '', city: '', state: '', zip: '' };
+    }
 
     const parts = formattedAddress.split(',').map(p => p.trim());
+    console.log('📍 Address parts:', parts);
 
-    // Common format: "Street, City, State Zip, Country"
+    // Common format: "Street, City, State Zip, Country" (4 parts)
+    // Or: "Street, City, State Zip" (3 parts)
     if (parts.length >= 3) {
         const street = parts[0];
         const city = parts[1];
 
-        // Extract state and zip from "IA 52402" or "Iowa 52402"
+        // The state/zip is usually in position 2 (0-indexed)
+        // Format: "IA 52203" or "Iowa 52203" or just "IA"
         const stateZipPart = parts[2];
-        const stateZipMatch = stateZipPart.match(/([A-Z]{2})\s+(\d{5})/i);
+
+        // Try multiple regex patterns for state + zip
+        // Pattern 1: "IA 52203" (2-letter state code + 5-digit zip)
+        let stateZipMatch = stateZipPart.match(/^\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i);
 
         if (stateZipMatch) {
-            return {
+            const result = {
                 street: street,
                 city: city,
-                state: stateZipMatch[1],
+                state: stateZipMatch[1].toUpperCase(),
                 zip: stateZipMatch[2]
             };
+            console.log('✅ Parsed address (pattern 1):', result);
+            return result;
         }
 
-        // Try to extract just state (no zip)
-        const stateMatch = stateZipPart.match(/^([A-Z]{2})/i);
-        if (stateMatch) {
-            return {
+        // Pattern 2: Just state code "IA" (no zip in this part, check other parts)
+        const stateOnlyMatch = stateZipPart.match(/^\s*([A-Z]{2})\s*$/i);
+        if (stateOnlyMatch) {
+            // Look for zip in remaining parts
+            let zip = '';
+            for (let i = 3; i < parts.length; i++) {
+                const zipMatch = parts[i].match(/(\d{5}(?:-\d{4})?)/);
+                if (zipMatch) {
+                    zip = zipMatch[1];
+                    break;
+                }
+            }
+
+            const result = {
                 street: street,
                 city: city,
-                state: stateMatch[1],
-                zip: ''
+                state: stateOnlyMatch[1].toUpperCase(),
+                zip: zip
             };
+            console.log('✅ Parsed address (pattern 2 - state only):', result);
+            return result;
+        }
+
+        // Pattern 3: Full state name "Iowa 52203"
+        const fullStateMatch = stateZipPart.match(/^\s*([A-Za-z]+)\s+(\d{5}(?:-\d{4})?)/i);
+        if (fullStateMatch) {
+            const stateAbbr = getStateAbbreviation(fullStateMatch[1]);
+            const result = {
+                street: street,
+                city: city,
+                state: stateAbbr,
+                zip: fullStateMatch[2]
+            };
+            console.log('✅ Parsed address (pattern 3 - full state name):', result);
+            return result;
         }
     }
 
-    // Fallback
+    // Fallback: Try to find state and zip anywhere in the string
+    const fullMatch = formattedAddress.match(/,\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i);
+    if (fullMatch) {
+        const beforeMatch = formattedAddress.substring(0, formattedAddress.indexOf(fullMatch[0]));
+        const addressParts = beforeMatch.split(',').map(p => p.trim());
+
+        const result = {
+            street: addressParts[0] || '',
+            city: addressParts[addressParts.length - 1] || '',
+            state: fullMatch[1].toUpperCase(),
+            zip: fullMatch[2]
+        };
+        console.log('✅ Parsed address (fallback regex):', result);
+        return result;
+    }
+
+    // Last resort fallback
+    console.log('⚠️ Could not parse address, using fallback');
     return {
         street: parts[0] || '',
         city: parts[1] || '',
-        state: parts[2] || '',
+        state: '',
         zip: ''
     };
+}
+
+/**
+ * Convert full state name to abbreviation
+ */
+function getStateAbbreviation(stateName) {
+    const stateMap = {
+        'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+        'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+        'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+        'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+        'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+        'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+        'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+        'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+        'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+        'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+        'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+        'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+        'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC'
+    };
+
+    const normalized = stateName.toLowerCase().trim();
+    return stateMap[normalized] || stateName.toUpperCase().substring(0, 2);
 }
