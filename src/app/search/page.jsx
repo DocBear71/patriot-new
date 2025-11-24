@@ -3142,43 +3142,7 @@ export default function SearchPage() {
                                                                                                             (business._id && business._id.toString().startsWith('google_'));
 
                                                                                                     const isFromDatabase = !isGooglePlace;
-                                                                                        // Priority 1: Verified veteran-owned with featured status
-                                                                                        const aVerifiedFeatured = a.veteranOwned?.isVeteranOwned &&
-                                                                                                a.veteranOwned?.verificationStatus ===
-                                                                                                'verified' &&
-                                                                                                a.veteranOwned?.priority?.isFeatured;
-                                                                                        const bVerifiedFeatured = b.veteranOwned?.isVeteranOwned &&
-                                                                                                b.veteranOwned?.verificationStatus ===
-                                                                                                'verified' &&
-                                                                                                b.veteranOwned?.priority?.isFeatured;
-
-                                                                                        if (aVerifiedFeatured &&
-                                                                                                !bVerifiedFeatured) return -1;
-                                                                                        if (!aVerifiedFeatured &&
-                                                                                                bVerifiedFeatured) return 1;
-
-                                                                                        // Priority 2: Verified veteran-owned
-                                                                                        const aVerified = a.veteranOwned?.isVeteranOwned &&
-                                                                                                a.veteranOwned?.verificationStatus ===
-                                                                                                'verified';
-                                                                                        const bVerified = b.veteranOwned?.isVeteranOwned &&
-                                                                                                b.veteranOwned?.verificationStatus ===
-                                                                                                'verified';
-
-                                                                                        if (aVerified &&
-                                                                                                !bVerified) return -1;
-                                                                                        if (!aVerified &&
-                                                                                                bVerified) return 1;
-
-                                                                                        // Priority 3: Any veteran-owned
-                                                                                        const aVBO = a.veteranOwned?.isVeteranOwned;
-                                                                                        const bVBO = b.veteranOwned?.isVeteranOwned;
-
-                                                                                        if (aVBO && !bVBO) return -1;
-                                                                                        if (!aVBO && bVBO) return 1;
-
-                                                                                        return 0;
-                                                                                    })};
+                                                                                        return (
 
                                                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                                                         {sortedOtherBusinesses.map(
@@ -3391,10 +3355,12 @@ export default function SearchPage() {
                                                                                                             </div>
                                                                                                         </div>
                                                                                                 ))
-                                                                                        })
+                                                                                        };
                                                                                     </div>
+                                                                                                )}
+                                                                                                )}
                                                                                     </div>
-                                                                            )
+                                                                                    )
 
                                                                         })()}
                                                                     </>
