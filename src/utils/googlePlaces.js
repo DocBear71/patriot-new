@@ -32,7 +32,7 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
             const seenPlaceIds = new Set();
 
             // Limit to first 5 types to avoid too many API calls
-            const typesToSearch = query.slice(0, 5);
+            const typesToSearch = query.slice(0, 3);
 
             for (const type of typesToSearch) {
                 try {
@@ -65,17 +65,15 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
                 }
             }
 
-            console.log(`✅ Total nearby search results: ${allResults.length} unique places`);
+            // Limit total results to 50 for performance
+            const limitedResults = allResults.slice(0, 50);
+            console.log(`✅ Total nearby search results: ${allResults.length} unique places (limiting to ${limitedResults.length})`);
 
-            // Fetch detailed information for each place to get address_components
-            console.log('🔍 DEBUG: Fetching detailed info for', allResults.length, 'nearby places');
-
-            // Limit to first 20 to avoid too many API calls
-            const placesToDetail = allResults.slice(0, 20);
-            const remainingPlaces = allResults.slice(20);
+            // Fetch detailed information for ALL limited places to get complete addresses
+            console.log('🔍 DEBUG: Fetching detailed info for', limitedResults.length, 'nearby places');
 
             const detailedResults = await Promise.all(
-                placesToDetail.map(async (place) => {
+                limitedResults.map(async (place) => {
                     console.log('🔍 DEBUG: Getting details for nearby place:', place.name, 'place_id:', place.place_id);
 
                     // Get full details including address_components
@@ -103,9 +101,6 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
                 })
             );
 
-            // Combine detailed results with remaining (non-detailed) results
-            const allDetailedResults = [...detailedResults, ...remainingPlaces];
-
             console.log('🔍 DEBUG: First detailed nearby result sample:',
                 detailedResults[0] ? {
                     name: detailedResults[0].name,
@@ -114,8 +109,8 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
                 } : 'NO RESULTS'
             );
 
-            // Transform and return results
-            return allDetailedResults.map(place => transformPlaceResult(place));
+            // Transform and return results (all should have detailed info now)
+            return detailedResults.map(place => transformPlaceResult(place));
         }
 
         // TEXT SEARCH: Use when we have a specific query string
