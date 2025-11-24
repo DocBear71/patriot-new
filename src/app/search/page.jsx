@@ -10,6 +10,30 @@ import SearchLoadingModal from '../../components/search/SearchLoadingModal';
 
 export default function SearchPage() {
     const router = useRouter();
+
+    // Helper function to get business location display string
+    const getBusinessLocationString = (business) => {
+        const city = business.city || business.detailedInfo?.city || '';
+        const state = business.state || business.detailedInfo?.state || '';
+        const zip = business.zip || business.detailedInfo?.zip || '';
+
+        let locationStr = city;
+        if (state) locationStr += locationStr ? `, ${state}` : state;
+        if (zip) locationStr += locationStr ? ` ${zip}` : zip;
+
+        return locationStr || 'Location not available';
+    };
+
+    // Helper function to get business address
+    const getBusinessAddress = (business) => {
+        return business.address1 || business.detailedInfo?.address1 || '';
+    };
+
+    // Helper function to get business phone
+    const getBusinessPhone = (business) => {
+        return business.phone || business.detailedInfo?.phone || '';
+    };
+
     const [searchData, setSearchData] = useState({
         businessName: '',
         address: '',
@@ -2661,10 +2685,10 @@ export default function SearchPage() {
                                                                                         )}
 
                                                                                         <div className="text-gray-600 mb-4">
-                                                                                            <p>{business.address1}</p>
-                                                                                            {business.address2 && <p>{business.address2}</p>}
-                                                                                            <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                            {business.phone && <p className="mt-1">📞 {business.phone}</p>}
+                                                                                            <p>{getBusinessAddress(business)}</p>
+                                                                                            {(business.address2 || business.detailedInfo?.address2) && <p>{business.address2 || business.detailedInfo?.address2}</p>}
+                                                                                            <p>{getBusinessLocationString(business)}</p>
+                                                                                            {getBusinessPhone(business) && <p className="mt-1">📞 {getBusinessPhone(business)}</p>}
                                                                                         </div>
 
                                                                                         {business.incentives && business.incentives.length > 0 && (
@@ -2708,20 +2732,21 @@ export default function SearchPage() {
                                                                                                                 const details = business.detailedInfo || {};
                                                                                                                 const businessData = {
                                                                                                                     bname: business.bname || business.name || '',
-                                                                                                                    address1: details.address1 || business.address1 || '',
-                                                                                                                    address2: details.address2 || business.address2 || '',
-                                                                                                                    city: details.city || business.city || '',
-                                                                                                                    state: details.state || business.state || '',
-                                                                                                                    zip: details.zip || business.zip || '',
-                                                                                                                    phone: details.phone || business.phone || '',
-                                                                                                                    types: business.types || [],
-                                                                                                                    website: business.website || '',
+                                                                                                                    address1: business.address1 || details.address1 || '',
+                                                                                                                    address2: business.address2 || details.address2 || '',
+                                                                                                                    city: business.city || details.city || '',
+                                                                                                                    state: business.state || details.state || '',
+                                                                                                                    zip: business.zip || details.zip || '',
+                                                                                                                    phone: business.phone || details.phone || '',
+                                                                                                                    type: business.type || '',
+                                                                                                                    types: business.types || details.types || [],
+                                                                                                                    website: business.website || details.website || '',
                                                                                                                     // Add chain info if found
                                                                                                                     chainId: business.possibleChain?.chain_id || '',
                                                                                                                     chainName: business.possibleChain?.chain_name || '',
-                                                                                                                    lat: business.lat || business.coordinates?.lat || business.geometry?.location?.lat || '',
-                                                                                                                    lng: business.lng || business.coordinates?.lng || business.geometry?.location?.lng || '',
-                                                                                                                    placeId: business.placeId || business.place_id || '',
+                                                                                                                    lat: business.lat || business.coordinates?.lat || details.lat || '',
+                                                                                                                    lng: business.lng || business.coordinates?.lng || details.lng || '',
+                                                                                                                    placeId: business.placeId || business.place_id || business.google_place_id || '',
                                                                                                                 };
                                                                                                                 console.log('📝 Preparing to add Google Place:', businessData);
                                                                                                                 sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
@@ -2951,14 +2976,12 @@ export default function SearchPage() {
                                                                                                                 {business.bname}
                                                                                                             </h3>
 
-                                                                                                            <div className="text-gray-600 mb-4">
-                                                                                                                <p>{business.address1}</p>
-                                                                                                                {business.address2 &&
-                                                                                                                        <p>{business.address2}</p>}
-                                                                                                                <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                                                {business.phone &&
-                                                                                                                        <p className="mt-1">📞 {business.phone}</p>}
-                                                                                                            </div>
+                                                                                                                <div className="text-gray-600 mb-4">
+                                                                                                                    <p>{getBusinessAddress(business)}</p>
+                                                                                                                    {(business.address2 || business.detailedInfo?.address2) && <p>{business.address2 || business.detailedInfo?.address2}</p>}
+                                                                                                                    <p>{getBusinessLocationString(business)}</p>
+                                                                                                                    {getBusinessPhone(business) && <p className="mt-1">📞 {getBusinessPhone(business)}</p>}
+                                                                                                                </div>
 
                                                                                                             {business.incentives &&
                                                                                                                     business.incentives.length >
@@ -3023,19 +3046,21 @@ export default function SearchPage() {
                                                                                                                                         const details = business.detailedInfo || {};
                                                                                                                                         const businessData = {
                                                                                                                                             bname: business.bname || business.name || '',
-                                                                                                                                            address1: details.address1 || business.address1 || '',
-                                                                                                                                            address2: details.address2 || business.address2 || '',
-                                                                                                                                            city: details.city || business.city || '',
-                                                                                                                                            state: details.state || business.state || '',
-                                                                                                                                            zip: details.zip || business.zip || '',
-                                                                                                                                            phone: details.phone || business.phone || '',
-                                                                                                                                            types: business.types || [],
-                                                                                                                                            website: business.website || '',
-                                                                                                                                            lat: business.lat || business.coordinates?.lat || '',
-                                                                                                                                            lng: business.lng || business.coordinates?.lng || '',
-                                                                                                                                            placeId: business.placeId || business.place_id || '',
+                                                                                                                                            address1: business.address1 || details.address1 || '',
+                                                                                                                                            address2: business.address2 || details.address2 || '',
+                                                                                                                                            city: business.city || details.city || '',
+                                                                                                                                            state: business.state || details.state || '',
+                                                                                                                                            zip: business.zip || details.zip || '',
+                                                                                                                                            phone: business.phone || details.phone || '',
+                                                                                                                                            type: business.type || '',
+                                                                                                                                            types: business.types || details.types || [],
+                                                                                                                                            website: business.website || details.website || '',
+                                                                                                                                            // Add chain info if found
                                                                                                                                             chainId: business.possibleChain?.chain_id || '',
                                                                                                                                             chainName: business.possibleChain?.chain_name || '',
+                                                                                                                                            lat: business.lat || business.coordinates?.lat || details.lat || '',
+                                                                                                                                            lng: business.lng || business.coordinates?.lng || details.lng || '',
+                                                                                                                                            placeId: business.placeId || business.place_id || business.google_place_id || '',
                                                                                                                                         };
                                                                                                                                         sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));
                                                                                                                                         router.push('/business-add');
@@ -3214,10 +3239,10 @@ export default function SearchPage() {
                                                                                                         </h3>
 
                                                                                                         <div className="text-gray-600 mb-4">
-                                                                                                            <p>{business.address1}</p>
-                                                                                                            {business.address2 && <p>{business.address2}</p>}
-                                                                                                            <p>{business.city}, {business.state} {business.zip}</p>
-                                                                                                            {business.phone && <p className="mt-1">📞 {business.phone}</p>}
+                                                                                                            <p>{getBusinessAddress(business)}</p>
+                                                                                                            {(business.address2 || business.detailedInfo?.address2) && <p>{business.address2 || business.detailedInfo?.address2}</p>}
+                                                                                                            <p>{getBusinessLocationString(business)}</p>
+                                                                                                            {getBusinessPhone(business) && <p className="mt-1">📞 {getBusinessPhone(business)}</p>}
                                                                                                         </div>
 
                                                                                                         {business.incentives && business.incentives.length > 0 && (
@@ -3261,19 +3286,21 @@ export default function SearchPage() {
                                                                                                                                 const details = business.detailedInfo || {};
                                                                                                                                 const businessData = {
                                                                                                                                     bname: business.bname || business.name || '',
-                                                                                                                                    address1: details.address1 || business.address1 || '',
-                                                                                                                                    address2: details.address2 || business.address2 || '',
-                                                                                                                                    city: details.city || business.city || '',
-                                                                                                                                    state: details.state || business.state || '',
-                                                                                                                                    zip: details.zip || business.zip || '',
-                                                                                                                                    phone: details.phone || business.phone || '',
-                                                                                                                                    types: business.types || [],
-                                                                                                                                    website: business.website || '',
-                                                                                                                                    lat: business.lat || business.coordinates?.lat || '',
-                                                                                                                                    lng: business.lng || business.coordinates?.lng || '',
-                                                                                                                                    placeId: business.placeId || business.place_id || '',
+                                                                                                                                    address1: business.address1 || details.address1 || '',
+                                                                                                                                    address2: business.address2 || details.address2 || '',
+                                                                                                                                    city: business.city || details.city || '',
+                                                                                                                                    state: business.state || details.state || '',
+                                                                                                                                    zip: business.zip || details.zip || '',
+                                                                                                                                    phone: business.phone || details.phone || '',
+                                                                                                                                    type: business.type || '',
+                                                                                                                                    types: business.types || details.types || [],
+                                                                                                                                    website: business.website || details.website || '',
+                                                                                                                                    // Add chain info if found
                                                                                                                                     chainId: business.possibleChain?.chain_id || '',
                                                                                                                                     chainName: business.possibleChain?.chain_name || '',
+                                                                                                                                    lat: business.lat || business.coordinates?.lat || details.lat || '',
+                                                                                                                                    lng: business.lng || business.coordinates?.lng || details.lng || '',
+                                                                                                                                    placeId: business.placeId || business.place_id || business.google_place_id || '',
                                                                                                                                 };
                                                                                                                                 console.log('📝 Adding Google Place:', businessData);
                                                                                                                                 sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));

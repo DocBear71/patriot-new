@@ -149,6 +149,7 @@ function transformPlaceResult(place) {
         zip = place.detailedInfo.zip || '';
         streetAddress = place.detailedInfo.address1 || '';
         phone = place.detailedInfo.phone || '';
+        businessType = mapGoogleTypeToBusinessType(place.detailedInfo.types || place.types || []);
     } else if (place.address_components && place.address_components.length > 0) {
         // Fallback: Use address_components if available
         console.log('📍 Using address_components for:', place.name);
@@ -198,10 +199,20 @@ function transformPlaceResult(place) {
                 place.geometry.location.lng,
                 place.geometry.location.lat
             ]
-        } : null,
+        } : (place.detailedInfo ? {
+            type: 'Point',
+            coordinates: [
+                place.detailedInfo.lng,
+                place.detailedInfo.lat
+            ]
+        } : null),
+        coordinates: {
+            lat: place.geometry?.location?.lat || place.detailedInfo?.lat || 0,
+            lng: place.geometry?.location?.lng || place.detailedInfo?.lng || 0
+        },
         rating: place.rating || null,
         user_ratings_total: place.user_ratings_total || 0,
-        types: place.types || [],
+        types: place.types || place.detailedInfo?.types || [],
         business_status: place.business_status || 'OPERATIONAL',
         website: place.detailedInfo?.website || '',
         isGooglePlace: true,
@@ -210,7 +221,18 @@ function transformPlaceResult(place) {
         google_place_id: place.place_id,
         incentives: [],
         hasIncentives: false,
-        status: 'google_place'
+        status: 'google_place',
+        // Store full detailed info for downstream use
+        detailedInfo: place.detailedInfo || {
+            address1: streetAddress,
+            city: city,
+            state: state,
+            zip: zip,
+            phone: phone,
+            lat: place.geometry?.location?.lat || 0,
+            lng: place.geometry?.location?.lng || 0,
+            website: ''
+        }
     };
 }
 
