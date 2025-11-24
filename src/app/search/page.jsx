@@ -2704,14 +2704,16 @@ export default function SearchPage() {
                                                                                                     <button
                                                                                                             onClick={(e) => {
                                                                                                                 e.stopPropagation();
+                                                                                                                // Get data from detailedInfo if available (Google Places API details)
+                                                                                                                const details = business.detailedInfo || {};
                                                                                                                 const businessData = {
-                                                                                                                    bname: business.bname || business.name,
-                                                                                                                    address1: business.address1 || '',
-                                                                                                                    address2: business.address2 || '',
-                                                                                                                    city: business.city || '',
-                                                                                                                    state: business.state || '',
-                                                                                                                    zip: business.zip || '',
-                                                                                                                    phone: business.phone || '',
+                                                                                                                    bname: business.bname || business.name || '',
+                                                                                                                    address1: details.address1 || business.address1 || '',
+                                                                                                                    address2: details.address2 || business.address2 || '',
+                                                                                                                    city: details.city || business.city || '',
+                                                                                                                    state: details.state || business.state || '',
+                                                                                                                    zip: details.zip || business.zip || '',
+                                                                                                                    phone: details.phone || business.phone || '',
                                                                                                                     types: business.types || [],
                                                                                                                     website: business.website || '',
                                                                                                                     // Add chain info if found
@@ -3017,14 +3019,16 @@ export default function SearchPage() {
                                                                                                                             <button
                                                                                                                                     onClick={(e) => {
                                                                                                                                         e.stopPropagation();
+                                                                                                                                        // Get data from detailedInfo if available (Google Places API details)
+                                                                                                                                        const details = business.detailedInfo || {};
                                                                                                                                         const businessData = {
-                                                                                                                                            bname: business.bname || business.name,
-                                                                                                                                            address1: business.address1 || '',
-                                                                                                                                            address2: business.address2 || '',
-                                                                                                                                            city: business.city || '',
-                                                                                                                                            state: business.state || '',
-                                                                                                                                            zip: business.zip || '',
-                                                                                                                                            phone: business.phone || '',
+                                                                                                                                            bname: business.bname || business.name || '',
+                                                                                                                                            address1: details.address1 || business.address1 || '',
+                                                                                                                                            address2: details.address2 || business.address2 || '',
+                                                                                                                                            city: details.city || business.city || '',
+                                                                                                                                            state: details.state || business.state || '',
+                                                                                                                                            zip: details.zip || business.zip || '',
+                                                                                                                                            phone: details.phone || business.phone || '',
                                                                                                                                             types: business.types || [],
                                                                                                                                             website: business.website || '',
                                                                                                                                             lat: business.lat || business.coordinates?.lat || '',
@@ -3253,14 +3257,16 @@ export default function SearchPage() {
                                                                                                                     <button
                                                                                                                             onClick={(e) => {
                                                                                                                                 e.stopPropagation();
+                                                                                                                                // Get data from detailedInfo if available (Google Places API details)
+                                                                                                                                const details = business.detailedInfo || {};
                                                                                                                                 const businessData = {
-                                                                                                                                    bname: business.bname || business.name,
-                                                                                                                                    address1: business.address1 || '',
-                                                                                                                                    address2: business.address2 || '',
-                                                                                                                                    city: business.city || '',
-                                                                                                                                    state: business.state || '',
-                                                                                                                                    zip: business.zip || '',
-                                                                                                                                    phone: business.phone || '',
+                                                                                                                                    bname: business.bname || business.name || '',
+                                                                                                                                    address1: details.address1 || business.address1 || '',
+                                                                                                                                    address2: details.address2 || business.address2 || '',
+                                                                                                                                    city: details.city || business.city || '',
+                                                                                                                                    state: details.state || business.state || '',
+                                                                                                                                    zip: details.zip || business.zip || '',
+                                                                                                                                    phone: details.phone || business.phone || '',
                                                                                                                                     types: business.types || [],
                                                                                                                                     website: business.website || '',
                                                                                                                                     lat: business.lat || business.coordinates?.lat || '',
