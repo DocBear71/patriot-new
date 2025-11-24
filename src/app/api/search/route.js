@@ -537,6 +537,39 @@ export async function GET(request) {
                     )
                 }));
 
+                // ========== CHAIN MATCHING FOR GOOGLE PLACES ==========
+                console.log('🔗 Starting chain matching for Google Places results...');
+
+                // Check each Google Place for chain matches
+                for (let i = 0; i < googlePlacesResults.length; i++) {
+                    const place = googlePlacesResults[i];
+
+                    try {
+                        // Search for chain match using the same logic as the frontend
+                        const chainMatchInfo = await searchForChainMatchServer(place.bname);
+
+                        if (chainMatchInfo) {
+                            console.log(`✅ Found chain match for "${place.bname}": ${chainMatchInfo.chain.chain_name}`);
+
+                            // Add chain info to the place
+                            googlePlacesResults[i] = {
+                                ...place,
+                                possibleChain: {
+                                    chain_id: chainMatchInfo.chain._id,
+                                    chain_name: chainMatchInfo.chain.chain_name,
+                                    incentives: chainMatchInfo.incentives || [],
+                                    matchedWith: chainMatchInfo.matchedWith
+                                }
+                            };
+                        }
+                    } catch (chainError) {
+                        console.error(`⚠️ Error checking chain for ${place.bname}:`, chainError);
+                    }
+                }
+
+                console.log('✅ Chain matching complete for Google Places');
+                // ========== END CHAIN MATCHING ==========
+
             } catch (placesError) {
                 console.error('❌ Google Places search FAILED:', placesError);
                 console.error('Error details:', placesError.message);
@@ -672,4 +705,77 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+}
+
+/**
+ * Server-side version of chain matching
+ */
+async function searchForChainMatchServer(businessName) {
+    try {
+        const { Chain } = await import('../../../models/index.js');
+
+        // Generate search variations
+        const searchVariations = [];
+        searchVariations.push(businessName);
+
+        // Remove business type suffixes
+        let cleaned = businessName.replace(
+            /\s+(Grocery Store|Grocery|Supermarket|Market|Home Improvement|Gas Station|Fuel Center|Convenience Store|Department Store|Store|Shop|Location|Restaurant|Cafe|Coffee|Pizza|Pizzeria|Bakery|Deli|Pharmacy|Drugstore|Hotel|Motel|Inn|Suites|Bar & Grill|Grill & Bar|Grill|Bar|Pub|Tavern|Eatery|Diner|Kitchen|Bistro|Cuisine|Food Co\.|Co\.|Inc\.|LLC)$/i,
+            '').trim();
+        if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
+            searchVariations.push(cleaned);
+        }
+
+        // Remove symbols
+        cleaned = businessName.replace(/\s*[\+\&]\s*/g, ' ')
+            .replace(/\s+(Grill|Bar|Restaurant|Kitchen|Food Co\.|Co\.|Inc\.|LLC)$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (cleaned !== businessName && !searchVariations.includes(cleaned)) {
+            searchVariations.push(cleaned);
+        }
+
+        // Try first part only
+        const firstPartMatch = businessName.match(/^([A-Za-z0-9\-']+(?:\s+[A-Za-z0-9\-']+)?)/);
+        if (firstPartMatch && firstPartMatch[1] && firstPartMatch[1].length >= 4) {
+            const firstPart = firstPartMatch[1].trim();
+            if (!searchVariations.includes(firstPart)) {
+                searchVariations.push(firstPart);
+            }
+        }
+
+        const uniqueVariations = [...new Set(searchVariations)].filter(v => v.length >= 3);
+
+        // Try each variation
+        for (const variation of uniqueVariations) {
+            const matchedChain = await Chain.findOne({
+                $or: [
+                    { chain_name: new RegExp(`^${variation}$`, 'i') },
+                    { alternate_names: new RegExp(`^${variation}$`, 'i') }
+                ],
+                status: 'active'
+            }).lean();
+
+            if (matchedChain) {
+                // Get chain incentives
+                const chainIncentives = await Incentive.find({
+                    chain_id: matchedChain._id,
+                    is_available: true
+                }).lean();
+
+                if (chainIncentives && chainIncentives.length > 0) {
+                    return {
+                        chain: matchedChain,
+                        incentives: chainIncentives,
+                        matchedWith: variation
+                    };
+                }
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error('❌ Error in searchForChainMatchServer:', error);
+        return null;
+    }
 }

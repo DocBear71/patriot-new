@@ -2521,6 +2521,16 @@ export default function SearchPage() {
 
                                                                             const isFromDatabase = !isGooglePlace && business._id;
 
+                                                                            // Determine border color matching map pins
+                                                                            let borderColor = '#28a745'; // Default green (database)
+                                                                            if (isGooglePlace) {
+                                                                                borderColor = '#4285F4'; // Blue (Google Places)
+                                                                            } else if (business.chain_id) {
+                                                                                borderColor = '#FF9800'; // Orange (Chain)
+                                                                            } else if (business.nameMatches || business.isNameMatch) {
+                                                                                borderColor = '#EA4335'; // Red (Primary match)
+                                                                            }
+
                                                                             return (
                                                                                     <div
                                                                                             key={business._id || business.placeId || `google-${Math.random()}`}
@@ -2532,7 +2542,7 @@ export default function SearchPage() {
                                                                                             }}
                                                                                             style={{
                                                                                                 cursor: isFromDatabase ? 'pointer' : 'default',
-                                                                                                border: isGooglePlace ? '2px solid #4285F4' : '2px solid #28a745'
+                                                                                                border: `3px solid ${borderColor}`
                                                                                             }}
                                                                                     >
                                                                                         {/* Status Badge - Database vs Google Places */}
@@ -2585,11 +2595,12 @@ export default function SearchPage() {
                                                                                             <h3 className="text-xl font-bold text-gray-900" style={{margin: 0}}>
                                                                                                 {business.bname}
                                                                                             </h3>
-                                                                                            {business.veteranOwned?.isVeteranOwned && (
+                                                                                            {/* VBO Badge - Only show for database businesses */}
+                                                                                            {isFromDatabase && business.veteranOwned?.isVeteranOwned && (
                                                                                                     <span style={{
                                                                                                         padding: '4px 8px',
-                                                                                                        backgroundColor: '#fecaca',
-                                                                                                        color: '#991b1b',
+                                                                                                        backgroundColor: business.veteranOwned.verificationStatus === 'verified' ? '#dc2626' : '#fecaca',
+                                                                                                        color: business.veteranOwned.verificationStatus === 'verified' ? 'white' : '#991b1b',
                                                                                                         borderRadius: '12px',
                                                                                                         fontSize: '0.75rem',
                                                                                                         fontWeight: '600',
@@ -2597,10 +2608,10 @@ export default function SearchPage() {
                                                                                                         alignItems: 'center',
                                                                                                         gap: '4px'
                                                                                                     }}>
-                                                                                                        🇺🇸 VBO
+                                                                                                        🇺🇸 VBO {business.veteranOwned.verificationStatus === 'verified' && '✓'}
                                                                                                     </span>
                                                                                             )}
-                                                                                            {business.veteranOwned?.priority?.isFeatured && (
+                                                                                            {isFromDatabase && business.veteranOwned?.priority?.isFeatured && (
                                                                                                     <span style={{
                                                                                                         padding: '4px 8px',
                                                                                                         backgroundColor: '#fef3c7',
@@ -2612,25 +2623,38 @@ export default function SearchPage() {
                                                                                                         alignItems: 'center',
                                                                                                         gap: '4px'
                                                                                                     }}>
-                                                                                                            ⭐ Featured
-                                                                                                        </span>
+                                                                                                        ⭐ Featured
+                                                                                                    </span>
                                                                                             )}
                                                                                         </div>
 
-                                                                                        {/* Veteran-Owned Badge */}
-                                                                                        {business.veteranOwned?.isVeteranOwned && (
-                                                                                                <div className="mb-3">
-                                                                                                    <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1">
-                                                                                                        <span className="text-red-600 font-bold">🇺🇸</span>
-                                                                                                        <span className="text-sm font-semibold text-red-700">
-                                                                                                            Veteran-Owned
-                                                                                                        </span>
-                                                                                                        {business.veteranOwned.verificationStatus === 'certified' && (
-                                                                                                                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                                                                                                                    Certified
-                                                                                                                </span>
-                                                                                                        )}
-                                                                                                    </div>
+                                                                                        {/* Chain Match Info for Google Places */}
+                                                                                        {isGooglePlace && business.possibleChain && (
+                                                                                                <div style={{
+                                                                                                    padding: '8px 12px',
+                                                                                                    backgroundColor: '#f0f8ff',
+                                                                                                    border: '2px solid #4CAF50',
+                                                                                                    borderRadius: '6px',
+                                                                                                    marginBottom: '12px',
+                                                                                                    fontSize: '0.875rem'
+                                                                                                }}>
+                                                                                                    <strong style={{color: '#1976d2'}}>🎯 Possible Chain:</strong>
+                                                                                                    <span style={{marginLeft: '6px', color: '#666'}}>
+                                                                                                    {business.possibleChain.chain_name}
+                                                                                                </span>
+                                                                                                    {business.possibleChain.incentives?.length > 0 && (
+                                                                                                            <span style={{
+                                                                                                                marginLeft: '8px',
+                                                                                                                padding: '2px 6px',
+                                                                                                                backgroundColor: '#28a745',
+                                                                                                                color: 'white',
+                                                                                                                borderRadius: '10px',
+                                                                                                                fontSize: '0.75rem',
+                                                                                                                fontWeight: '600'
+                                                                                                            }}>
+                                                                                                        {business.possibleChain.incentives.length} incentive{business.possibleChain.incentives.length !== 1 ? 's' : ''}
+                                                                                                    </span>
+                                                                                                    )}
                                                                                                 </div>
                                                                                         )}
 
@@ -2680,17 +2704,20 @@ export default function SearchPage() {
                                                                                                                 e.stopPropagation();
                                                                                                                 const businessData = {
                                                                                                                     bname: business.bname || business.name,
-                                                                                                                    address1: business.address1 || business.formatted_address?.split(',')[0] || '',
+                                                                                                                    address1: business.address1 || '',
                                                                                                                     address2: business.address2 || '',
                                                                                                                     city: business.city || '',
                                                                                                                     state: business.state || '',
                                                                                                                     zip: business.zip || '',
-                                                                                                                    phone: business.phone || business.formatted_phone_number || business.international_phone_number || '',
+                                                                                                                    phone: business.phone || '',
+                                                                                                                    types: business.types || [],
+                                                                                                                    website: business.website || '',
+                                                                                                                    // Add chain info if found
+                                                                                                                    chainId: business.possibleChain?.chain_id || '',
+                                                                                                                    chainName: business.possibleChain?.chain_name || '',
                                                                                                                     lat: business.lat || business.coordinates?.lat || business.geometry?.location?.lat || '',
                                                                                                                     lng: business.lng || business.coordinates?.lng || business.geometry?.location?.lng || '',
                                                                                                                     placeId: business.placeId || business.place_id || '',
-                                                                                                                    types: business.types || [],
-                                                                                                                    website: business.website || ''
                                                                                                                 };
                                                                                                                 console.log('📝 Preparing to add Google Place:', businessData);
                                                                                                                 sessionStorage.setItem('prefillBusinessData', JSON.stringify(businessData));

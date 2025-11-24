@@ -115,19 +115,22 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
  * @returns {Object} Transformed business object
  */
 function transformPlaceResult(place) {
+    // Parse the formatted address to extract components
+    const addressParts = parseFormattedAddress(place.formatted_address || place.vicinity || '');
+
     return {
         // Use a temporary ID that can be identified as Google Place
         _id: `google_${place.place_id}`,
         placeId: place.place_id,
 
-        // Business info
+        // Business info - Use parsed address components
         bname: place.name,
-        address1: place.formatted_address || place.vicinity || '',
+        address1: addressParts.street || place.vicinity || '',
         address2: '',
-        city: extractCity(place),
-        state: extractState(place),
-        zip: extractZip(place),
-        phone: place.formatted_phone_number || '',
+        city: addressParts.city || extractCity(place),
+        state: addressParts.state || extractState(place),
+        zip: addressParts.zip || extractZip(place),
+        phone: place.formatted_phone_number || place.international_phone_number || '',
 
         // Location data
         lat: place.geometry?.location?.lat || 0,
@@ -303,4 +306,52 @@ function extractZipFromComponents(addressComponents) {
     );
 
     return zipComponent?.long_name || '';
+}
+
+/**
+ * Parse formatted address string to extract components
+ * Handles formats like: "123 Main St, Cedar Rapids, IA 52402, USA"
+ */
+function parseFormattedAddress(formattedAddress) {
+    if (!formattedAddress) return { street: '', city: '', state: '', zip: '' };
+
+    const parts = formattedAddress.split(',').map(p => p.trim());
+
+    // Common format: "Street, City, State Zip, Country"
+    if (parts.length >= 3) {
+        const street = parts[0];
+        const city = parts[1];
+
+        // Extract state and zip from "IA 52402" or "Iowa 52402"
+        const stateZipPart = parts[2];
+        const stateZipMatch = stateZipPart.match(/([A-Z]{2})\s+(\d{5})/i);
+
+        if (stateZipMatch) {
+            return {
+                street: street,
+                city: city,
+                state: stateZipMatch[1],
+                zip: stateZipMatch[2]
+            };
+        }
+
+        // Try to extract just state (no zip)
+        const stateMatch = stateZipPart.match(/^([A-Z]{2})/i);
+        if (stateMatch) {
+            return {
+                street: street,
+                city: city,
+                state: stateMatch[1],
+                zip: ''
+            };
+        }
+    }
+
+    // Fallback
+    return {
+        street: parts[0] || '',
+        city: parts[1] || '',
+        state: parts[2] || '',
+        zip: ''
+    };
 }
