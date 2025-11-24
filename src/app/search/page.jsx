@@ -2728,7 +2728,7 @@ export default function SearchPage() {
                                                                                                             style={{
                                                                                                                 width: '100%',
                                                                                                                 padding: '10px',
-                                                                                                                backgroundColor: '#2563eb',
+                                                                                                                backgroundColor: '#059669',
                                                                                                                 color: 'white',
                                                                                                                 border: 'none',
                                                                                                                 borderRadius: '6px',
@@ -2748,7 +2748,7 @@ export default function SearchPage() {
                                                                                                             style={{
                                                                                                                 width: '100%',
                                                                                                                 padding: '10px',
-                                                                                                                backgroundColor: '#059669',
+                                                                                                                backgroundColor: '#2563eb',
                                                                                                                 color: 'white',
                                                                                                                 border: 'none',
                                                                                                                 borderRadius: '6px',
