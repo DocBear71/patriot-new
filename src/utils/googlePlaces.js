@@ -67,8 +67,55 @@ export async function searchGooglePlaces(query, lat = null, lng = null, radius =
 
             console.log(`✅ Total nearby search results: ${allResults.length} unique places`);
 
+            // Fetch detailed information for each place to get address_components
+            console.log('🔍 DEBUG: Fetching detailed info for', allResults.length, 'nearby places');
+
+            // Limit to first 20 to avoid too many API calls
+            const placesToDetail = allResults.slice(0, 20);
+            const remainingPlaces = allResults.slice(20);
+
+            const detailedResults = await Promise.all(
+                placesToDetail.map(async (place) => {
+                    console.log('🔍 DEBUG: Getting details for nearby place:', place.name, 'place_id:', place.place_id);
+
+                    // Get full details including address_components
+                    const details = await getPlaceDetails(place.place_id);
+
+                    console.log('🔍 DEBUG: Got details for', place.name, ':', details ? 'SUCCESS' : 'NULL');
+
+                    if (details) {
+                        console.log('🔍 DEBUG: Details for', place.name, ':', {
+                            city: details.city,
+                            state: details.state,
+                            zip: details.zip,
+                            address1: details.address1
+                        });
+
+                        // Merge the details with the original place data
+                        return {
+                            ...place,
+                            address_components_available: true,
+                            detailedInfo: details
+                        };
+                    }
+                    console.log('⚠️ DEBUG: No details returned for', place.name);
+                    return place;
+                })
+            );
+
+            // Combine detailed results with remaining (non-detailed) results
+            const allDetailedResults = [...detailedResults, ...remainingPlaces];
+
+            console.log('🔍 DEBUG: First detailed nearby result sample:',
+                detailedResults[0] ? {
+                    name: detailedResults[0].name,
+                    hasDetailedInfo: !!detailedResults[0].detailedInfo,
+                    detailedInfo: detailedResults[0].detailedInfo
+                } : 'NO RESULTS'
+            );
+
             // Transform and return results
-            return allResults.map(place => transformPlaceResult(place));
+            return allDetailedResults.map(place => transformPlaceResult(place));
         }
 
         // TEXT SEARCH: Use when we have a specific query string
