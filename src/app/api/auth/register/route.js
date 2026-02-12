@@ -1,14 +1,72 @@
-// file: /src/app/api/auth/register/route.js v2 - Updated registration with email verification for Patriot Thanks
+// file: /src/app/api/auth/register/route.js v3 - Added bot protection (honeypot, timing, rate limit, reCAPTCHA v3)
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import connectDB from '../../../../lib/mongodb.js';
 import { User } from '../../../../models/index.js';
+import { checkRateLimit, getClientIP } from '../../../../utils/rate-limiter.js';
+import { verifyRecaptcha } from '../../../../utils/recaptcha.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request) {
     try {
+        // ========== BOT PROTECTION LAYER 1: Rate Limiting ==========
+        const clientIP = getClientIP(request);
+        const rateCheck = checkRateLimit(clientIP, 5, 15 * 60 * 1000); // 5 registrations per 15 minutes per IP
+
+        if (rateCheck.limited) {
+            console.warn(`🚫 Rate limited registration attempt from IP: ${clientIP}`);
+            const retryMinutes = Math.ceil(rateCheck.retryAfterMs / 60000);
+            return NextResponse.json(
+                { error: `Too many registration attempts. Please try again in ${retryMinutes} minutes.` },
+                { status: 429 }
+            );
+        }
+
         const body = await request.json();
+
+        // ========== BOT PROTECTION LAYER 2: Honeypot ==========
+        if (body._hp_website && body._hp_website.trim() !== '') {
+            // A human would never fill this hidden field — it's a bot
+            console.warn(`🍯 Honeypot triggered from IP: ${clientIP}, value: "${body._hp_website}"`);
+            // Return a fake success to not tip off the bot
+            return NextResponse.json({
+                message: 'Account created successfully! Please check your email to verify your account.',
+                user: { id: 'fake', email: body.email, fname: body.fname, lname: body.lname, isVerified: false }
+            }, { status: 201 });
+        }
+
+        // ========== BOT PROTECTION LAYER 3: Timing Check ==========
+        if (body._hp_timestamp) {
+            const formDuration = Date.now() - parseInt(body._hp_timestamp, 10);
+            const MIN_FORM_TIME = 3000; // 3 seconds minimum — no human fills the form this fast
+
+            if (formDuration < MIN_FORM_TIME) {
+                console.warn(`⏱️ Speed bot detected from IP: ${clientIP}, form filled in ${formDuration}ms`);
+                // Return fake success
+                return NextResponse.json({
+                    message: 'Account created successfully! Please check your email to verify your account.',
+                    user: { id: 'fake', email: body.email, fname: body.fname, lname: body.lname, isVerified: false }
+                }, { status: 201 });
+            }
+        }
+
+        // ========== BOT PROTECTION LAYER 4: reCAPTCHA v3 ==========
+        const recaptchaResult = await verifyRecaptcha(body.recaptchaToken, 'register', 0.5);
+
+        if (!recaptchaResult.success) {
+            console.warn(`🤖 reCAPTCHA failed from IP: ${clientIP}, score: ${recaptchaResult.score}, error: ${recaptchaResult.error}`);
+            return NextResponse.json(
+                { error: 'Registration verification failed. Please try again. If the problem persists, please contact support.' },
+                { status: 400 }
+            );
+        }
+
+        if (recaptchaResult.score !== undefined && !recaptchaResult.skipped) {
+            console.log(`✅ reCAPTCHA passed from IP: ${clientIP}, score: ${recaptchaResult.score}`);
+        }
+        // ========== END BOT PROTECTION ==========
+
         const {
             fname,
             lname,

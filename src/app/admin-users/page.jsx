@@ -25,6 +25,16 @@ export default function AdminUsersPage() {
     const [userToDelete, setUserToDelete] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [showPurgeModal, setShowPurgeModal] = useState(false);
+    const [purgePreview, setPurgePreview] = useState(null);
+    const [isPurging, setIsPurging] = useState(false);
+    const [purgeOptions, setPurgeOptions] = useState({
+        unverifiedOnly: true,
+        olderThanDays: 0,       // 0 means include all dates
+        excludeAdmins: true,
+        createdAfter: '',       // Date string for "created after" filter
+        createdBefore: '',      // Date string for "created before" filter
+    });
 
     // User form state
     const [userForm, setUserForm] = useState({
@@ -204,13 +214,12 @@ export default function AdminUsersPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch('/api/auth', {
+            const response = await fetch('/api/auth?operation=delete-user', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    operation: 'delete-user',
                     userId: userToDelete._id
                 })
             });
@@ -231,6 +240,79 @@ export default function AdminUsersPage() {
             setIsSubmitting(false);
         }
     };
+
+    // ========== PURGE FAKE ACCOUNTS ==========
+    const handlePurgePreview = async () => {
+        setIsPurging(true);
+        setMessage({ type: '', text: '' });
+
+        try {
+            const params = new URLSearchParams({
+                operation: 'purge-fake-accounts',
+                preview: 'true',
+                unverifiedOnly: purgeOptions.unverifiedOnly.toString(),
+                olderThanDays: purgeOptions.olderThanDays.toString(),
+                excludeAdmins: purgeOptions.excludeAdmins.toString(),
+                ...(purgeOptions.createdAfter && { createdAfter: purgeOptions.createdAfter }),
+                ...(purgeOptions.createdBefore && { createdBefore: purgeOptions.createdBefore }),
+            });
+
+            const response = await fetch(`/api/auth?${params}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                setPurgePreview(data);
+            } else {
+                throw new Error(data.error || 'Failed to preview purge');
+            }
+        } catch (error) {
+            console.error('Purge preview error:', error);
+            setMessage({ type: 'error', text: error.message });
+        } finally {
+            setIsPurging(false);
+        }
+    };
+
+    const handlePurgeExecute = async () => {
+        if (!purgePreview || purgePreview.count === 0) return;
+
+        setIsPurging(true);
+
+        try {
+            const response = await fetch('/api/auth?operation=purge-fake-accounts', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    preview: false,
+                    unverifiedOnly: purgeOptions.unverifiedOnly,
+                    olderThanDays: purgeOptions.olderThanDays,
+                    excludeAdmins: purgeOptions.excludeAdmins,
+                    createdAfter: purgeOptions.createdAfter || null,
+                    createdBefore: purgeOptions.createdBefore || null,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage({
+                    type: 'success',
+                    text: `✅ Successfully deleted ${data.deletedCount} fake/unverified accounts.`
+                });
+                setShowPurgeModal(false);
+                setPurgePreview(null);
+                loadUsers(); // Refresh the user list
+            } else {
+                throw new Error(data.error || 'Purge failed');
+            }
+        } catch (error) {
+            console.error('Purge execute error:', error);
+            setMessage({ type: 'error', text: error.message });
+        } finally {
+            setIsPurging(false);
+        }
+    };
+    // ========== END PURGE FAKE ACCOUNTS ==========
 
     const getStatusLabel = (status) => {
         const option = statusOptions.find(opt => opt.value === status);
@@ -306,7 +388,7 @@ export default function AdminUsersPage() {
                             <h1 style={{ margin: 0, color: '#003366' }}>Patriot Thanks</h1>
                             <h4 style={{ margin: '5px 0 0 0', color: '#666' }}>Admin Dashboard - User Management</h4>
                         </div>
-                        <div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             <button
                                     onClick={() => router.push('/admin/dashboard')}
                                     style={{
@@ -316,10 +398,26 @@ export default function AdminUsersPage() {
                                         border: 'none',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        marginRight: '10px'
                                     }}
                             >
                                 Return to Dashboard
+                            </button>
+                            <button
+                                    onClick={() => {
+                                        setPurgePreview(null);
+                                        setShowPurgeModal(true);
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        backgroundColor: '#dc3545',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                    }}
+                            >
+                                🗑️ Purge Fake Accounts
                             </button>
                             <button
                                     onClick={() => openUserModal()}
@@ -936,6 +1034,185 @@ export default function AdminUsersPage() {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                )}
+
+                {/* Purge Fake Accounts Modal */}
+                {showPurgeModal && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            zIndex: 1000
+                        }}>
+                            <div style={{
+                                backgroundColor: 'white', borderRadius: '8px',
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                width: '90%', maxWidth: '600px', maxHeight: '90vh',
+                                overflow: 'auto', padding: '30px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h3 style={{ margin: 0, color: '#dc3545' }}>🗑️ Purge Fake / Bot Accounts</h3>
+                                    <button
+                                            onClick={() => { setShowPurgeModal(false); setPurgePreview(null); }}
+                                            style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6c757d' }}
+                                    >×</button>
+                                </div>
+
+                                <div style={{ padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', marginBottom: '20px' }}>
+                                    <strong>⚠️ Warning:</strong> This will permanently delete matching user accounts. This action cannot be undone. Use the Preview button first to see what will be deleted.
+                                </div>
+
+                                {/* Purge Options */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <h4 style={{ marginBottom: '10px' }}>Filter Options:</h4>
+
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    checked={purgeOptions.unverifiedOnly}
+                                                    onChange={(e) => setPurgeOptions(prev => ({ ...prev, unverifiedOnly: e.target.checked }))}
+                                            />
+                                            <span><strong>Only unverified emails</strong> (accounts that never verified their email)</span>
+                                        </label>
+                                    </div>
+
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                            <input
+                                                    type="checkbox"
+                                                    checked={purgeOptions.excludeAdmins}
+                                                    onChange={(e) => setPurgeOptions(prev => ({ ...prev, excludeAdmins: e.target.checked }))}
+                                            />
+                                            <span><strong>Exclude admin accounts</strong> (always recommended)</span>
+                                        </label>
+                                    </div>
+
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'block', marginBottom: '5px' }}>
+                                            <strong>Only accounts older than (days):</strong>
+                                        </label>
+                                        <input
+                                                type="number"
+                                                min="0"
+                                                value={purgeOptions.olderThanDays}
+                                                onChange={(e) => setPurgeOptions(prev => ({ ...prev, olderThanDays: parseInt(e.target.value) || 0 }))}
+                                                style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', width: '100px' }}
+                                        />
+                                        <span style={{ marginLeft: '10px', color: '#666', fontSize: '14px' }}>
+                                        (0 = include all dates)
+                                    </span>
+                                    </div>
+
+                                    <div style={{ marginBottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px' }}>
+                                                <strong>Created after:</strong>
+                                            </label>
+                                            <input
+                                                    type="date"
+                                                    value={purgeOptions.createdAfter}
+                                                    onChange={(e) => setPurgeOptions(prev => ({ ...prev, createdAfter: e.target.value }))}
+                                                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', width: '100%' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '5px' }}>
+                                                <strong>Created before:</strong>
+                                            </label>
+                                            <input
+                                                    type="date"
+                                                    value={purgeOptions.createdBefore}
+                                                    onChange={(e) => setPurgeOptions(prev => ({ ...prev, createdBefore: e.target.value }))}
+                                                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', width: '100%' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Preview Button */}
+                                <button
+                                        onClick={handlePurgePreview}
+                                        disabled={isPurging}
+                                        style={{
+                                            padding: '10px 20px', backgroundColor: '#ffc107', color: '#000',
+                                            border: 'none', borderRadius: '4px', cursor: isPurging ? 'not-allowed' : 'pointer',
+                                            fontWeight: 'bold', marginBottom: '20px', width: '100%'
+                                        }}
+                                >
+                                    {isPurging ? 'Scanning...' : '🔍 Preview — Show What Will Be Deleted'}
+                                </button>
+
+                                {/* Preview Results */}
+                                {purgePreview && (
+                                        <div style={{
+                                            padding: '15px', borderRadius: '8px', marginBottom: '20px',
+                                            backgroundColor: purgePreview.count > 0 ? '#f8d7da' : '#d4edda',
+                                            border: `1px solid ${purgePreview.count > 0 ? '#f5c6cb' : '#c3e6cb'}`
+                                        }}>
+                                            <h4 style={{ margin: '0 0 10px 0' }}>
+                                                {purgePreview.count > 0
+                                                        ? `⚠️ Found ${purgePreview.count} accounts to delete:`
+                                                        : '✅ No matching accounts found. Nothing to delete.'
+                                                }
+                                            </h4>
+
+                                            {purgePreview.count > 0 && purgePreview.sample && (
+                                                    <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
+                                                        <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                            <tr style={{ borderBottom: '1px solid #ccc' }}>
+                                                                <th style={{ textAlign: 'left', padding: '4px' }}>Name</th>
+                                                                <th style={{ textAlign: 'left', padding: '4px' }}>Email</th>
+                                                                <th style={{ textAlign: 'left', padding: '4px' }}>Created</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            {purgePreview.sample.map((u, i) => (
+                                                                    <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
+                                                                        <td style={{ padding: '4px' }}>{u.fname} {u.lname}</td>
+                                                                        <td style={{ padding: '4px' }}>{u.email}</td>
+                                                                        <td style={{ padding: '4px' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                                                                    </tr>
+                                                            ))}
+                                                            </tbody>
+                                                        </table>
+                                                        {purgePreview.count > purgePreview.sample.length && (
+                                                                <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                                                                    ...and {purgePreview.count - purgePreview.sample.length} more
+                                                                </p>
+                                                        )}
+                                                    </div>
+                                            )}
+
+                                            {purgePreview.count > 0 && (
+                                                    <button
+                                                            onClick={handlePurgeExecute}
+                                                            disabled={isPurging}
+                                                            style={{
+                                                                padding: '10px 20px', backgroundColor: '#dc3545', color: 'white',
+                                                                border: 'none', borderRadius: '4px',
+                                                                cursor: isPurging ? 'not-allowed' : 'pointer',
+                                                                fontWeight: 'bold', width: '100%'
+                                                            }}
+                                                    >
+                                                        {isPurging ? 'Deleting...' : `🗑️ Permanently Delete ${purgePreview.count} Accounts`}
+                                                    </button>
+                                            )}
+                                        </div>
+                                )}
+
+                                <button
+                                        onClick={() => { setShowPurgeModal(false); setPurgePreview(null); }}
+                                        style={{
+                                            padding: '10px 20px', backgroundColor: '#6c757d', color: 'white',
+                                            border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%'
+                                        }}
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
                 )}

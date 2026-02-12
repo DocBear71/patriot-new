@@ -1,6 +1,7 @@
 'use client';
+// file: /src/app/auth/signup/page.js v2 - Added bot protection (honeypot, timestamp, reCAPTCHA v3)
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../../../components/layout/Navigation';
@@ -28,6 +29,54 @@ export default function SignUp() {
     const [showTermsModal, setShowTermsModal] = useState(false);
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
     const router = useRouter();
+
+    // === BOT PROTECTION ===
+    // Honeypot: invisible field that bots fill but humans don't
+    const [website, setWebsite] = useState('');
+    // Timestamp: records when form was loaded (bots submit too fast)
+    const formLoadedAt = useRef(Date.now());
+
+    // Load reCAPTCHA v3 script on mount
+    useEffect(() => {
+        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+        if (!siteKey) {
+            console.warn('reCAPTCHA site key not configured');
+            return;
+        }
+
+        // Don't load if already loaded
+        if (document.querySelector(`script[src*="recaptcha"]`)) return;
+
+        const script = document.createElement('script');
+        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+        script.async = true;
+        document.head.appendChild(script);
+
+        return () => {
+            // Cleanup: remove the script and badge on unmount
+            const badge = document.querySelector('.grecaptcha-badge');
+            if (badge) badge.style.display = 'none';
+        };
+    }, []);
+
+    // Get reCAPTCHA token
+    const getRecaptchaToken = async () => {
+        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+        if (!siteKey || !window.grecaptcha) {
+            console.warn('reCAPTCHA not available');
+            return null;
+        }
+
+        try {
+            await new Promise((resolve) => window.grecaptcha.ready(resolve));
+            const token = await window.grecaptcha.execute(siteKey, { action: 'register' });
+            return token;
+        } catch (error) {
+            console.error('reCAPTCHA error:', error);
+            return null;
+        }
+    };
+    // === END BOT PROTECTION ===
 
     const serviceTypes = [
         { value: 'VT', label: 'Veteran' },
@@ -73,6 +122,9 @@ export default function SignUp() {
         }
 
         try {
+            // Get reCAPTCHA token before submitting
+            const recaptchaToken = await getRecaptchaToken();
+
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
@@ -89,7 +141,11 @@ export default function SignUp() {
                     city: formData.city,
                     state: formData.state,
                     zip: formData.zip,
-                    termsAccepted: formData.termsAccepted
+                    termsAccepted: formData.termsAccepted,
+                    // Bot protection fields
+                    _hp_website: website,           // Honeypot (should be empty)
+                    _hp_timestamp: formLoadedAt.current,  // Form load timestamp
+                    recaptchaToken: recaptchaToken,  // reCAPTCHA v3 token
                 }),
             });
 
@@ -261,6 +317,32 @@ export default function SignUp() {
                             </div>
                         </div>
                     )}
+
+                    {/* === HONEYPOT FIELD — Hidden from humans, visible to bots === */}
+                    <div
+                        aria-hidden="true"
+                        style={{
+                            position: 'absolute',
+                            left: '-9999px',
+                            top: '-9999px',
+                            opacity: 0,
+                            height: 0,
+                            width: 0,
+                            overflow: 'hidden',
+                            tabIndex: -1,
+                        }}
+                    >
+                        <label htmlFor="website">Website</label>
+                        <input
+                            type="text"
+                            id="website"
+                            name="website"
+                            value={website}
+                            onChange={(e) => setWebsite(e.target.value)}
+                            autoComplete="off"
+                            tabIndex={-1}
+                        />
+                    </div>
 
                     {/* Password */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

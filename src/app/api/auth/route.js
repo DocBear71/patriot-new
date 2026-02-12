@@ -1,4 +1,4 @@
-// file: src/app/api/auth/route.js v2 - Migrated to NextAuth sessions (keeping all existing functionality)
+// file: src/app/api/auth/route.js v3 - Added purge fake accounts operations for admin bot cleanup
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb.js';
@@ -79,6 +79,8 @@ export async function GET(request) {
             case 'dashboard-stats':
             case 'admin-stats':
                 return await handleDashboardStats(request);
+            case 'purge-fake-accounts':
+                return await handlePurgePreview(request);
             default:
                 // Default information response
                 return NextResponse.json({
@@ -184,6 +186,8 @@ export async function DELETE(request) {
         switch (operation) {
             case 'delete-user':
                 return await handleDeleteUser(request);
+            case 'purge-fake-accounts':
+                return await handlePurgeExecute(request);
             default:
                 return NextResponse.json(
                     { message: 'Invalid operation for DELETE request' },
@@ -1105,5 +1109,160 @@ async function handleDashboardStats(request) {
             availableIncentiveCount: 0,
             error: 'Error retrieving dashboard statistics: ' + error.message
         });
+    }
+}
+
+/**
+ * Handle purge fake accounts - PREVIEW (GET request, admin only)
+ * Returns a count and sample of accounts that would be deleted
+ */
+async function handlePurgePreview(request) {
+    console.log("🗑️ Admin previewing purge of fake accounts");
+
+    // Verify admin access
+    const adminAccess = await verifyAdminAccess();
+    if (!adminAccess.success) {
+        return NextResponse.json(
+            { message: adminAccess.message },
+            { status: adminAccess.status }
+        );
+    }
+
+    try {
+        const { searchParams } = new URL(request.url);
+
+        // Build the filter query
+        const purgeQuery = {};
+
+        if (searchParams.get('unverifiedOnly') === 'true') {
+            purgeQuery.$or = [
+                { isVerified: false },
+                { isVerified: { $exists: false } }
+            ];
+        }
+
+        if (searchParams.get('excludeAdmins') === 'true') {
+            purgeQuery.isAdmin = { $ne: true };
+            if (!purgeQuery.$and) purgeQuery.$and = [];
+            purgeQuery.$and.push({ level: { $ne: 'Admin' } });
+        }
+
+        const olderThanDays = parseInt(searchParams.get('olderThanDays')) || 0;
+        if (olderThanDays > 0) {
+            purgeQuery.created_at = { ...purgeQuery.created_at, $lt: new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000)) };
+        }
+
+        // Date range filters
+        const createdAfter = searchParams.get('createdAfter');
+        const createdBefore = searchParams.get('createdBefore');
+
+        if (createdAfter) {
+            purgeQuery.created_at = { ...purgeQuery.created_at, $gte: new Date(createdAfter) };
+        }
+        if (createdBefore) {
+            // Add 1 day to include the entire "before" date
+            const beforeDate = new Date(createdBefore);
+            beforeDate.setDate(beforeDate.getDate() + 1);
+            purgeQuery.created_at = { ...purgeQuery.created_at, $lte: beforeDate };
+        }
+
+        console.log('🗑️ Purge preview query:', JSON.stringify(purgeQuery, null, 2));
+
+        console.log('🗑️ Purge preview query:', JSON.stringify(purgeQuery, null, 2));
+
+        const matchingUsers = await User.find(purgeQuery)
+            .select('fname lname email created_at isVerified level status')
+            .sort({ created_at: -1 })
+            .lean();
+
+        console.log(`🗑️ Purge preview found ${matchingUsers.length} matching accounts`);
+
+        return NextResponse.json({
+            count: matchingUsers.length,
+            sample: matchingUsers.slice(0, 50), // Show first 50 as preview
+        });
+
+    } catch (error) {
+        console.error('❌ Error in purge preview:', error);
+        return NextResponse.json(
+            { error: 'Failed to preview purge: ' + error.message },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * Handle purge fake accounts - EXECUTE (DELETE request, admin only)
+ * Permanently deletes matching accounts
+ */
+async function handlePurgeExecute(request) {
+    console.log("🗑️ Admin executing purge of fake accounts");
+
+    // Verify admin access
+    const adminAccess = await verifyAdminAccess();
+    if (!adminAccess.success) {
+        return NextResponse.json(
+            { message: adminAccess.message },
+            { status: adminAccess.status }
+        );
+    }
+
+    try {
+        const body = await request.json();
+
+        // Build the filter query (same logic as preview)
+        const purgeQuery = {};
+
+        if (body.unverifiedOnly) {
+            purgeQuery.$or = [
+                { isVerified: false },
+                { isVerified: { $exists: false } }
+            ];
+        }
+
+        if (body.excludeAdmins !== false) {
+            purgeQuery.isAdmin = { $ne: true };
+            if (!purgeQuery.$and) purgeQuery.$and = [];
+            purgeQuery.$and.push({ level: { $ne: 'Admin' } });
+        }
+
+        const olderThanDays = parseInt(body.olderThanDays) || 0;
+        if (olderThanDays > 0) {
+            purgeQuery.created_at = { ...purgeQuery.created_at, $lt: new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000)) };
+        }
+
+        // Date range filters
+        if (body.createdAfter) {
+            purgeQuery.created_at = { ...purgeQuery.created_at, $gte: new Date(body.createdAfter) };
+        }
+        if (body.createdBefore) {
+            const beforeDate = new Date(body.createdBefore);
+            beforeDate.setDate(beforeDate.getDate() + 1);
+            purgeQuery.created_at = { ...purgeQuery.created_at, $lte: beforeDate };
+        }
+
+        console.log('🗑️ Executing purge with query:', JSON.stringify(purgeQuery, null, 2));
+
+        console.log('🗑️ Executing purge with query:', JSON.stringify(purgeQuery, null, 2));
+
+        // Count before deleting (for logging)
+        const countBefore = await User.countDocuments(purgeQuery);
+        console.log(`🗑️ About to delete ${countBefore} accounts`);
+
+        const result = await User.deleteMany(purgeQuery);
+
+        console.log(`✅ Purged ${result.deletedCount} fake/unverified accounts`);
+
+        return NextResponse.json({
+            success: true,
+            deletedCount: result.deletedCount
+        });
+
+    } catch (error) {
+        console.error('❌ Error executing purge:', error);
+        return NextResponse.json(
+            { error: 'Failed to execute purge: ' + error.message },
+            { status: 500 }
+        );
     }
 }
