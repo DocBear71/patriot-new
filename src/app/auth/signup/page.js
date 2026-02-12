@@ -48,7 +48,7 @@ export default function SignUp() {
         if (document.querySelector(`script[src*="recaptcha"]`)) return;
 
         const script = document.createElement('script');
-        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+        script.src = `https://www.google.com/recaptcha/enterprise.js?render=${siteKey}`;
         script.async = true;
         document.head.appendChild(script);
 
@@ -68,8 +68,8 @@ export default function SignUp() {
         }
 
         try {
-            await new Promise((resolve) => window.grecaptcha.ready(resolve));
-            const token = await window.grecaptcha.execute(siteKey, { action: 'register' });
+            await new Promise((resolve) => window.grecaptcha.enterprise.ready(resolve));
+            const token = await window.grecaptcha.enterprise.execute(siteKey, { action: 'register' });
             return token;
         } catch (error) {
             console.error('reCAPTCHA error:', error);

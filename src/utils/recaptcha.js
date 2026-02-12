@@ -23,64 +23,139 @@ export async function verifyRecaptcha(token, expectedAction = 'register', minSco
     }
 
     try {
-        const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                secret: secretKey,
-                response: token,
-            }),
-        });
+        // Use Enterprise API endpoint
+        const projectId = process.env.RECAPTCHA_PROJECT_ID;
+        const apiKey = process.env.RECAPTCHA_API_KEY || secretKey;
+        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
-        const data = await response.json();
+        let data;
 
-        console.log('🔒 reCAPTCHA verification result:', {
-            success: data.success,
-            score: data.score,
-            action: data.action,
-            hostname: data.hostname,
-            errors: data['error-codes']
-        });
+        if (projectId) {
+            // Enterprise API with project ID
+            const url = `https://recaptchaenterprise.googleapis.com/v1/projects/${projectId}/assessments?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    event: {
+                        token: token,
+                        expectedAction: expectedAction,
+                        siteKey: siteKey,
+                    }
+                }),
+            });
 
-        // Check if verification was successful
-        if (!data.success) {
+            const result = await response.json();
+
+            console.log('🔒 reCAPTCHA Enterprise verification result:', JSON.stringify(result, null, 2));
+
+            if (result.error) {
+                return {
+                    success: false,
+                    score: 0,
+                    action: '',
+                    error: `reCAPTCHA Enterprise error: ${result.error.message || JSON.stringify(result.error)}`
+                };
+            }
+
+            // Enterprise API returns tokenProperties and riskAnalysis
+            const tokenValid = result.tokenProperties?.valid;
+            const action = result.tokenProperties?.action || '';
+            const score = result.riskAnalysis?.score ?? 0;
+
+            if (!tokenValid) {
+                return {
+                    success: false,
+                    score: 0,
+                    action: action,
+                    error: `reCAPTCHA token invalid: ${result.tokenProperties?.invalidReason || 'unknown'}`
+                };
+            }
+
+            if (action && action !== expectedAction) {
+                return {
+                    success: false,
+                    score: score,
+                    action: action,
+                    error: `reCAPTCHA action mismatch: expected "${expectedAction}", got "${action}"`
+                };
+            }
+
+            if (score < minScore) {
+                return {
+                    success: false,
+                    score: score,
+                    action: action,
+                    error: `reCAPTCHA score too low: ${score} (minimum: ${minScore})`
+                };
+            }
+
             return {
-                success: false,
-                score: 0,
-                action: data.action || '',
-                error: `reCAPTCHA verification failed: ${(data['error-codes'] || []).join(', ')}`
+                success: true,
+                score: score,
+                action: action,
+                error: null
             };
-        }
 
-        // Check the action matches what we expected
-        if (data.action && data.action !== expectedAction) {
-            return {
-                success: false,
+        } else {
+            // Fallback: Standard reCAPTCHA API (siteverify)
+            const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    secret: secretKey,
+                    response: token,
+                }),
+            });
+
+            data = await response.json();
+
+            console.log('🔒 reCAPTCHA verification result:', {
+                success: data.success,
                 score: data.score,
                 action: data.action,
-                error: `reCAPTCHA action mismatch: expected "${expectedAction}", got "${data.action}"`
-            };
-        }
+                hostname: data.hostname,
+                errors: data['error-codes']
+            });
 
-        // Check the score threshold
-        // Score ranges from 0.0 (likely bot) to 1.0 (likely human)
-        if (data.score < minScore) {
+            if (!data.success) {
+                return {
+                    success: false,
+                    score: 0,
+                    action: data.action || '',
+                    error: `reCAPTCHA verification failed: ${(data['error-codes'] || []).join(', ')}`
+                };
+            }
+
+            if (data.action && data.action !== expectedAction) {
+                return {
+                    success: false,
+                    score: data.score,
+                    action: data.action,
+                    error: `reCAPTCHA action mismatch: expected "${expectedAction}", got "${data.action}"`
+                };
+            }
+
+            if (data.score < minScore) {
+                return {
+                    success: false,
+                    score: data.score,
+                    action: data.action,
+                    error: `reCAPTCHA score too low: ${data.score} (minimum: ${minScore})`
+                };
+            }
+
             return {
-                success: false,
+                success: true,
                 score: data.score,
                 action: data.action,
-                error: `reCAPTCHA score too low: ${data.score} (minimum: ${minScore})`
+                error: null
             };
         }
-
-        return {
-            success: true,
-            score: data.score,
-            action: data.action,
-            error: null
-        };
 
     } catch (error) {
         console.error('❌ reCAPTCHA verification error:', error);
