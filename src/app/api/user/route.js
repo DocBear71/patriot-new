@@ -1,4 +1,7 @@
-// file: /src/app/api/user/route.js v2 - no hardcoded JWT secret fallback; missing JWT_SECRET
+// file: /src/app/api/user/route.js v3 - every operation needs a NextAuth session and acts only on
+//   the signed-in user; update whitelists fields and status values; responses whitelisted
+//   (no password or tokens)
+// v2 - no hardcoded JWT secret fallback; missing JWT_SECRET
 //   returns a 500 instead of a misleading 401
 // v1 - User profile management API for Next.js App Router
 
@@ -8,8 +11,34 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../../../models/User';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../../lib/auth';
 
 const { ObjectId } = mongoose.Types;
+
+
+// Fields a user may change on their own profile
+const EDITABLE_FIELDS = ['fname', 'lname', 'address1', 'address2', 'city', 'state', 'zip', 'status'];
+// Must match statusOptions on /profile
+const ALLOWED_STATUS = ['VT', 'AD', 'FR', 'SP', 'BO', 'VBO', 'SU'];
+// Fields returned to the profile page; never password or tokens
+const PUBLIC_PROFILE_FIELDS = ['_id', 'fname', 'lname', 'email', 'address1', 'address2',
+    'city', 'state', 'zip', 'status', 'level'];
+
+function toPublicProfile(user) {
+    const src = user.toObject ? user.toObject() : user;
+    const out = {};
+    for (const field of PUBLIC_PROFILE_FIELDS) {
+        if (src[field] !== undefined) out[field] = src[field];
+    }
+    return out;
+}
+
+// The signed-in user's id from the NextAuth session cookie, or null
+async function getSessionUserId() {
+    const session = await getServerSession(authOptions);
+    return session?.user?.id || null;
+}
 
 /**
  * Helper to verify user authentication and get user from token
@@ -71,12 +100,28 @@ export async function GET(request) {
         );
     }
 
+    // Must be signed in, and may only read their own record. The query's
+    // userId is checked against the session, never trusted on its own.
+    const sessionUserId = await getSessionUserId();
+    if (!sessionUserId) {
+        return NextResponse.json(
+            { message: 'Sign in required' },
+            { status: 401 }
+        );
+    }
+    if (userId && userId !== sessionUserId) {
+        return NextResponse.json(
+            { message: 'You can only view your own profile' },
+            { status: 403 }
+        );
+    }
+
     try {
         switch (operation) {
             case 'profile':
-                return await handleProfileGet(request, userId);
+                return await handleProfileGet(request, sessionUserId);
             case 'get':
-                return await handleUserGet(request, userId);
+                return await handleUserGet(request, sessionUserId);
             default:
                 // Default response - list available operations
                 return NextResponse.json({
@@ -112,12 +157,21 @@ export async function PUT(request) {
         );
     }
 
+    // Must be signed in; handlers act only on this user
+    const sessionUserId = await getSessionUserId();
+    if (!sessionUserId) {
+        return NextResponse.json(
+            { message: 'Sign in required' },
+            { status: 401 }
+        );
+    }
+
     try {
         switch (operation) {
             case 'update':
-                return await handleUserUpdate(request);
+                return await handleUserUpdate(request, sessionUserId);
             case 'password':
-                return await handlePasswordUpdate(request);
+                return await handlePasswordUpdate(request, sessionUserId);
             default:
                 return NextResponse.json(
                     { message: 'Invalid operation for PUT request' },
@@ -181,9 +235,8 @@ async function handleProfileGet(request, userId) {
             );
         }
 
-        // Convert to plain object and remove password
-        const userData = user.toObject ? user.toObject() : { ...user };
-        delete userData.password;
+        // Whitelisted fields only (no password, resetToken, verificationToken)
+        const userData = toPublicProfile(user);
 
         console.log("✅ Returning user profile data");
 
@@ -225,9 +278,8 @@ async function handleUserGet(request, userId) {
             );
         }
 
-        // Create a user object without the password
-        const userData = user.toObject();
-        delete userData.password;
+        // Whitelisted fields only (no password, resetToken, verificationToken)
+        const userData = toPublicProfile(user);
 
         console.log("✅ User data retrieved successfully");
 
@@ -248,7 +300,7 @@ async function handleUserGet(request, userId) {
 /**
  * Handle PUT request for updating user profile
  */
-async function handleUserUpdate(request) {
+async function handleUserUpdate(request, sessionUserId) {
     console.log("👤 Updating user profile");
 
     try {
@@ -262,6 +314,14 @@ async function handleUserUpdate(request) {
             return NextResponse.json(
                 { message: 'User ID is required' },
                 { status: 400 }
+            );
+        }
+
+        // Only the signed-in user's own profile can be updated here
+        if (String(userData._id) !== sessionUserId) {
+            return NextResponse.json(
+                { message: 'You can only update your own profile' },
+                { status: 403 }
             );
         }
 
@@ -290,22 +350,27 @@ async function handleUserUpdate(request) {
 
         console.log("✅ Found existing user:", existingUser._id);
 
-        // Remove sensitive fields that shouldn't be updated via this endpoint
-        delete userData.password;
-        delete userData.level;
-        delete userData.isAdmin;
-        delete userData.created_at;
-        delete userData._id; // Remove _id from update data
+        // Whitelist: only these fields can change here. Email has its own
+        // verified flow (/api/auth/update-email); level, isAdmin, isVerified,
+        // tokens and veteranBusinessOwner are never user-writable.
+        const updates = {};
+        for (const field of EDITABLE_FIELDS) {
+            if (userData[field] !== undefined) updates[field] = userData[field];
+        }
+        if (updates.status !== undefined && !ALLOWED_STATUS.includes(updates.status)) {
+            return NextResponse.json(
+                { message: 'Invalid status value' },
+                { status: 400 }
+            );
+        }
+        updates.updated_at = new Date();
 
-        // Set updated timestamp
-        userData.updated_at = new Date();
-
-        console.log("Updating with data:", JSON.stringify(userData, null, 2));
+        console.log("Updating with data:", JSON.stringify(updates, null, 2));
 
         // Update the user using the existing user's _id
         const updatedUser = await User.findByIdAndUpdate(
             existingUser._id,
-            { $set: userData },
+            { $set: updates },
             { new: true, runValidators: true }
         );
 
@@ -320,8 +385,7 @@ async function handleUserUpdate(request) {
         console.log("✅ User updated successfully");
 
         // Remove password from response
-        const responseData = updatedUser.toObject();
-        delete responseData.password;
+        const responseData = toPublicProfile(updatedUser);
 
         return NextResponse.json({
             message: 'User updated successfully',
@@ -367,7 +431,7 @@ async function handleUserUpdate(request) {
 /**
  * Handle PUT request for updating user password
  */
-async function handlePasswordUpdate(request) {
+async function handlePasswordUpdate(request, sessionUserId) {
     console.log("🔐 Updating user password");
 
     try {
@@ -379,6 +443,14 @@ async function handlePasswordUpdate(request) {
             return NextResponse.json(
                 { message: 'User ID, current password, and new password are required' },
                 { status: 400 }
+            );
+        }
+
+        // Only the signed-in user's own password can be changed here
+        if (userId !== sessionUserId) {
+            return NextResponse.json(
+                { message: 'You can only change your own password' },
+                { status: 403 }
             );
         }
 
