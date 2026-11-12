@@ -1,6 +1,8 @@
 'use client';
 
-// file: src/app/auth/signin/page.js v5 - Final NextAuth implementation for Patriot Thanks
+// file: src/app/auth/signin/page.js v6 - forgot-password link goes to /contact (reset disabled
+//   on V1; the old /auth/forgot-password link was a 404)
+// v5 - Final NextAuth implementation for Patriot Thanks
 
 import { useState, useEffect, Suspense } from 'react';
 import { signIn, getSession } from 'next-auth/react';
@@ -252,8 +254,8 @@ function SignInContent() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                        <Link href="/auth/forgot-password" className="text-sm text-blue-500 hover:text-blue-700">
-                            Forgot your password?
+                        <Link href="/contact" className="text-sm text-blue-500 hover:text-blue-700">
+                            Forgot your password? Contact support
                         </Link>
                     </div>
 

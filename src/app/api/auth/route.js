@@ -1,4 +1,6 @@
-// file: src/app/api/auth/route.js v3 - Added purge fake accounts operations for admin bot cleanup
+// file: src/app/api/auth/route.js v4 - forgot-password and reset-password return 410 (guessable
+//   code, unescaped email regex, unreachable UI); lost passwords go through support
+// v3 - Added purge fake accounts operations for admin bot cleanup
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb.js';
@@ -119,9 +121,14 @@ export async function POST(request) {
             case 'verify-admin':
                 return await handleVerifyAdmin(request);
             case 'forgot-password':
-                return await handleForgotPassword(request);
             case 'reset-password':
-                return await handleResetPassword(request);
+                // Disabled 2026-11-11: guessable 6-digit code with no attempt limit,
+                // unescaped email regex, and the site's links to these pages 404.
+                // V1 is retiring; lost passwords go through support.
+                return NextResponse.json(
+                    { message: 'Password reset is not available on this site. Please contact support through the Contact page.' },
+                    { status: 410 }
+                );
             case 'update-terms-acceptance':
                 return await handleUpdateTermsAcceptance(request);
             case 'resend-verification':
