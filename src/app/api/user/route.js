@@ -1,4 +1,6 @@
-// file: /src/app/api/user/route.js v1 - User profile management API for Next.js App Router
+// file: /src/app/api/user/route.js v2 - no hardcoded JWT secret fallback; missing JWT_SECRET
+//   returns a 500 instead of a misleading 401
+// v1 - User profile management API for Next.js App Router
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
@@ -13,6 +15,12 @@ const { ObjectId } = mongoose.Types;
  * Helper to verify user authentication and get user from token
  */
 async function getUserFromToken(request) {
+    // Checked before the try: its catch reports every error as a 401
+    // "Invalid or expired token", which would hide a server misconfiguration.
+    if (!process.env.JWT_SECRET) {
+        console.error('❌ JWT_SECRET is not set in the environment');
+        return { success: false, status: 500, message: 'Server misconfigured: JWT_SECRET is not set' };
+    }
     try {
         const authHeader = request.headers.get('authorization');
 
@@ -23,7 +31,7 @@ async function getUserFromToken(request) {
         const token = authHeader.split(' ')[1];
 
         // Verify JWT token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Connect to database
         await connectDB();

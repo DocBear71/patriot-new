@@ -1,5 +1,7 @@
 'use client';
-// file: /src/app/donate/page.jsx v3 - Real PayPal and Stripe integration
+// file: /src/app/donate/page.jsx v4 - donations paused notice replaces the form (V1 retiring,
+//   PayPal account closed); Stripe.js no longer loaded
+// v3 - Real PayPal and Stripe integration
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,8 +11,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import Navigation from '../../components/layout/Navigation';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+// Stripe.js is no longer loaded here: the paused page takes no payments.
 
 // PayPal configuration
 const paypalOptions = {
@@ -853,13 +854,19 @@ function DonationForm() {
     );
 }
 
-// Main component wrapped with both Stripe and PayPal providers
+// Donations are paused: V1 is retiring for the new app and the PayPal account is closed.
+// DonationForm above is no longer rendered; nginx blocks /api/donations.
 export default function DonatePage() {
     return (
-            <PayPalScriptProvider options={paypalOptions}>
-                <Elements stripe={stripePromise}>
-                    <DonationForm />
-                </Elements>
-            </PayPalScriptProvider>
+            <div style={{ paddingTop: '70px' }} id="page_layout">
+                <Navigation />
+                <main style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+                    <h1 style={{ color: '#003366', marginBottom: '20px' }}>Donations Are Paused</h1>
+                    <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
+                        We are building the new Patriot Thanks app, and online donations are paused until it launches.
+                        Thank you for supporting those who serve.
+                    </p>
+                </main>
+            </div>
     );
 }

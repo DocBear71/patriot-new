@@ -1,3 +1,6 @@
+# file: /.github/workflows/deploy.yml v2 - set -euo pipefail so a failed build stops the deploy;
+#   pm2 restart --update-env
+# v1 - git pull, npm install, build, pm2 restart on push to main
 name: Deploy Patriot Thanks
 
 on:
@@ -19,8 +22,9 @@ jobs:
           script: |
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            set -euo pipefail
             cd /var/www/patriotthanks.com
             git pull origin main
             npm install
             npm run build
-            pm2 restart patriotthanks
+            pm2 restart patriotthanks --update-env

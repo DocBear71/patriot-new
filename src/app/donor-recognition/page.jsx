@@ -1,10 +1,13 @@
 'use client';
-// file: /src/app/donor-recognition/page.jsx v1 - Donor recognition page displaying recent donors
+// file: /src/app/donor-recognition/page.jsx v2 - paused notice is the default export; the donor
+//   list is no longer rendered while donations are paused
+// v1 - Donor recognition page displaying recent donors
 
 import { useState, useEffect } from 'react';
 import Navigation from '../../components/layout/Navigation';
 
-export default function DonorRecognitionPage() {
+// No longer rendered: the recognition API is blocked while donations are paused.
+function DonorRecognitionPage() {
     const [donors, setDonors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, month, year
@@ -442,6 +445,23 @@ export default function DonorRecognitionPage() {
                     100% { transform: rotate(360deg); }
                 }
             `}</style>
+            </div>
+    );
+}
+
+
+// Shown while donations are paused (V1 retiring for the new app).
+export default function DonorRecognitionPausedPage() {
+    return (
+            <div style={{ paddingTop: '70px' }} id="page_layout">
+                <Navigation />
+                <main style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+                    <h1 style={{ color: '#003366', marginBottom: '20px' }}>Donor Recognition</h1>
+                    <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
+                        Donations are paused while we build the new Patriot Thanks app. Donor recognition
+                        will return with it. Thank you to everyone who has supported those who serve.
+                    </p>
+                </main>
             </div>
     );
 }

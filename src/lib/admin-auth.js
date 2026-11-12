@@ -1,4 +1,6 @@
-// file: /src/lib/admin-auth.js v1 - Admin authentication helper utilities
+// file: /src/lib/admin-auth.js v2 - no hardcoded JWT secret fallback; missing JWT_SECRET
+//   returns a 500 through the outer catch
+// v1 - Admin authentication helper utilities
 
 import jwt from 'jsonwebtoken';
 import connectDB from './mongodb';
@@ -24,10 +26,14 @@ export async function verifyAdminAccess(request) {
 
         const token = authHeader.split(' ')[1];
 
-        // Verify JWT token
+        // Verify JWT token. No hardcoded fallback: a missing secret is a server
+        // misconfiguration, so it throws to the outer catch (500), not a 401.
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not set in the environment');
+        }
         let userId;
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
             userId = decoded.userId;
         } catch (error) {
             console.error("Token verification error:", error);

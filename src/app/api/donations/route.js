@@ -1,4 +1,6 @@
-// file: /src/app/api/donations/route.js v4 - Real PayPal and Stripe Integration
+// file: /src/app/api/donations/route.js v5 - no hardcoded secret fallbacks: missing JWT_SECRET
+//   or DONATION_EMAIL_* throws at load; SMTP TLS verification back on
+// v4 - Real PayPal and Stripe Integration
 
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
@@ -42,17 +44,23 @@ function getPayPalClient() {
     return new paypal.core.PayPalHttpClient(environment);
 }
 
+// Fail loud: these secrets have no hardcoded fallbacks. If one is missing, this
+// module throws when it loads, so every donations request returns a 500 and the
+// pm2 log names the missing variable.
+for (const name of ['JWT_SECRET', 'DONATION_EMAIL_USER', 'DONATION_EMAIL_PASS']) {
+    if (!process.env[name]) {
+        throw new Error(`${name} is not set in the environment`);
+    }
+}
+
 // Create email transporter for donation confirmations
 const transporter = nodemailer.createTransport({
     host: 'mail.patriotthanks.com',
     port: 465,
     secure: true,
     auth: {
-        user: process.env.DONATION_EMAIL_USER || process.env.EMAIL_USER || 'donations@patriotthanks.com',
-        pass: process.env.DONATION_EMAIL_PASS || process.env.EMAIL_PASS || '1369Bkcsdp55chtdp81??'
-    },
-    tls: {
-        rejectUnauthorized: false
+        user: process.env.DONATION_EMAIL_USER,
+        pass: process.env.DONATION_EMAIL_PASS
     }
 });
 
@@ -111,7 +119,7 @@ async function verifyAdminAccess(request) {
 async function sendDonationConfirmationEmail(donation) {
     try {
         const mailOptions = {
-            from: process.env.DONATION_EMAIL_USER || process.env.EMAIL_USER || 'donations@patriotthanks.com',
+            from: process.env.DONATION_EMAIL_USER,
             to: donation.email,
             subject: 'Thank you for your donation to Patriot Thanks',
             html: `
@@ -358,7 +366,7 @@ async function handleCreatePayPalOrder(request) {
             const authHeader = request.headers.get('authorization');
             if (authHeader && authHeader.startsWith('Bearer ')) {
                 const token = authHeader.split(' ')[1];
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 userId = decoded.userId;
                 console.log('✅ User is logged in, userId captured:', userId);
             }
@@ -448,7 +456,7 @@ async function handleCapturePayPalOrder(request) {
             const authHeader = request.headers.get('authorization');
             if (authHeader && authHeader.startsWith('Bearer ')) {
                 const token = authHeader.split(' ')[1];
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 userId = decoded.userId;
                 console.log('✅ User is logged in, userId captured:', userId);
             }
@@ -547,7 +555,7 @@ async function handleSaveDonation(request) {
             const authHeader = request.headers.get('authorization');
             if (authHeader && authHeader.startsWith('Bearer ')) {
                 const token = authHeader.split(' ')[1];
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'patriot-thanks-secret-key');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 userId = decoded.userId;
                 console.log('✅ User is logged in, userId captured:', userId);
             }
